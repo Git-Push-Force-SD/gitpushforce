@@ -1,4 +1,4 @@
-# Campus Marketplace Landing Page
+# Campus Marketplace
 
 A modern, responsive landing page for the Campus Marketplace web application built with React, Tailwind CSS, and Vite.
 
@@ -68,8 +68,8 @@ npm run preview
 
 ### Colors
 Edit `tailwind.config.js` to customize colors:
-- Primary color (pink): `primary-500`, `primary-600`, `primary-700`
-- Gradient colors (blue to gold): `gradient-from`, `gradient-to`
+- Primary color (green): `primary-500`, `primary-600`, `primary-700`
+- Gradient colors (green to dark): `gradient-from`, `gradient-to`
 
 ### Content
 Edit `src/App.jsx` to modify:

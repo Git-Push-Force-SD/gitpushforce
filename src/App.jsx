@@ -16,7 +16,7 @@ export default function App() {
               <span className="bg-primary-500 w-10 h-10 rounded-full flex items-center justify-center">
                 <ShoppingBag className="text-white" size={24} />
               </span>
-              <span className="text-2xl font-bold text-primary-500">CampusHub</span>
+              <span className="text-2xl font-bold text-primary-500">UniMart</span>
             </span>
 
             {/* Desktop Menu */}
@@ -192,7 +192,7 @@ export default function App() {
         <span className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center block">
           <h2 className="text-4xl font-bold mb-6 text-primary-500">Ready to Start Trading?</h2>
           <p className="text-xl text-dark mb-8">
-            Join thousands of students already buying and selling on Campus Marketplace
+            Join thousands of students already buying and selling on UniMart
           </p>
           <button className="px-8 py-3 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition shadow-lg">
             Create Your Account Today
@@ -205,7 +205,7 @@ export default function App() {
         <span className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 block">
           <span className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8 block">
             <article>
-              <h4 className="font-bold mb-4">Campus Marketplace</h4>
+              <h4 className="font-bold mb-4">UniMart</h4>
               <p className="text-gray-400">Your trusted campus trading platform</p>
             </article>
             <nav>
@@ -234,7 +234,7 @@ export default function App() {
             </nav>
           </span>
           <span className="border-t border-gray-800 pt-8 text-center text-gray-400 block">
-            <p>&copy; 2026 Campus Marketplace. All rights reserved.</p>
+            <p>&copy; 2026 UniMart. All rights reserved.</p>
           </span>
         </span>
       </footer>
