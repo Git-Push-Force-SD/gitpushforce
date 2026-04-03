@@ -61,5 +61,5 @@ jobs:
         with:
           app-name: 'unimart'
           slot-name: 'Production'
-          package: .
+          package: ./dist
           
