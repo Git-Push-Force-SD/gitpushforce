@@ -6,7 +6,6 @@ This project uses Jest for unit testing and Codecov for coverage tracking and re
 
 - [Local Testing](#local-testing)
 - [Coverage Reports](#coverage-reports)
-- [Codecov Setup](#codecov-setup)
 - [Writing Tests](#writing-tests)
 - [CI/CD Integration](#cicd-integration)
 
@@ -71,10 +70,10 @@ xdg-open coverage/lcov-report/index.html
 The project enforces minimum coverage requirements:
 
 ```
-Branches:  70%
-Functions: 70%
-Lines:     70%
-Statements: 70%
+Branches:  50%
+Functions: 50%
+Lines:     50%
+Statements: 50%
 ```
 
 Tests will fail if coverage drops below these thresholds.
@@ -89,40 +88,7 @@ The coverage report includes:
 
 Navigate to `coverage/lcov-report/index.html` for detailed visualization.
 
-## Codecov Setup
-
-### Step 1: Enable Codecov for Your Repository
-
-1. Go to [Codecov.io](https://codecov.io)
-2. Click "Sign up with GitHub"
-3. Authorize Codecov access to your repositories
-4. Select the repository `gitpushforce`
-5. Codecov is now enabled!
-
 **Note**: For public repositories, Codecov works automatically with GitHub Actions.
-
-### Step 2: Add Codecov Badge to README (Optional)
-
-Go to your Codecov dashboard for the repository and copy the badge markdown:
-
-```markdown
-[![codecov](https://codecov.io/gh/YOUR_USERNAME/gitpushforce/branch/main/graph/badge.svg?token=YOUR_TOKEN)](https://codecov.io/gh/YOUR_USERNAME/gitpushforce)
-```
-
-Add to your README.md in the Features section.
-
-### Step 3: Configure GitHub Secrets (If Private Repo)
-
-If your repository is private:
-
-1. Go to [Codecov.io](https://codecov.io)
-2. Find your repository settings
-3. Copy the upload token
-4. Go to your GitHub repo → Settings → Secrets and variables → Actions
-5. Click "New repository secret"
-6. Name: `CODECOV_TOKEN`
-7. Value: Paste the token from Codecov
-8. The workflow will automatically use this secret
 
 ### How It Works
 
@@ -250,8 +216,8 @@ If coverage drops below thresholds:
 
 ```
 ✗ Coverage thresholds not met:
-  Lines:    65% < 70%
-  Functions: 68% < 70%
+  Lines:    45% < 50%
+  Functions: 48% < 50%
 ```
 
 **To fix**:
@@ -282,9 +248,8 @@ npm run test:coverage
 ### Codecov not receiving coverage
 
 1. Check GitHub Actions logs for errors
-2. Verify token is set (for private repos)
-3. Ensure `coverage-final.json` exists locally
-4. Check Codecov server status
+2. Ensure `coverage-final.json` exists locally
+3. Check Codecov server status
 
 ### Tests failing with module errors
 

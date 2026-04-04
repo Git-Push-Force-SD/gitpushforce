@@ -1,13 +1,15 @@
 # Campus Marketplace
 
-A modern, responsive landing page for the Campus Marketplace web application built with React, Tailwind CSS, and Vite.
+A modern, responsive web app for a Campus Marketplace. Built with React, Tailwind CSS, and Vite.
 
 ## Features
 
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- **Modern UI**: Pink primary color with blue-to-gold gradient accents
+- **Modern UI**: Green primary color with green-to-black gradient accents
 - **Interactive Components**: Navigation, hero section, features showcase, pricing info, and more
 - **Fast Performance**: Built with Vite for lightning-fast development and production builds
+
+[![codecov](https://codecov.io/gh/Git-Push-Force-SD/gitpushforce/graph/badge.svg?token=KZ7ZV3URUU)](https://codecov.io/gh/Git-Push-Force-SD/gitpushforce)
 
 ## Tech Stack
 
@@ -16,7 +18,7 @@ A modern, responsive landing page for the Campus Marketplace web application bui
 - **Vite**: Next-generation frontend build tool
 - **Lucide Icons**: Beautiful icon library
 
-## Project Structure
+## Project Structure Example
 
 ```
 ├── index.html          # Main HTML entry point
@@ -113,10 +115,10 @@ xdg-open coverage/lcov-report/index.html
 ### Coverage Requirements
 
 The project enforces minimum coverage thresholds:
-- **Lines**: 70%
-- **Statements**: 70%
-- **Functions**: 70%
-- **Branches**: 70%
+- **Lines**: 50%
+- **Statements**: 50%
+- **Functions**: 50%
+- **Branches**: 50%
 
 Tests will fail if coverage drops below these thresholds.
 
@@ -129,7 +131,6 @@ Tests will fail if coverage drops below these thresholds.
 ### Codecov Integration
 
 Coverage reports are automatically uploaded to Codecov on every push to `main`:
-- Visit [Codecov.io](https://codecov.io) to view coverage trends
 - Codecov comments on pull requests with coverage analysis
 - Coverage badges and reports available in the Codecov dashboard
 
@@ -397,7 +398,3 @@ git checkout main
 git pull origin main
 git branch -d feature/add-filter-functionality
 ```
-
-## License
-
-This project is part of the Software Design 2026 course at University of Witwatersrand.
