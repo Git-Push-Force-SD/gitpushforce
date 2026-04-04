@@ -1,4 +1,8 @@
-# Campus Marketplace
+# CodeCov
+
+[![codecov](https://codecov.io/gh/Git-Push-Force-SD/gitpushforce/graph/badge.svg?token=KZ7ZV3URUU)](https://codecov.io/gh/Git-Push-Force-SD/gitpushforce)
+
+## Campus Marketplace
 
 A modern, responsive web app for a Campus Marketplace. Built with React, Tailwind CSS, and Vite.
 
@@ -8,8 +12,6 @@ A modern, responsive web app for a Campus Marketplace. Built with React, Tailwin
 - **Modern UI**: Green primary color with green-to-black gradient accents
 - **Interactive Components**: Navigation, hero section, features showcase, pricing info, and more
 - **Fast Performance**: Built with Vite for lightning-fast development and production builds
-
-[![codecov](https://codecov.io/gh/Git-Push-Force-SD/gitpushforce/graph/badge.svg?token=KZ7ZV3URUU)](https://codecov.io/gh/Git-Push-Force-SD/gitpushforce)
 
 ## Tech Stack
 
