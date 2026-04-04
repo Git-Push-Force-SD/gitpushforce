@@ -64,6 +64,77 @@ This creates an optimized production build in the `dist/` folder.
 npm run preview
 ```
 
+## Testing
+
+This project uses Jest for unit testing and Codecov for coverage tracking.
+
+### Running Tests
+
+Run all tests once:
+```bash
+npm test
+```
+
+### Watch Mode
+
+Run tests in watch mode (re-run on file changes):
+```bash
+npm run test:watch
+```
+
+### Coverage Report
+
+Generate a coverage report with detailed metrics:
+```bash
+npm run test:coverage
+```
+
+This generates a coverage report in the `coverage/` directory and displays a summary in the terminal.
+
+### View Coverage Report
+
+After running `npm run test:coverage`, view the detailed HTML report:
+
+**macOS:**
+```bash
+open coverage/lcov-report/index.html
+```
+
+**Windows:**
+```bash
+start coverage/lcov-report/index.html
+```
+
+**Linux:**
+```bash
+xdg-open coverage/lcov-report/index.html
+```
+
+### Coverage Requirements
+
+The project enforces minimum coverage thresholds:
+- **Lines**: 70%
+- **Statements**: 70%
+- **Functions**: 70%
+- **Branches**: 70%
+
+Tests will fail if coverage drops below these thresholds.
+
+### Writing Tests
+
+- Place test files in the same directory as components with `.test.jsx` extension
+- Example: `App.jsx` → `App.test.jsx`
+- Follow the pattern: Arrange → Act → Assert
+
+### Codecov Integration
+
+Coverage reports are automatically uploaded to Codecov on every push to `main`:
+- Visit [Codecov.io](https://codecov.io) to view coverage trends
+- Codecov comments on pull requests with coverage analysis
+- Coverage badges and reports available in the Codecov dashboard
+
+For detailed testing and coverage setup instructions, see [TESTING_AND_COVERAGE.md](./TESTING_AND_COVERAGE.md).
+
 ## Customization
 
 ### Colors
