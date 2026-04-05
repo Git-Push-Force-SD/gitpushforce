@@ -27,7 +27,19 @@ jobs:
         run: |
           npm install
           npm run build --if-present
-          npm run test --if-present
+          npm run test:coverage --if-present
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: Git-Push-Force-SD/gitpushforce
+          file: ./coverage/coverage-final.json
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          verbose: true
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4

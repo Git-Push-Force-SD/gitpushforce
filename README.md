@@ -1,11 +1,15 @@
-# Campus Marketplace
+# CodeCov
 
-A modern, responsive landing page for the Campus Marketplace web application built with React, Tailwind CSS, and Vite.
+[![codecov](https://codecov.io/gh/Git-Push-Force-SD/gitpushforce/graph/badge.svg?token=KZ7ZV3URUU)](https://codecov.io/gh/Git-Push-Force-SD/gitpushforce)
+
+## Campus Marketplace
+
+A modern, responsive web app for a Campus Marketplace. Built with React, Tailwind CSS, and Vite.
 
 ## Features
 
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- **Modern UI**: Pink primary color with blue-to-gold gradient accents
+- **Modern UI**: Green primary color with green-to-black gradient accents
 - **Interactive Components**: Navigation, hero section, features showcase, pricing info, and more
 - **Fast Performance**: Built with Vite for lightning-fast development and production builds
 
@@ -16,7 +20,7 @@ A modern, responsive landing page for the Campus Marketplace web application bui
 - **Vite**: Next-generation frontend build tool
 - **Lucide Icons**: Beautiful icon library
 
-## Project Structure
+## Project Structure Example
 
 ```
 ├── index.html          # Main HTML entry point
@@ -63,6 +67,76 @@ This creates an optimized production build in the `dist/` folder.
 ```bash
 npm run preview
 ```
+
+## Testing
+
+This project uses Jest for unit testing and Codecov for coverage tracking.
+
+### Running Tests
+
+Run all tests once:
+```bash
+npm test
+```
+
+### Watch Mode
+
+Run tests in watch mode (re-run on file changes):
+```bash
+npm run test:watch
+```
+
+### Coverage Report
+
+Generate a coverage report with detailed metrics:
+```bash
+npm run test:coverage
+```
+
+This generates a coverage report in the `coverage/` directory and displays a summary in the terminal.
+
+### View Coverage Report
+
+After running `npm run test:coverage`, view the detailed HTML report:
+
+**macOS:**
+```bash
+open coverage/lcov-report/index.html
+```
+
+**Windows:**
+```bash
+start coverage/lcov-report/index.html
+```
+
+**Linux:**
+```bash
+xdg-open coverage/lcov-report/index.html
+```
+
+### Coverage Requirements
+
+The project enforces minimum coverage thresholds:
+- **Lines**: 50%
+- **Statements**: 50%
+- **Functions**: 50%
+- **Branches**: 50%
+
+Tests will fail if coverage drops below these thresholds.
+
+### Writing Tests
+
+- Place test files in the same directory as components with `.test.jsx` extension
+- Example: `App.jsx` → `App.test.jsx`
+- Follow the pattern: Arrange → Act → Assert
+
+### Codecov Integration
+
+Coverage reports are automatically uploaded to Codecov on every push to `main`:
+- Codecov comments on pull requests with coverage analysis
+- Coverage badges and reports available in the Codecov dashboard
+
+For detailed testing and coverage setup instructions, see [TESTING_AND_COVERAGE.md](./TESTING_AND_COVERAGE.md).
 
 ## Customization
 
@@ -326,7 +400,3 @@ git checkout main
 git pull origin main
 git branch -d feature/add-filter-functionality
 ```
-
-## License
-
-This project is part of the Software Design 2026 course at University of Witwatersrand.
