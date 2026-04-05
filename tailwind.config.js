@@ -7,20 +7,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: '#d4f1e4',
-          100: '#a8e3ca',
-          400: '#396447',
-          500: '#396447',
-          600: '#396447',
-          700: '#0f5027',
-        },
+        primary: '#3cc973',
+        'primary-hover': '#3cc973',
         dark: '#1b1b1b',
-        light: '#f3f3f7',
+        'dark-muted': '#334155',
+        'text-muted': '#4a4a4a',
+        offwhite: '#ebebd3',
+        light: '#f1f5f9',
       },
-      backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, #1f7a3d 0%, #1b1b1b 100%)',
-        'gradient-secondary': 'linear-gradient(135deg, #1f7a3d 0%, #1b1b1b 50%, #2a9a52 100%)',
+      fontFamily: {
+        main: ['Inter', 'sans-serif'],
+        display: ['Anton', 'sans-serif'],
+      },
+      animation: {
+        'spin-slow': 'spin 15s linear infinite',
+        'bounce-slow': 'bounce 2s infinite',
       }
     },
   },
