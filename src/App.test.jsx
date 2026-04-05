@@ -5,79 +5,12 @@ import App from './App'
 describe('App Component', () => {
   test('renders without crashing', () => {
     render(<App />)
-    const uniMartTexts = screen.getAllByText('UniMart')
-    expect(uniMartTexts.length).toBeGreaterThan(0)
+    expect(screen.getByRole('main')).toBeInTheDocument()
   })
 
-//   test('renders navigation header', () => {
-//     render(<App />)
-//     expect(screen.getByRole('navigation')).toBeInTheDocument()
-//   })
-
-  test('displays main hero section', () => {
+  test('renders header with UNIMART logo', () => {
     render(<App />)
-    expect(screen.getByText(/Buy, Sell & Trade/i)).toBeInTheDocument()
-  })
-
-  test('shows features heading', () => {
-    render(<App />)
-    expect(screen.getByText('Powerful Features')).toBeInTheDocument()
-  })
-
-  test('displays all feature cards', () => {
-    render(<App />)
-    const features = [
-      'Smart Browsing',
-      'Secure Trading',
-      'In-App Messaging',
-      'Ratings & Reviews',
-      'Price Insights',
-      'Easy Payments',
-    ]
-    features.forEach((feature) => {
-      expect(screen.getByText(feature)).toBeInTheDocument()
-    })
-  })
-
-  test('renders how it works section', () => {
-    render(<App />)
-    expect(screen.getByText('How It Works')).toBeInTheDocument()
-    expect(screen.getByText('Create Account')).toBeInTheDocument()
-    expect(screen.getByText('List Items')).toBeInTheDocument()
-    expect(screen.getByText('Connect')).toBeInTheDocument()
-    expect(screen.getByText('Trade Safely')).toBeInTheDocument()
-  })
-
-  test('displays statistics section', () => {
-    render(<App />)
-    expect(screen.getByText('10K+')).toBeInTheDocument()
-    expect(screen.getByText('50K+')).toBeInTheDocument()
-    expect(screen.getByText('98%')).toBeInTheDocument()
-  })
-
-  test('shows call to action section', () => {
-    render(<App />)
-    expect(screen.getByText('Ready to Start Trading?')).toBeInTheDocument()
-    expect(screen.getByText('Create Your Account Today')).toBeInTheDocument()
-  })
-
-  test('renders footer', () => {
-    render(<App />)
-    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
-    const allRights = screen.getByText(/2026 UniMart/i)
-    expect(allRights).toBeInTheDocument()
-  })
-
-  test('has mobile menu button', () => {
-    render(<App />)
-    const buttons = screen.getAllByRole('button')
-    expect(buttons.length).toBeGreaterThan(0)
-  })
-
-  test('mobile menu button is present on mobile view', () => {
-    render(<App />)
-    const navButtons = screen.getAllByRole('button')
-    expect(navButtons.length).toBeGreaterThan(0)
+    expect(screen.getByText('UNIMART')).toBeInTheDocument()
   })
 
   test('displays navigation links', () => {
@@ -86,28 +19,148 @@ describe('App Component', () => {
     expect(links.length).toBeGreaterThan(0)
   })
 
-  test('renders main element', () => {
+  test('displays How It Works and Safety navigation links', () => {
     render(<App />)
-    const main = screen.getByRole('main')
-    expect(main).toBeInTheDocument()
+    const howitWorksLinks = screen.getAllByText('How It Works')
+    const safetyLinks = screen.getAllByText('Safety')
+    expect(howitWorksLinks.length).toBeGreaterThan(0)
+    expect(safetyLinks.length).toBeGreaterThan(0)
   })
 
-  test('displays sign in and get started buttons', () => {
+  test('displays Sign In button', () => {
     render(<App />)
-    const getStartedButtons = screen.getAllByText('Get Started')
+    const signInButtons = screen.getAllByText(/Sign [Ii]n/)
+    expect(signInButtons.length).toBeGreaterThan(0)
+  })
+
+  test('has mobile menu button', () => {
+    render(<App />)
+    const buttons = screen.getAllByRole('button')
+    expect(buttons.length).toBeGreaterThan(0)
+  })
+
+  test('displays hero heading with SAFE TRADES FOR VERIFIED STUDENTS', () => {
+    render(<App />)
+    expect(screen.getByText(/SAFE TRADES/i)).toBeInTheDocument()
+    expect(screen.getByText(/VERIFIED/i)).toBeInTheDocument()
+    expect(screen.getByText(/STUDENTS/i)).toBeInTheDocument()
+  })
+
+  test('displays hero description text', () => {
+    render(<App />)
+    expect(screen.getByText(/A secure campus marketplace where students can buy, sell, and trade/i)).toBeInTheDocument()
+  })
+
+  test('displays Browse Marketplace button', () => {
+    render(<App />)
+    expect(screen.getByText(/Browse Marketplace/i)).toBeInTheDocument()
+  })
+
+  test('displays Get started button in hero', () => {
+    render(<App />)
+    const getStartedButtons = screen.getAllByText('Get started')
     expect(getStartedButtons.length).toBeGreaterThan(0)
   })
 
-  test('hero section has call to action buttons', () => {
+  test('displays category hashtags', () => {
     render(<App />)
-    expect(screen.getByText('Browse Items')).toBeInTheDocument()
-    expect(screen.getByText('List an Item')).toBeInTheDocument()
+    expect(screen.getByText('#TECH')).toBeInTheDocument()
+    expect(screen.getByText('#CAMPUS ESSENTIALS')).toBeInTheDocument()
   })
 
-  test('feature cards have descriptions', () => {
+  test('displays verified accounts section', () => {
     render(<App />)
-    expect(screen.getByText(/Search, filter by category/i)).toBeInTheDocument()
-    expect(screen.getByText(/Safe drop-off and collection/i)).toBeInTheDocument()
+    expect(screen.getByText(/verified accounts/i)).toBeInTheDocument()
+  })
+
+  test('displays Designed for Students section', () => {
+    render(<App />)
+    expect(screen.getByText(/Designed for Students/i)).toBeInTheDocument()
+  })
+
+  test('displays parallel text section with product categories', () => {
+    render(<App />)
+    expect(screen.getByText('TEXTBOOKS')).toBeInTheDocument()
+    expect(screen.getByText('ELECTRONICS')).toBeInTheDocument()
+    expect(screen.getByText('CLOTHING')).toBeInTheDocument()
+    expect(screen.getByText('AND MORE')).toBeInTheDocument()
+  })
+
+  test('displays List in Minutes card', () => {
+    render(<App />)
+    expect(screen.getByText('List in Minutes')).toBeInTheDocument()
+    expect(screen.getByText(/Add an item, price, and description/i)).toBeInTheDocument()
+  })
+
+  test('displays Message Safely card', () => {
+    render(<App />)
+    expect(screen.getByText('Message Safely')).toBeInTheDocument()
+    expect(screen.getByText(/Talk to buyers and sellers inside the platform/i)).toBeInTheDocument()
+  })
+
+  test('displays Secure Exchange card', () => {
+    render(<App />)
+    expect(screen.getByText('Secure Exchange')).toBeInTheDocument()
+    expect(screen.getByText(/Items are exchanged through a structured campus process/i)).toBeInTheDocument()
+  })
+
+  test('displays Trusted System section', () => {
+    render(<App />)
+    expect(screen.getByText('TRUSTED SYSTEM')).toBeInTheDocument()
+    expect(screen.getByText(/Secure Campus/i)).toBeInTheDocument()
+    expect(screen.getByText(/Exchange System/i)).toBeInTheDocument()
+  })
+
+  test('displays Browse The Feed heading', () => {
+    render(<App />)
+    expect(screen.getByText(/Browse The Feed/i)).toBeInTheDocument()
+  })
+
+  test('displays product cards', () => {
+    render(<App />)
+    expect(screen.getByText('Sony WH-1000XM4')).toBeInTheDocument()
+    expect(screen.getByText('Linear Algebra 8th Ed')).toBeInTheDocument()
+    expect(screen.getByText('Nike Dunks Low')).toBeInTheDocument()
+  })
+
+  test('displays product prices', () => {
+    render(<App />)
+    expect(screen.getByText('R8000')).toBeInTheDocument()
+    expect(screen.getByText('R1000')).toBeInTheDocument()
+    expect(screen.getByText('R2100')).toBeInTheDocument()
+  })
+
+  test('displays product conditions', () => {
+    render(<App />)
+    expect(screen.getByText('Like New')).toBeInTheDocument()
+    expect(screen.getByText('Used - Good')).toBeInTheDocument()
+    expect(screen.getByText('Worn Once')).toBeInTheDocument()
+  })
+
+  test('displays View All Marketplace button', () => {
+    render(<App />)
+    expect(screen.getByText(/View All Marketplace/i)).toBeInTheDocument()
+  })
+
+  test('displays footer CTA with BUY SELL TRADE SAFELY', () => {
+    render(<App />)
+    expect(screen.getByText(/BUY. SELL. TRADE./i)).toBeInTheDocument()
+    expect(screen.getByText('SAFELY')).toBeInTheDocument()
+  })
+
+  test('displays footer Platform links', () => {
+    render(<App />)
+    expect(screen.getByText('Platform')).toBeInTheDocument()
+  })
+
+  test('displays footer Trust links', () => {
+    render(<App />)
+    expect(screen.getByText('Trust')).toBeInTheDocument()
+  })
+
+  test('displays footer Account links', () => {
+    render(<App />)
+    expect(screen.getByText('Account')).toBeInTheDocument()
   })
 
   test('all navigation links have href attributes', () => {
@@ -118,9 +171,9 @@ describe('App Component', () => {
     })
   })
 
-  test('renders correct page title', () => {
+  test('renders footer UNIMART text', () => {
     render(<App />)
-    const mainContent = screen.getAllByText('UniMart')
-    expect(mainContent[0]).toBeInTheDocument()
+    const uniMartTexts = screen.getAllByText('UNIMART')
+    expect(uniMartTexts.length).toBeGreaterThan(1) // header and footer
   })
 })
