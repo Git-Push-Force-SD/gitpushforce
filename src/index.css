@@ -1,17 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer components {
-  .btn-primary {
-    @apply px-6 py-3 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-colors duration-300;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+  body {
+    @apply bg-offwhite text-dark font-main antialiased overflow-x-hidden;
+  }
+}
+
+@layer utilities {
+  .text-outline {
+    -webkit-text-stroke: 1px #121212;
+    color: transparent;
+  }
+  
+  .text-outline-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .text-outline-wrapper::after {
+    content: ''; 
+    position: absolute; 
+    top: 50%; left: 50%; 
+    transform: translate(-50%, -50%);
+    width: 110%; height: 140%; 
+    border: 2px solid #ff5722; 
+    border-radius: 50%;
   }
 
-  .btn-secondary {
-    @apply px-6 py-3 border-2 border-primary-500 text-primary-500 font-semibold rounded-lg hover:bg-primary-50 transition-colors duration-300;
+  .reveal { 
+    opacity: 0; 
+    transform: translateY(30px); 
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); 
   }
-
-  .gradient-text {
-    @apply bg-gradient-primary bg-clip-text text-transparent;
+  .reveal.visible { 
+    opacity: 1; 
+    transform: translateY(0); 
   }
 }
