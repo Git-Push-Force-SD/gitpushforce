@@ -1,0 +1,334 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap');
+
+.login-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+  background-color: #E6F5EC; /* Soft pastel green matching inspiration */
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
+}
+
+/* --- Floating Background Animations --- */
+.floating-shapes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.shape {
+  position: absolute;
+  background-color: white;
+  opacity: 0.6;
+  border-radius: 8px;
+  animation: floatUp 20s infinite linear;
+}
+
+.shape-1 {
+  width: 40px; height: 40px;
+  left: 10%; top: 80%;
+  animation-duration: 25s;
+  transform: rotate(20deg);
+}
+.shape-2 {
+  width: 80px; height: 80px;
+  left: 85%; top: 60%;
+  opacity: 0.3;
+  border-radius: 16px;
+  animation-duration: 35s;
+  transform: rotate(45deg);
+}
+.shape-3 {
+  width: 25px; height: 25px;
+  left: 20%; top: 20%;
+  border-radius: 50%;
+  animation-duration: 18s;
+}
+.shape-4 {
+  width: 100px; height: 20px;
+  left: 70%; top: 15%;
+  transform: rotate(-30deg);
+  animation-duration: 22s;
+  opacity: 0.4;
+}
+.shape-5 {
+  width: 15px; height: 40px;
+  left: 5%; top: 40%;
+  transform: rotate(15deg);
+  animation-duration: 15s;
+}
+.shape-6 {
+  width: 60px; height: 60px;
+  left: 50%; top: 90%;
+  border-radius: 50%;
+  background-color: transparent;
+  border: 4px solid rgba(255, 255, 255, 0.4);
+  animation-duration: 28s;
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(100px) rotate(0deg); opacity: 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.6; }
+  100% { transform: translateY(-800px) rotate(360deg); opacity: 0; }
+}
+
+/* --- Main Login Card --- */
+.login-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1000px;
+  height: 600px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.05);
+  display: flex;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: cardFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cardFadeIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Left Side: Form --- */
+.login-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 3rem 4rem;
+  background: white;
+  position: relative;
+}
+
+.login-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: auto;
+}
+
+.mobile-header {
+  display: none;
+}
+
+.login-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.back-btn {
+  background: white;
+  border: 1px solid #f3f4f6;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.back-btn:hover {
+  background: #f9fafb;
+  color: #111827;
+  border-color: #e5e7eb;
+}
+
+.logo-text {
+  font-size: 1.6rem;
+  font-weight: normal;
+  color: #111827;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  font-family: 'Anton', sans-serif;
+}
+
+.lang-select {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.login-form-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.greeting {
+  font-size: 2.2rem;
+  font-weight: normal;
+  color: #111827;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  font-family: 'Anton', sans-serif;
+}
+
+.greeting-sub {
+  font-size: 0.9rem;
+  color: #6b7280;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  max-width: 280px;
+}
+
+/* button matching reference image */
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+  padding: 14px 24px;
+  background-color: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px; /* Pill shape */
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.google-btn:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.google-btn:active {
+  background-color: #f3f4f6;
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.login-right {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.right-bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: transform 12s ease-out;
+}
+
+.login-card:hover .right-bg-image {
+  transform: scale(1.04);
+}
+
+.typing-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
+  width: 90%;
+  text-align: center;
+  container-type: inline-size;
+}
+
+.typing-text-container {
+  display: inline-block;
+  color: white;
+  font-size: 2.5rem;
+  font-size: min(2.8rem, 7.5cqi);
+  font-weight: normal;
+  font-family: 'Anton', sans-serif;
+  text-transform: uppercase;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 4px solid transparent; 
+  text-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  margin: 0 auto;
+  max-width: 0;
+  /* 'both' maps 0% frame during delay. Blink iterations map to strict limit to stop animating. */
+  animation: typing 2.5s steps(32, end) 0.5s both, blink-caret 0.75s step-end 6 forwards;
+}
+
+@keyframes typing {
+  from { max-width: 0; }
+  to { max-width: 19em; } /* Scaled up safely to accommodate Anton font width changes naturally */
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent }
+  50% { border-color: white; }
+}
+
+@media (max-width: 850px) {
+  .login-container {
+    padding: 6rem 1.5rem 2rem 1.5rem; /* Add padding to push the card down and create breathing room */
+  }
+  .login-card {
+    flex-direction: column;
+    height: auto;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  }
+  .mobile-header {
+    display: flex;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    padding: 1.5rem 1.5rem;
+    background: transparent;
+  }
+  .mobile-header .back-btn {
+    background: white;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    color: #111827;
+  }
+  .desktop-header {
+    display: none;
+  }
+  .login-right {
+    min-height: 350px;
+    order: -1;
+  }
+  .login-left {
+    padding: 2.5rem 2rem;
+  }
+  .typing-text-container {
+    font-size: 1.5rem;
+    font-size: min(1.8rem, 6.5cqi);
+  }
+}

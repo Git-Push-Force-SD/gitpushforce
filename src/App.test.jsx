@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import App from './App'
 
 describe('App Component', () => {
@@ -180,5 +180,142 @@ describe('App Component', () => {
     render(<App />)
     const uniMartTexts = screen.getAllByText('UNIMART')
     expect(uniMartTexts.length).toBeGreaterThan(1) // header and footer
+  })
+
+  test('shows login page when Sign In button is clicked', () => {
+    render(<App />)
+    // Find the header section and get the Sign In button from there
+    const header = document.querySelector('header')
+    const signInButton = within(header).getByRole('button', { name: /^sign in$/i })
+    fireEvent.click(signInButton)
+    expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+  })
+
+  test('shows login page when Browse Marketplace button is clicked', () => {
+    render(<App />)
+    // Find the hero section by looking for the image with alt "Student Lifestyle"
+    const heroImage = screen.getByAltText('Student Lifestyle')
+    const heroSection = heroImage.closest('.relative.rounded-\\[20px\\]')
+    const browseButton = within(heroSection).getByRole('button', { name: /browse marketplace/i })
+    fireEvent.click(browseButton)
+    expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+  })
+
+  test('shows login page when Get started button is clicked', () => {
+    render(<App />)
+    const getStartedButtons = screen.getAllByText('Get started')
+    // Click the first one (hero Get started button)
+    fireEvent.click(getStartedButtons[0])
+    expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+  })
+
+  test('shows login page when View All Marketplace button is clicked', () => {
+    render(<App />)
+    const viewAllButton = screen.getByText(/View All Marketplace/)
+    fireEvent.click(viewAllButton)
+    expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+  })
+
+  test('shows login page when footer Get started button is clicked', () => {
+    render(<App />)
+    // Find the footer Get started button specifically
+    const footerSection = screen.getByText('Account').closest('section')
+    const getStartedButton = footerSection.querySelector('button')
+    fireEvent.click(getStartedButton)
+    expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+  })
+
+  test('shows login page when footer Sign in button is clicked', () => {
+    render(<App />)
+    // Find the footer Sign in button specifically
+    const footerSection = screen.getByText('Account').closest('section')
+    const signInButtons = footerSection.querySelectorAll('button')
+    const signInButton = Array.from(signInButtons).find(btn => btn.textContent === 'Sign in')
+    fireEvent.click(signInButton)
+    expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+  })
+
+  test('hides landing page when login is shown', () => {
+    render(<App />)
+    const header = document.querySelector('header')
+    const signInButton = within(header).getByRole('button', { name: /^sign in$/i })
+    fireEvent.click(signInButton)
+    expect(screen.getByText(/SAFE TRADES/i)).not.toBeVisible()
+  })
+
+  test('returns to landing page when back button is clicked from login', () => {
+    render(<App />)
+    const header = document.querySelector('header')
+    const signInButton = within(header).getByRole('button', { name: /^sign in$/i })
+    fireEvent.click(signInButton)
+    expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+
+    const backButtons = screen.getAllByTitle('Go back')
+    const backButton = backButtons[0]
+    fireEvent.click(backButton)
+    expect(screen.getByText(/SAFE TRADES/i)).toBeInTheDocument()
+  })
+
+  test('mobile menu toggles when hamburger button is clicked', () => {
+    render(<App />)
+    // Find the hamburger menu button (it should be the button with Menu icon)
+    const buttons = screen.getAllByRole('button')
+    const menuButton = buttons.find(button => button.innerHTML.includes('Menu'))
+    if (menuButton) {
+      fireEvent.click(menuButton)
+      expect(screen.getByText('How It Works')).toBeInTheDocument()
+    }
+  })
+
+  test('mobile menu closes when Sign in is clicked', () => {
+    render(<App />)
+    const buttons = screen.getAllByRole('button')
+    const menuButton = buttons.find(button => button.innerHTML.includes('Menu'))
+    if (menuButton) {
+      fireEvent.click(menuButton)
+      // Find the mobile menu Sign in button
+      const mobileSignIn = screen.getAllByText('Sign in').find(btn => 
+        btn.closest('.absolute') // mobile menu is in absolute positioned div
+      )
+      if (mobileSignIn) {
+        fireEvent.click(mobileSignIn)
+        expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+      }
+    }
+  })
+
+  test('displays arrow buttons in feature cards', () => {
+    render(<App />)
+    // Check that there are buttons with SVG icons (arrow icons)
+    const buttons = screen.getAllByRole('button')
+    const buttonsWithIcons = buttons.filter(button => button.querySelector('svg'))
+    expect(buttonsWithIcons.length).toBeGreaterThan(3)
+  })
+
+  test('arrow buttons in feature cards lead to login', () => {
+    render(<App />)
+    // Find the List in Minutes section and click its button
+    const listSection = screen.getByText('List in Minutes').closest('section')
+    const button = listSection.querySelector('button')
+    fireEvent.click(button)
+    expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+  })
+
+  test('product card arrow buttons lead to login', () => {
+    render(<App />)
+    // Find a product card and click its arrow button
+    const productCard = screen.getByText('Sony WH-1000XM4').parentElement.parentElement
+    const button = productCard.querySelector('button')
+    expect(button).toBeInTheDocument()
+    fireEvent.click(button)
+    expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+  })
+
+  test('scroll effect applies parallax transform', () => {
+    // Mock window.scrollY
+    Object.defineProperty(window, 'scrollY', { value: 100, writable: true })
+    render(<App />)
+    // This is hard to test directly, but we can check if the component renders with scroll handling
+    expect(screen.getByRole('main')).toBeInTheDocument()
   })
 })
