@@ -40,10 +40,10 @@ describe('LoginPage Component', () => {
     expect(mockOnBack).toHaveBeenCalledTimes(1)
   })
 
-  test('displays language selector', () => {
-    render(<LoginPage onBack={mockOnBack} />)
-    expect(screen.getByText('EN')).toBeInTheDocument()
-  })
+test('displays welcome message', () => {
+  render(<LoginPage onBack={mockOnBack} />)
+  expect(screen.getByText('Welcome back!')).toBeInTheDocument()
+})
 
   test('displays floating shapes', () => {
     render(<LoginPage onBack={mockOnBack} />)
