@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Menu, X, ArrowRight, ShieldCheck, MapPin, Search } from 'lucide-react';
 import './index.css';
 import LoginPage from './LoginPage';
+import AdminPanel from './AdminPanel';
+import { supabase } from './utils/supabase';
 
 
 const RevealOnScroll = ({ children, className = "", style = {}, delay = 0 }) => {
@@ -37,6 +39,90 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check for existing session and subscribe to auth changes
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user || null);
+        
+        if (session?.user) {
+          // Fetch user role from database
+          const { data } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+          setUserRole(data?.role || 'user');
+        }
+      } catch (error) {
+        console.error('Error checking user:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUser();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const email = session.user.email;
+        
+        // Validate Wits email for all users (including Google OAuth)
+        const witsEmailPattern = /^[0-9]+@students\.wits\.ac\.za$/;
+        if (!witsEmailPattern.test(email)) {
+          await supabase.auth.signOut();
+          setUser(null);
+          setUserRole(null);
+          console.warn('Unauthorized email domain:', email);
+          return;
+        }
+
+        setUser(session.user);
+        
+        // Check if user exists in database
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (existingUser) {
+          setUserRole(existingUser.role || 'user');
+        } else {
+          // Create user profile for new users (e.g., from Google OAuth)
+          const adminUsers = ['2624301@students.wits.ac.za', '2685923@students.wits.ac.za', '2677770@students.wits.ac.za', '2549625@students.wits.ac.za', '2590255@students.wits.ac.za', '2594438@students.wits.ac.za'];
+          const isAdmin = adminUsers.includes(email);
+          
+          const { error: dbError } = await supabase
+            .from('users')
+            .insert([{
+              id: session.user.id,
+              email: email,
+              role: isAdmin ? 'admin' : 'user',
+              created_at: new Date()
+            }]);
+          
+          if (!dbError) {
+            setUserRole(isAdmin ? 'admin' : 'user');
+          } else {
+            console.error('Database error creating user:', dbError);
+            setUserRole('user');
+          }
+        }
+      } else {
+        setUser(null);
+        setUserRole(null);
+      }
+    });
+
+    return () => subscription?.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -47,6 +133,23 @@ export default function App() {
   const parallaxStyle = (speed) => ({
     transform: `translateY(${scrollY * speed}px)`
   });
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setUserRole(null);
+    setShowLogin(false);
+  };
+
+  if (loading) {
+    return (
+      <main className="w-full min-h-screen bg-offwhite flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-dark text-lg">Loading...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="w-full min-h-screen bg-offwhite">
@@ -67,11 +170,24 @@ export default function App() {
             </ul>
 
             <section className="flex-1 flex justify-end items-center gap-4">
-              <button
-                onClick={() => setShowLogin(true)}
-                className="hidden md:block bg-dark text-white px-6 py-2.5 rounded-full font-semibold text-[0.85rem] hover:bg-primary transition-colors">
-                Sign In
-              </button>
+              {user ? (
+                <section className="flex items-center gap-4">
+                  <span className="hidden md:block text-sm text-dark">
+                    {user.email} {userRole === 'admin' && <span className="text-primary font-semibold">[Admin]</span>}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="hidden md:block bg-red-600 text-white px-6 py-2.5 rounded-full font-semibold text-[0.85rem] hover:bg-red-700 transition-colors">
+                    Sign Out
+                  </button>
+                </section>
+              ) : (
+                <button
+                  onClick={() => setShowLogin(true)}
+                  className="hidden md:block bg-dark text-white px-6 py-2.5 rounded-full font-semibold text-[0.85rem] hover:bg-primary transition-colors">
+                  Sign In
+                </button>
+              )}
               <button
                 className="md:hidden flex items-center justify-center text-dark"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -85,11 +201,22 @@ export default function App() {
             <section className="absolute top-full left-0 w-full bg-offwhite shadow-md flex flex-col items-center gap-6 py-8 z-40 md:hidden">
               <a href="#" className="text-dark font-semibold uppercase text-sm">How It Works</a>
               <a href="#" className="text-dark font-semibold uppercase text-sm">Safety</a>
-              <button
-                onClick={() => { setShowLogin(true); setIsMenuOpen(false); }}
-                className="bg-dark text-white px-6 py-2 rounded-full font-semibold text-sm">
-                Sign in
-              </button>
+              {user ? (
+                <>
+                  <span className="text-dark text-sm">{user.email}</span>
+                  <button
+                    onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                    className="bg-red-600 text-white px-6 py-2 rounded-full font-semibold text-sm">
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => { setShowLogin(true); setIsMenuOpen(false); }}
+                  className="bg-dark text-white px-6 py-2 rounded-full font-semibold text-sm">
+                  Sign in
+                </button>
+              )}
             </section>
           )}
         </header>
@@ -315,6 +442,11 @@ export default function App() {
             </button>
           </section>
         </section>
+
+        {/* Admin Panel */}
+        {user && userRole === 'admin' && (
+          <AdminPanel user={user} userRole={userRole} />
+        )}
 
         {/* 6. Massive Footer CTA */}
         <footer className="pt-32 px-5 md:px-10 flex flex-col items-center text-center relative overflow-hidden bg-dark text-white">
