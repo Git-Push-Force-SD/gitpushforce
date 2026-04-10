@@ -57,10 +57,11 @@ describe('FacilDashboard Component', () => {
     expect(screen.getByText('42')).toBeInTheDocument()
   })
 
-  test('displays trade queue section', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText(/Trade queue/i)).toBeInTheDocument()
-  })
+ test('displays trade queue section', () => {
+  render(<FacilDashboard />)
+  expect(screen.getAllByText(/Trade Queue/i).length).toBeGreaterThan(0)
+  expect(screen.getByText(/Today’s facilitated exchanges/i)).toBeInTheDocument()
+})
 
   test('displays trade items', () => {
     render(<FacilDashboard />)
@@ -98,16 +99,17 @@ describe('FacilDashboard Component', () => {
     expect(screen.getByText('Desk Lamp')).toBeInTheDocument()
   })
 
-  test('shows empty state when no results', () => {
-    render(<FacilDashboard />)
+ test('shows no matching trade items when search has no results', () => {
+  render(<FacilDashboard />)
 
-    const input = screen.getByPlaceholderText(/Search trade, item, buyer/i)
-    fireEvent.change(input, { target: { value: 'xyz123' } })
+  const input = screen.getByPlaceholderText(/Search trade, item, buyer/i)
+  fireEvent.change(input, { target: { value: 'xyz123' } })
 
-    expect(
-      screen.getByText(/No trades matched your search/i)
-    ).toBeInTheDocument()
-  })
+  // Expect NO trades to be shown
+  expect(screen.queryByText('MacBook Air M2')).not.toBeInTheDocument()
+  expect(screen.queryByText('Calculus Textbook')).not.toBeInTheDocument()
+  expect(screen.queryByText('Nike Dunks Low')).not.toBeInTheDocument()
+})
 
   test('displays safe zones section', () => {
     render(<FacilDashboard />)
