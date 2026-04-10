@@ -25,3 +25,12 @@ class MockIntersectionObserver {
 
 global.IntersectionObserver = MockIntersectionObserver;
 window.IntersectionObserver = MockIntersectionObserver;
+
+// Mock window.location
+delete window.location;
+window.location = { 
+  origin: 'http://localhost:3000',
+  pathname: '/',
+  hash: '',
+  search: '',
+};
