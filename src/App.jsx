@@ -33,6 +33,7 @@ const RevealOnScroll = ({ children, className = "", style = {}, delay = 0 }) => 
 };
 
 export default function App() {
+  //return <FacilDashboard />; // Uncomment this line to render the dashboard for testing, comment the other 2 lines
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   
