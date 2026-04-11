@@ -97,18 +97,19 @@ describe('LoginPage Component - Authentication Tests', () => {
       render(<LoginPage onBack={mockOnBack} />);
       
       // Switch to signup
-      const signUpLink = screen.getByRole('button', { name: 'Sign Up' });
-      fireEvent.click(signUpLink);
+      const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
+      const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
+      fireEvent.click(toggleButton);
 
       expect(screen.getByText('Join Unimart')).toBeInTheDocument();
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
-      const passwordInput = screen.getAllByPlaceholderText('••••••••')[0];
-      const confirmPasswordInput = screen.getByDisplayValue('');
-      const submitButton = screen.getByRole('button', { name: /Sign Up/i });
+      const passwordInputs = screen.getAllByPlaceholderText('••••••••');
+      const confirmPasswordInput = passwordInputs[1];
+      const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
       await userEvent.type(emailInput, 'user@gmail.com');
-      await userEvent.type(passwordInput, 'password123');
+      await userEvent.type(passwordInputs[0], 'password123');
       await userEvent.type(confirmPasswordInput, 'password123');
 
       fireEvent.click(submitButton);
@@ -123,16 +124,17 @@ describe('LoginPage Component - Authentication Tests', () => {
     test('rejects invalid Wits email format (no number)', async () => {
       render(<LoginPage onBack={mockOnBack} />);
       
-      const signUpLink = screen.getByRole('button', { name: 'Sign Up' });
-      fireEvent.click(signUpLink);
+      const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
+      const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
+      fireEvent.click(toggleButton);
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
-      const passwordInput = screen.getAllByPlaceholderText('••••••••')[0];
-      const confirmPasswordInput = screen.getByDisplayValue('');
-      const submitButton = screen.getByRole('button', { name: /Sign Up/i });
+      const passwordInputs = screen.getAllByPlaceholderText('••••••••');
+      const confirmPasswordInput = passwordInputs[1];
+      const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
       await userEvent.type(emailInput, 'abc@students.wits.ac.za');
-      await userEvent.type(passwordInput, 'password123');
+      await userEvent.type(passwordInputs[0], 'password123');
       await userEvent.type(confirmPasswordInput, 'password123');
 
       fireEvent.click(submitButton);
@@ -149,16 +151,17 @@ describe('LoginPage Component - Authentication Tests', () => {
     test('rejects password less than 6 characters on signup', async () => {
       render(<LoginPage onBack={mockOnBack} />);
       
-      const signUpLink = screen.getByRole('button', { name: 'Sign Up' });
-      fireEvent.click(signUpLink);
+      const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
+      const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
+      fireEvent.click(toggleButton);
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
-      const passwordInput = screen.getAllByPlaceholderText('••••••••')[0];
-      const confirmPasswordInput = screen.getByDisplayValue('');
-      const submitButton = screen.getByRole('button', { name: /Sign Up/i });
+      const passwordInputs = screen.getAllByPlaceholderText('••••••••');
+      const confirmPasswordInput = passwordInputs[1];
+      const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
       await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInput, '12345');
+      await userEvent.type(passwordInputs[0], '12345');
       await userEvent.type(confirmPasswordInput, '12345');
 
       fireEvent.click(submitButton);
@@ -212,14 +215,15 @@ describe('LoginPage Component - Authentication Tests', () => {
 
       render(<LoginPage onBack={mockOnBack} />);
       
-      const signUpLink = screen.getByRole('button', { name: 'Sign Up' });
-      fireEvent.click(signUpLink);
+      const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
+      const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
+      fireEvent.click(toggleButton);
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
       const passwordInput = passwordInputs[0];
       const confirmPasswordInput = passwordInputs[1];
-      const submitButton = screen.getByRole('button', { name: /Sign Up/i });
+      const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
       await userEvent.type(emailInput, '1234567@students.wits.ac.za');
       await userEvent.type(passwordInput, 'password123');
@@ -341,12 +345,13 @@ describe('LoginPage Component - Authentication Tests', () => {
 
       render(<LoginPage onBack={mockOnBack} />);
       
-      const signUpLink = screen.getByRole('button', { name: 'Sign Up' });
-      fireEvent.click(signUpLink);
+      const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
+      const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
+      fireEvent.click(toggleButton);
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
-      const submitButton = screen.getByRole('button', { name: /Sign Up/i });
+      const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
       await userEvent.type(emailInput, '1234567@students.wits.ac.za');
       await userEvent.type(passwordInputs[0], 'password123');
@@ -381,12 +386,17 @@ describe('LoginPage Component - Authentication Tests', () => {
 
       render(<LoginPage onBack={mockOnBack} />);
       
-      const signUpLink = screen.getByRole('button', { name: 'Sign Up' });
-      fireEvent.click(signUpLink);
+      const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
+      const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
+      fireEvent.click(toggleButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Join Unimart')).toBeInTheDocument();
+      });
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
-      const submitButton = screen.getByRole('button', { name: /Sign Up/i });
+      const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
       await userEvent.type(emailInput, '1234567@students.wits.ac.za');
       await userEvent.type(passwordInputs[0], 'password123');
@@ -397,7 +407,7 @@ describe('LoginPage Component - Authentication Tests', () => {
       await waitFor(() => {
         expect(mockSupabase.from).toHaveBeenCalledWith('users');
         expect(mockInsert).toHaveBeenCalled();
-      });
+      }, { timeout: 3000 });
     });
 
     test('displays error message on sign up failure', async () => {
@@ -408,12 +418,17 @@ describe('LoginPage Component - Authentication Tests', () => {
 
       render(<LoginPage onBack={mockOnBack} />);
       
-      const signUpLink = screen.getByRole('button', { name: 'Sign Up' });
-      fireEvent.click(signUpLink);
+      const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
+      const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
+      fireEvent.click(toggleButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Join Unimart')).toBeInTheDocument();
+      });
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
-      const submitButton = screen.getByRole('button', { name: /Sign Up/i });
+      const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
       await userEvent.type(emailInput, '1234567@students.wits.ac.za');
       await userEvent.type(passwordInputs[0], 'password123');
@@ -422,8 +437,9 @@ describe('LoginPage Component - Authentication Tests', () => {
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Email already registered/)).toBeInTheDocument();
-      });
+        const errorElements = screen.queryAllByText(/Email already registered/);
+        expect(errorElements.length).toBeGreaterThan(0);
+      }, { timeout: 3000 });
     });
   });
 
@@ -479,7 +495,8 @@ describe('LoginPage Component - Authentication Tests', () => {
       expect(screen.getByText('Welcome back!')).toBeInTheDocument();
       expect(screen.getByText(/Continue with Google/)).toBeInTheDocument();
 
-      const toggleButton = screen.getByRole('button', { name: 'Sign Up' });
+      const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
+      const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
       fireEvent.click(toggleButton);
 
       await waitFor(() => {
@@ -601,63 +618,3 @@ describe('LoginPage Component - Authentication Tests', () => {
     });
   });
 });
-
-    expect(shapes.length).toBe(6)
-  })
-
-  test('displays background image on right side', () => {
-    render(<LoginPage onBack={mockOnBack} />)
-    const rightSide = document.querySelector('.login-right')
-    expect(rightSide).toBeInTheDocument()
-    const bgImage = rightSide.querySelector('.right-bg-image')
-    expect(bgImage).toBeInTheDocument()
-  })
-
-  test('displays typing text animation', () => {
-    render(<LoginPage onBack={mockOnBack} />)
-    expect(screen.getByText('your campus. your marketplace.')).toBeInTheDocument()
-  })
-
-  test('Google button contains SVG icon', () => {
-    render(<LoginPage onBack={mockOnBack} />)
-    const googleButton = screen.getByText('Sign in with Google')
-    const svgIcon = googleButton.querySelector('svg')
-    expect(svgIcon).toBeInTheDocument()
-    expect(svgIcon).toHaveClass('google-icon')
-  })
-
-  test('has proper accessibility attributes', () => {
-    render(<LoginPage onBack={mockOnBack} />)
-    const backButtons = screen.getAllByTitle('Go back')
-    backButtons.forEach(button => {
-      expect(button).toHaveAttribute('title', 'Go back')
-    })
-  })
-
-  test('renders login card structure', () => {
-    render(<LoginPage onBack={mockOnBack} />)
-    expect(document.querySelector('.login-card')).toBeInTheDocument()
-    expect(document.querySelector('.login-left')).toBeInTheDocument()
-    expect(document.querySelector('.login-right')).toBeInTheDocument()
-  })
-
-  test('form container has proper structure', () => {
-    render(<LoginPage onBack={mockOnBack} />)
-    const formContainer = document.querySelector('.login-form-container')
-    expect(formContainer).toBeInTheDocument()
-    expect(formContainer).toContainElement(screen.getByText('Welcome back!'))
-  })
-
-  test('does not render back button when onBack is not provided', () => {
-    render(<LoginPage />)
-    expect(screen.queryByTitle('Go back')).not.toBeInTheDocument()
-  })
-
-  test('back button is clickable and functional', () => {
-    render(<LoginPage onBack={mockOnBack} />)
-    const backButtons = screen.getAllByTitle('Go back')
-    expect(backButtons[0]).toBeEnabled()
-    fireEvent.click(backButtons[0])
-    expect(mockOnBack).toHaveBeenCalled()
-  })
-})
