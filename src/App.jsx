@@ -5,6 +5,7 @@ import LoginPage from './LoginPage';
 import AdminPanel from './AdminPanel';
 import StudentDashboard from './StudentDashboard';
 import { supabase } from './utils/supabase';
+import { validateWitsEmail, resolveUserRole } from './utils/constants';
 
 
 const RevealOnScroll = ({ children, className = "", style = {}, delay = 0 }) => {
@@ -48,74 +49,78 @@ export default function App() {
   // Check for existing session and subscribe to auth changes
   useEffect(() => {
     const checkUser = async () => {
+      let sessionUser = null;
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user || null);
+        sessionUser = session?.user || null;
+        setUser(sessionUser);
 
-        if (session?.user) {
-          // Fetch user role from database
-          const { data } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-          setUserRole(data?.role || 'user');
+        if (sessionUser) {
+          try {
+            const { data, error } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', sessionUser.id)
+              .single();
+            if (error && error.code !== 'PGRST116') {
+              console.error('Error fetching user role:', error);
+            }
+            setUserRole(resolveUserRole(data?.role, sessionUser.email));
+          } catch (roleErr) {
+            console.error('Error fetching user role:', roleErr);
+            setUserRole(resolveUserRole(null, sessionUser.email));
+          }
         }
       } catch (error) {
         console.error('Error checking user:', error);
-      } finally {
-        setLoading(false);
+        if (sessionUser) {
+          setUserRole(resolveUserRole(null, sessionUser.email));
+        }
       }
     };
 
-    checkUser();
+    const maxWait = new Promise((resolve) => {
+      setTimeout(resolve, 12000);
+    });
+    Promise.race([checkUser(), maxWait]).finally(() => {
+      setLoading(false);
+    });
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const email = session.user.email;
 
-        // Validate Wits email for all users (including Google OAuth)
-        const witsEmailPattern = /^[0-9]+@students\.wits\.ac\.za$/;
-        if (!witsEmailPattern.test(email)) {
+        // Validate Wits email FIRST - reject if invalid
+        if (!validateWitsEmail(email)) {
+          console.warn('Unauthorized email domain:', email);
           await supabase.auth.signOut();
           setUser(null);
           setUserRole(null);
-          console.warn('Unauthorized email domain:', email);
           return;
         }
 
         setUser(session.user);
 
-        // Check if user exists in database
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-
-        if (existingUser) {
-          setUserRole(existingUser.role || 'user');
-        } else {
-          // Create user profile for new users (e.g., from Google OAuth)
-          const adminUsers = ['2624301@students.wits.ac.za', '2685923@students.wits.ac.za', '2677770@students.wits.ac.za', '2549625@students.wits.ac.za', '2590255@students.wits.ac.za', '2594438@students.wits.ac.za'];
-          const isAdmin = adminUsers.includes(email);
-
-          const { error: dbError } = await supabase
+        // Fetch user role from database (trigger creates it automatically)
+        try {
+          const { data: userData, error } = await supabase
             .from('users')
-            .insert([{
-              id: session.user.id,
-              email: email,
-              role: isAdmin ? 'admin' : 'user',
-              created_at: new Date()
-            }]);
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
 
-          if (!dbError) {
-            setUserRole(isAdmin ? 'admin' : 'user');
+          if (userData) {
+            setUserRole(resolveUserRole(userData.role, session.user.email));
+          } else if (error && error.code !== 'PGRST116') {
+            console.error('Error fetching user role:', error);
+            setUserRole(resolveUserRole(null, session.user.email));
           } else {
-            console.error('Database error creating user:', dbError);
-            setUserRole('user');
+            setUserRole(resolveUserRole(null, session.user.email));
           }
+        } catch (err) {
+          console.error('Error fetching user:', err);
+          setUserRole(resolveUserRole(null, session.user.email));
         }
       } else {
         setUser(null);
@@ -169,8 +174,8 @@ export default function App() {
     );
   }
 
-  if (user && userRole === 'user') {
-    return <StudentDashboard />;
+  if (user && (userRole === 'user' || userRole === 'admin')) {
+    return <StudentDashboard user={user} userRole={userRole} handleLogout={handleLogout} />;
   }
 
   if (showLogin) {

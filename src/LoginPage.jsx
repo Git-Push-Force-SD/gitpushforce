@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './LoginPage.css';
 import { ArrowLeft, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { supabase } from './utils/supabase';
+import { ADMIN_USERS, validateWitsEmail, isAdminUser } from './utils/constants';
 
 export default function LoginPage({ onBack }) {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -11,14 +12,6 @@ export default function LoginPage({ onBack }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [verificationSent, setVerificationSent] = useState(false);
-
-  // Admin user IDs - customize with your team members
-  const ADMIN_USERS = ['2624301@students.wits.ac.za', '2685923@students.wits.ac.za', '2677770@students.wits.ac.za', '2549625@students.wits.ac.za', '2590255@students.wits.ac.za', '2594438@students.wits.ac.za']; // Add your admin emails here
-
-  const validateWitsEmail = (email) => {
-    const witsPattern = /^[0-9]+@students\.wits\.ac\.za$/;
-    return witsPattern.test(email);
-  };
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -52,7 +45,7 @@ export default function LoginPage({ onBack }) {
         options: {
           emailRedirectTo: `${window.location.origin}`,
           data: {
-            role: ADMIN_USERS.includes(email) ? 'admin' : 'user'
+            role: isAdminUser(email) ? 'admin' : 'user'
           }
         }
       });
@@ -60,22 +53,7 @@ export default function LoginPage({ onBack }) {
       if (error) {
         setMessage({ type: 'error', text: error.message });
       } else {
-        // Create user profile in database
-        const { error: dbError } = await supabase
-          .from('users')
-          .insert([
-            {
-              id: data.user.id,
-              email: email,
-              role: ADMIN_USERS.includes(email) ? 'admin' : 'user',
-              created_at: new Date()
-            }
-          ]);
-
-        if (dbError) {
-          console.error('Database error:', dbError);
-        }
-
+        // Database trigger automatically creates user record
         setVerificationSent(true);
         setMessage({
           type: 'success',

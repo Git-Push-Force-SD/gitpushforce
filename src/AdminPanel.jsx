@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './utils/supabase';
-import { AlertCircle, CheckCircle, Loader, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { isAdminUser } from './utils/constants';
 
-export default function AdminPanel({ user, userRole }) {
+export default function AdminPanel({ user, userRole, onBack }) {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newStaffEmail, setNewStaffEmail] = useState('');
   const [newStaffName, setNewStaffName] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  // Only show admin panel to admins
-  if (userRole !== 'admin') {
+  const canAccessAdmin = userRole === 'admin' || isAdminUser(user?.email);
+  if (!canAccessAdmin) {
     return null;
   }
 
@@ -90,8 +91,30 @@ export default function AdminPanel({ user, userRole }) {
   };
 
   return (
-    <div className="admin-panel bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto my-8">
-      <h2 className="text-2xl font-bold text-dark mb-6">Admin Panel</h2>
+    <div className="admin-panel bg-offwhite min-h-screen">
+      {/* Header with Back Button */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-8 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {onBack && (
+              <button 
+                onClick={onBack}
+                className="text-dark hover:text-primary transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                title="Back to Dashboard"
+              >
+                <ArrowLeft size={24} className="stroke-[1.5]" />
+              </button>
+            )}
+            <h1 className="text-2xl font-bold text-dark">Admin Panel</h1>
+          </div>
+          <div className="text-sm text-gray-600">
+            Trade Facilitator Management
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-offwhite rounded-lg p-6 max-w-4xl mx-auto my-8">
 
       {/* Message Display */}
       {message.text && (
@@ -199,6 +222,7 @@ export default function AdminPanel({ user, userRole }) {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }
