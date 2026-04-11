@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './LoginPage.css';
 import { ArrowLeft, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { supabase } from './utils/supabase';
 
 export default function LoginPage({ onBack }) {
   const [isSignUp, setIsSignUp] = useState(false);
