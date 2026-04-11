@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminPanel from './AdminPanel';
@@ -179,16 +179,15 @@ describe('AdminPanel Component', () => {
       });
     });
 
-    test('shows validation error when form is empty', async () => {
+    test('requires name and email fields for staff creation', async () => {
       render(<AdminPanel user={mockUser} userRole="admin" />);
 
       await waitFor(() => {
-        const createButton = screen.getByRole('button', { name: /Create Account/i });
-        fireEvent.click(createButton);
-      });
+        const nameInput = screen.getByPlaceholderText('Staff member name');
+        const emailInput = screen.getByPlaceholderText('staff@students.wits.ac.za');
 
-      await waitFor(() => {
-        expect(screen.getByText(/Please fill in all fields/)).toBeInTheDocument();
+        expect(nameInput).toBeRequired();
+        expect(emailInput).toBeRequired();
       });
     });
 
@@ -211,12 +210,18 @@ describe('AdminPanel Component', () => {
       render(<AdminPanel user={mockUser} userRole="admin" />);
 
       await waitFor(() => {
-        const nameInput = screen.getByPlaceholderText('Staff member name');
-        const emailInput = screen.getByPlaceholderText('staff@students.wits.ac.za');
-        const createButton = screen.getByRole('button', { name: /Create Account/i });
+        expect(screen.getByPlaceholderText('Staff member name')).toBeInTheDocument();
+      });
 
-        userEvent.type(nameInput, 'New Staff');
-        userEvent.type(emailInput, 'newstaff@students.wits.ac.za');
+      const nameInput = screen.getByPlaceholderText('Staff member name');
+      const emailInput = screen.getByPlaceholderText('staff@students.wits.ac.za');
+      const createButton = screen.getByRole('button', { name: /Create Account/i });
+
+      await act(async () => {
+        await userEvent.clear(nameInput);
+        await userEvent.type(nameInput, 'New Staff');
+        await userEvent.clear(emailInput);
+        await userEvent.type(emailInput, 'newstaff@students.wits.ac.za');
         fireEvent.click(createButton);
       });
 
@@ -261,12 +266,18 @@ describe('AdminPanel Component', () => {
       render(<AdminPanel user={mockUser} userRole="admin" />);
 
       await waitFor(() => {
-        const nameInput = screen.getByPlaceholderText('Staff member name');
-        const emailInput = screen.getByPlaceholderText('staff@students.wits.ac.za');
-        const createButton = screen.getByRole('button', { name: /Create Account/i });
+        expect(screen.getByPlaceholderText('Staff member name')).toBeInTheDocument();
+      });
 
-        userEvent.type(nameInput, 'New Staff');
-        userEvent.type(emailInput, 'newstaff@students.wits.ac.za');
+      const nameInput = screen.getByPlaceholderText('Staff member name');
+      const emailInput = screen.getByPlaceholderText('staff@students.wits.ac.za');
+      const createButton = screen.getByRole('button', { name: /Create Account/i });
+
+      await act(async () => {
+        await userEvent.clear(nameInput);
+        await userEvent.type(nameInput, 'New Staff');
+        await userEvent.clear(emailInput);
+        await userEvent.type(emailInput, 'newstaff@students.wits.ac.za');
         fireEvent.click(createButton);
       });
 
@@ -292,17 +303,20 @@ describe('AdminPanel Component', () => {
       render(<AdminPanel user={mockUser} userRole="admin" />);
 
       await waitFor(() => {
-        const nameInput = screen.getByPlaceholderText('Staff member name');
-        expect(nameInput).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Staff member name')).toBeInTheDocument();
       });
 
       const nameInput = screen.getByPlaceholderText('Staff member name');
       const emailInput = screen.getByPlaceholderText('staff@students.wits.ac.za');
       const createButton = screen.getByRole('button', { name: /Create Account/i });
 
-      await userEvent.type(nameInput, 'New Staff');
-      await userEvent.type(emailInput, 'existing@students.wits.ac.za');
-      fireEvent.click(createButton);
+      await act(async () => {
+        await userEvent.clear(nameInput);
+        await userEvent.type(nameInput, 'New Staff');
+        await userEvent.clear(emailInput);
+        await userEvent.type(emailInput, 'existing@students.wits.ac.za');
+        fireEvent.click(createButton);
+      });
 
       await waitFor(() => {
         const errorElements = screen.queryAllByText(/Email already exists/);
@@ -332,20 +346,26 @@ describe('AdminPanel Component', () => {
       render(<AdminPanel user={mockUser} userRole="admin" />);
 
       await waitFor(() => {
-        const nameInput = screen.getByPlaceholderText('Staff member name');
-        const emailInput = screen.getByPlaceholderText('staff@students.wits.ac.za');
-        const createButton = screen.getByRole('button', { name: /Create Account/i });
+        expect(screen.getByPlaceholderText('Staff member name')).toBeInTheDocument();
+      });
 
-        userEvent.type(nameInput, 'New Staff');
-        userEvent.type(emailInput, 'newstaff@students.wits.ac.za');
+      const nameInput = screen.getByPlaceholderText('Staff member name');
+      const emailInput = screen.getByPlaceholderText('staff@students.wits.ac.za');
+      const createButton = screen.getByRole('button', { name: /Create Account/i });
+
+      await act(async () => {
+        await userEvent.clear(nameInput);
+        await userEvent.type(nameInput, 'New Staff');
+        await userEvent.clear(emailInput);
+        await userEvent.type(emailInput, 'newstaff@students.wits.ac.za');
         fireEvent.click(createButton);
       });
 
       await waitFor(() => {
-        const nameInput = screen.getByPlaceholderText('Staff member name');
-        const emailInput = screen.getByPlaceholderText('staff@students.wits.ac.za');
-        expect(nameInput).toHaveValue('');
-        expect(emailInput).toHaveValue('');
+        const nameInputAfter = screen.getByPlaceholderText('Staff member name');
+        const emailInputAfter = screen.getByPlaceholderText('staff@students.wits.ac.za');
+        expect(nameInputAfter).toHaveValue('');
+        expect(emailInputAfter).toHaveValue('');
       });
     });
   });

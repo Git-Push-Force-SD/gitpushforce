@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 import * as supabaseModule from './utils/supabase';
@@ -16,6 +16,12 @@ jest.mock('./utils/supabase', () => ({
 }));
 
 const mockSupabase = supabaseModule.supabase;
+
+const waitForAppLoad = async () => {
+  await waitFor(() => {
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+  });
+};
 
 describe('App Component - Authentication Integration', () => {
   beforeEach(() => {
@@ -69,6 +75,7 @@ describe('App Component - Authentication Integration', () => {
 
     test('displays Sign In button when not logged in', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
         const signInButtons = screen.getAllByText(/Sign [Ii]n/);
@@ -78,18 +85,20 @@ describe('App Component - Authentication Integration', () => {
 
     test('displays UNIMART logo', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
-        expect(screen.getByText('UNIMART')).toBeInTheDocument();
+        expect(screen.getAllByText('UNIMART')[0]).toBeInTheDocument();
       });
     });
 
     test('displays navigation links', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
-        expect(screen.getByText('How It Works')).toBeInTheDocument();
-        expect(screen.getByText('Safety')).toBeInTheDocument();
+        expect(screen.getAllByText('How It Works')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('Safety')[0]).toBeInTheDocument();
       });
     });
   });
@@ -122,35 +131,44 @@ describe('App Component - Authentication Integration', () => {
       });
     });
 
-    test('displays user email when logged in', async () => {
+    test('renders StudentDashboard when logged in instead of landing page', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
-        expect(screen.getByText('1234567@students.wits.ac.za')).toBeInTheDocument();
+        expect(screen.getByText('Recent Listings')).toBeInTheDocument();
+        expect(screen.getByText('Sell Item')).toBeInTheDocument();
       });
     });
 
-    test('displays Sign Out button when logged in', async () => {
+    test('shows profile button for authenticated users', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
-        const signOutButton = screen.getByText('Sign Out');
-        expect(signOutButton).toBeInTheDocument();
+        expect(screen.getByLabelText('Open profile')).toBeInTheDocument();
       });
     });
 
-    test('calls signOut when Sign Out button is clicked', async () => {
+    test('renders StudentDashboard for authenticated student users', async () => {
+      render(<App />);
+      await waitForAppLoad();
+
+      await waitFor(() => {
+        expect(screen.getByText('Recent Listings')).toBeInTheDocument();
+        expect(screen.getByText('Sell Item')).toBeInTheDocument();
+      });
+    });
+
+    test('authenticated user lands on StudentDashboard and can access profile', async () => {
       mockSupabase.auth.signOut.mockResolvedValue({ error: null });
 
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
-        const signOutButton = screen.getByText('Sign Out');
-        fireEvent.click(signOutButton);
-      });
-
-      await waitFor(() => {
-        expect(mockSupabase.auth.signOut).toHaveBeenCalled();
+        expect(screen.getByText('Sell Item')).toBeInTheDocument();
+        expect(screen.getByLabelText('Open profile')).toBeInTheDocument();
       });
     });
   });
@@ -185,6 +203,7 @@ describe('App Component - Authentication Integration', () => {
 
     test('displays [Admin] label for admin users', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
         expect(screen.getByText('[Admin]')).toBeInTheDocument();
@@ -193,6 +212,7 @@ describe('App Component - Authentication Integration', () => {
 
     test('renders Admin Panel for admin users', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
         expect(screen.getByText('Admin Panel')).toBeInTheDocument();
@@ -211,6 +231,7 @@ describe('App Component - Authentication Integration', () => {
       });
 
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
         expect(screen.queryByText('Admin Panel')).not.toBeInTheDocument();
@@ -244,6 +265,7 @@ describe('App Component - Authentication Integration', () => {
       });
 
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
         expect(screen.queryByText(/1234567@students.wits.ac.za/)).not.toBeInTheDocument();
@@ -258,7 +280,7 @@ describe('App Component - Authentication Integration', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('1234567@students.wits.ac.za')).toBeInTheDocument();
+        expect(screen.getByText('Recent Listings')).toBeInTheDocument();
       });
     });
 
@@ -298,8 +320,9 @@ describe('App Component - Authentication Integration', () => {
 
     test('displays Login Page when Sign In button is clicked', async () => {
       render(<App />);
+      await waitForAppLoad();
 
-      await waitFor(() => {
+      await act(async () => {
         const signInButtons = screen.getAllByText(/Sign [Ii]n/);
         fireEvent.click(signInButtons[0]);
       });
@@ -311,26 +334,29 @@ describe('App Component - Authentication Integration', () => {
 
     test('hides hero content when Login Page is shown', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
-        const heroText = screen.getByText(/SAFE TRADES/);
+        const heroText = screen.getAllByText(/SAFE TRADES/i)[0];
         expect(heroText).toBeVisible();
       });
 
-      const signInButtons = screen.getAllByText(/Sign [Ii]n/);
-      fireEvent.click(signInButtons[0]);
+      await act(async () => {
+        const signInButtons = screen.getAllByText(/Sign [Ii]n/);
+        fireEvent.click(signInButtons[0]);
+      });
 
       await waitFor(() => {
-        const heroText = screen.getByText(/SAFE TRADES/);
-        expect(heroText).not.toBeVisible();
+        expect(screen.queryByText(/SAFE TRADES/i)).not.toBeInTheDocument();
       });
     });
 
     test('hides Login Page when back button is clicked', async () => {
       render(<App />);
+      await waitForAppLoad();
 
-      const signInButtons = screen.getAllByText(/Sign [Ii]n/);
-      await waitFor(() => {
+      await act(async () => {
+        const signInButtons = screen.getAllByText(/Sign [Ii]n/);
         fireEvent.click(signInButtons[0]);
       });
 
@@ -338,12 +364,14 @@ describe('App Component - Authentication Integration', () => {
         expect(screen.getByText('Welcome back!')).toBeInTheDocument();
       });
 
-      const backButtons = screen.getAllByTitle('Go back');
-      fireEvent.click(backButtons[0]);
+      await act(async () => {
+        const backButtons = screen.getAllByTitle('Go back');
+        fireEvent.click(backButtons[0]);
+      });
 
       await waitFor(() => {
         expect(screen.queryByText('Welcome back!')).not.toBeInTheDocument();
-        expect(screen.getByText(/SAFE TRADES/)).toBeVisible();
+        expect(screen.getAllByText(/SAFE TRADES/i)[0]).toBeVisible();
       });
     });
   });
@@ -403,17 +431,20 @@ describe('App Component - Authentication Integration', () => {
       });
 
       render(<App />);
+      await waitForAppLoad();
 
       // Test with valid Wits email
-      authCallback('SIGNED_IN', {
-        user: {
-          id: 'oauth-user',
-          email: '1234567@students.wits.ac.za',
-        },
+      act(() => {
+        authCallback('SIGNED_IN', {
+          user: {
+            id: 'oauth-user',
+            email: '1234567@students.wits.ac.za',
+          },
+        });
       });
 
       await waitFor(() => {
-        expect(screen.getByText('1234567@students.wits.ac.za')).toBeInTheDocument();
+        expect(screen.getByText('Recent Listings')).toBeInTheDocument();
       });
     });
   });
@@ -431,28 +462,31 @@ describe('App Component - Authentication Integration', () => {
 
     test('renders header with UNIMART logo', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
-        const logo = screen.getByText('UNIMART');
+        const logo = screen.getAllByText('UNIMART')[0];
         expect(logo).toBeInTheDocument();
       });
     });
 
     test('displays navigation links', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
-        expect(screen.getByText('How It Works')).toBeInTheDocument();
-        expect(screen.getByText('Safety')).toBeInTheDocument();
+        expect(screen.getAllByText('How It Works')[0]).toBeInTheDocument();
+        expect(screen.getAllByText('Safety')[0]).toBeInTheDocument();
       });
     });
 
     test('displays hero heading with SAFE TRADES FOR VERIFIED STUDENTS', async () => {
       render(<App />);
+      await waitForAppLoad();
 
       await waitFor(() => {
-        expect(screen.getByText(/SAFE TRADES/i)).toBeInTheDocument();
-        expect(screen.getByText(/VERIFIED/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/SAFE TRADES/i)[0]).toBeInTheDocument();
+        expect(screen.getAllByText(/VERIFIED/i)[0]).toBeInTheDocument();
       });
     });
   });

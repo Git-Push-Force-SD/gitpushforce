@@ -3,6 +3,7 @@ import { Menu, X, ArrowRight, ShieldCheck, MapPin, Search } from 'lucide-react';
 import './index.css';
 import LoginPage from './LoginPage';
 import AdminPanel from './AdminPanel';
+import StudentDashboard from './StudentDashboard';
 import { supabase } from './utils/supabase';
 
 
@@ -50,7 +51,7 @@ export default function App() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setUser(session?.user || null);
-        
+
         if (session?.user) {
           // Fetch user role from database
           const { data } = await supabase
@@ -73,7 +74,7 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const email = session.user.email;
-        
+
         // Validate Wits email for all users (including Google OAuth)
         const witsEmailPattern = /^[0-9]+@students\.wits\.ac\.za$/;
         if (!witsEmailPattern.test(email)) {
@@ -85,21 +86,21 @@ export default function App() {
         }
 
         setUser(session.user);
-        
+
         // Check if user exists in database
         const { data: existingUser } = await supabase
           .from('users')
           .select('role')
           .eq('id', session.user.id)
           .single();
-        
+
         if (existingUser) {
           setUserRole(existingUser.role || 'user');
         } else {
           // Create user profile for new users (e.g., from Google OAuth)
           const adminUsers = ['2624301@students.wits.ac.za', '2685923@students.wits.ac.za', '2677770@students.wits.ac.za', '2549625@students.wits.ac.za', '2590255@students.wits.ac.za', '2594438@students.wits.ac.za'];
           const isAdmin = adminUsers.includes(email);
-          
+
           const { error: dbError } = await supabase
             .from('users')
             .insert([{
@@ -108,7 +109,7 @@ export default function App() {
               role: isAdmin ? 'admin' : 'user',
               created_at: new Date()
             }]);
-          
+
           if (!dbError) {
             setUserRole(isAdmin ? 'admin' : 'user');
           } else {
@@ -145,17 +146,24 @@ export default function App() {
   if (loading) {
     return (
       <main className="w-full min-h-screen bg-offwhite flex items-center justify-center">
-        <div className="text-center">
+        <section className="text-center">
           <p className="text-dark text-lg">Loading...</p>
-        </div>
+        </section>
       </main>
     );
   }
 
+  if (user && userRole === 'user') {
+    return <StudentDashboard />;
+  }
+
+  if (showLogin) {
+    return <LoginPage onBack={() => setShowLogin(false)} />;
+  }
+
   return (
     <main className="w-full min-h-screen bg-offwhite">
-      {showLogin && <LoginPage onBack={() => setShowLogin(false)} />}
-      <section style={{ display: showLogin ? 'none' : 'block' }}>
+      <section>
 
 
         <header className="relative z-50">
@@ -254,7 +262,7 @@ export default function App() {
                   </defs>
                   <text fontSize="12" fill="#fff" fontWeight="bold" letterSpacing="1.5">
                     <textPath href="#circle-text-path" textLength="282" lengthAdjust="spacing">
-                      • VERIFIED • SAFE • CAMPUS ONLY 
+                      • VERIFIED • SAFE • CAMPUS ONLY
                     </textPath>
                   </text>
                 </svg>
