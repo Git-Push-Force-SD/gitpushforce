@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LoginPage from './LoginPage';
@@ -17,6 +17,18 @@ jest.mock('./utils/supabase', () => ({
 }));
 
 const mockSupabase = supabaseModule.supabase;
+
+const typeText = async (element, text) => {
+  await act(async () => {
+    await userEvent.type(element, text);
+  });
+};
+
+const clickElement = async (element) => {
+  await act(async () => {
+    fireEvent.click(element);
+  });
+};
 
 describe('LoginPage Component - Authentication Tests', () => {
   const mockOnBack = jest.fn();
@@ -81,9 +93,9 @@ describe('LoginPage Component - Authentication Tests', () => {
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const submitButton = screen.getByRole('button', { name: /Sign In/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInput, 'password123');
-      fireEvent.click(submitButton);
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInput, 'password123');
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
@@ -99,7 +111,7 @@ describe('LoginPage Component - Authentication Tests', () => {
       // Switch to signup
       const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
       const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
-      fireEvent.click(toggleButton);
+      await clickElement(toggleButton);
 
       expect(screen.getByText('Join Unimart')).toBeInTheDocument();
 
@@ -108,11 +120,11 @@ describe('LoginPage Component - Authentication Tests', () => {
       const confirmPasswordInput = passwordInputs[1];
       const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
-      await userEvent.type(emailInput, 'user@gmail.com');
-      await userEvent.type(passwordInputs[0], 'password123');
-      await userEvent.type(confirmPasswordInput, 'password123');
+      await typeText(emailInput, 'user@gmail.com');
+      await typeText(passwordInputs[0], 'password123');
+      await typeText(confirmPasswordInput, 'password123');
 
-      fireEvent.click(submitButton);
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/Email must be in format/)).toBeInTheDocument();
@@ -126,18 +138,18 @@ describe('LoginPage Component - Authentication Tests', () => {
       
       const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
       const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
-      fireEvent.click(toggleButton);
+      await clickElement(toggleButton);
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
       const confirmPasswordInput = passwordInputs[1];
       const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
-      await userEvent.type(emailInput, 'abc@students.wits.ac.za');
-      await userEvent.type(passwordInputs[0], 'password123');
-      await userEvent.type(confirmPasswordInput, 'password123');
+      await typeText(emailInput, 'abc@students.wits.ac.za');
+      await typeText(passwordInputs[0], 'password123');
+      await typeText(confirmPasswordInput, 'password123');
 
-      fireEvent.click(submitButton);
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/Email must be in format/)).toBeInTheDocument();
@@ -153,18 +165,18 @@ describe('LoginPage Component - Authentication Tests', () => {
       
       const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
       const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
-      fireEvent.click(toggleButton);
+      await clickElement(toggleButton);
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
       const confirmPasswordInput = passwordInputs[1];
       const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInputs[0], '12345');
-      await userEvent.type(confirmPasswordInput, '12345');
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInputs[0], '12345');
+      await typeText(confirmPasswordInput, '12345');
 
-      fireEvent.click(submitButton);
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/Password must be at least 6 characters/)).toBeInTheDocument();
@@ -177,7 +189,7 @@ describe('LoginPage Component - Authentication Tests', () => {
       render(<LoginPage onBack={mockOnBack} />);
       
       const signUpLink = screen.getByRole('button', { name: 'Sign Up' });
-      fireEvent.click(signUpLink);
+      await clickElement(signUpLink);
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
@@ -185,11 +197,11 @@ describe('LoginPage Component - Authentication Tests', () => {
       const confirmPasswordInput = passwordInputs[1];
       const submitButton = screen.getByRole('button', { name: /Sign Up/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInput, 'password123');
-      await userEvent.type(confirmPasswordInput, 'password456');
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInput, 'password123');
+      await typeText(confirmPasswordInput, 'password456');
 
-      fireEvent.click(submitButton);
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/Passwords do not match/)).toBeInTheDocument();
@@ -217,7 +229,7 @@ describe('LoginPage Component - Authentication Tests', () => {
       
       const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
       const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
-      fireEvent.click(toggleButton);
+      await clickElement(toggleButton);
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
@@ -225,11 +237,11 @@ describe('LoginPage Component - Authentication Tests', () => {
       const confirmPasswordInput = passwordInputs[1];
       const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInput, 'password123');
-      await userEvent.type(confirmPasswordInput, 'password123');
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInput, 'password123');
+      await typeText(confirmPasswordInput, 'password123');
 
-      fireEvent.click(submitButton);
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
@@ -260,9 +272,9 @@ describe('LoginPage Component - Authentication Tests', () => {
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const submitButton = screen.getByRole('button', { name: /Sign In/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInput, 'password123');
-      fireEvent.click(submitButton);
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInput, 'password123');
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
@@ -293,9 +305,9 @@ describe('LoginPage Component - Authentication Tests', () => {
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const submitButton = screen.getByRole('button', { name: /Sign In/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInput, 'password123');
-      fireEvent.click(submitButton);
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInput, 'password123');
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/Please verify your email before logging in/)).toBeInTheDocument();
@@ -314,9 +326,9 @@ describe('LoginPage Component - Authentication Tests', () => {
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const submitButton = screen.getByRole('button', { name: /Sign In/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInput, 'wrongpassword');
-      fireEvent.click(submitButton);
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInput, 'wrongpassword');
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/Invalid login credentials/)).toBeInTheDocument();
@@ -347,17 +359,17 @@ describe('LoginPage Component - Authentication Tests', () => {
       
       const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
       const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
-      fireEvent.click(toggleButton);
+      await clickElement(toggleButton);
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
       const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInputs[0], 'password123');
-      await userEvent.type(passwordInputs[1], 'password123');
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInputs[0], 'password123');
+      await typeText(passwordInputs[1], 'password123');
 
-      fireEvent.click(submitButton);
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/Check your email to verify your account/)).toBeInTheDocument();
@@ -388,7 +400,7 @@ describe('LoginPage Component - Authentication Tests', () => {
       
       const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
       const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
-      fireEvent.click(toggleButton);
+      await clickElement(toggleButton);
 
       await waitFor(() => {
         expect(screen.getByText('Join Unimart')).toBeInTheDocument();
@@ -398,11 +410,11 @@ describe('LoginPage Component - Authentication Tests', () => {
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
       const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInputs[0], 'password123');
-      await userEvent.type(passwordInputs[1], 'password123');
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInputs[0], 'password123');
+      await typeText(passwordInputs[1], 'password123');
 
-      fireEvent.click(submitButton);
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(mockSupabase.from).toHaveBeenCalledWith('users');
@@ -420,7 +432,7 @@ describe('LoginPage Component - Authentication Tests', () => {
       
       const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
       const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
-      fireEvent.click(toggleButton);
+      await clickElement(toggleButton);
 
       await waitFor(() => {
         expect(screen.getByText('Join Unimart')).toBeInTheDocument();
@@ -430,11 +442,11 @@ describe('LoginPage Component - Authentication Tests', () => {
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
       const submitButton = screen.getByRole('button', { name: /^Sign Up$/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInputs[0], 'password123');
-      await userEvent.type(passwordInputs[1], 'password123');
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInputs[0], 'password123');
+      await typeText(passwordInputs[1], 'password123');
 
-      fireEvent.click(submitButton);
+      await clickElement(submitButton);
 
       await waitFor(() => {
         const errorElements = screen.queryAllByText(/Email already registered/);
@@ -458,7 +470,7 @@ describe('LoginPage Component - Authentication Tests', () => {
       render(<LoginPage onBack={mockOnBack} />);
 
       const googleButton = screen.getByRole('button', { name: /Continue with Google/ });
-      fireEvent.click(googleButton);
+      await clickElement(googleButton);
 
       await waitFor(() => {
         expect(mockSupabase.auth.signInWithOAuth).toHaveBeenCalledWith({
@@ -480,7 +492,7 @@ describe('LoginPage Component - Authentication Tests', () => {
       render(<LoginPage onBack={mockOnBack} />);
 
       const googleButton = screen.getByRole('button', { name: /Continue with Google/ });
-      fireEvent.click(googleButton);
+      await clickElement(googleButton);
 
       await waitFor(() => {
         expect(screen.getByText(/OAuth provider error/)).toBeInTheDocument();
@@ -497,7 +509,7 @@ describe('LoginPage Component - Authentication Tests', () => {
 
       const toggleButtons = screen.getAllByRole('button', { name: 'Sign Up' });
       const toggleButton = toggleButtons.find(btn => btn.textContent === 'Sign Up');
-      fireEvent.click(toggleButton);
+      await clickElement(toggleButton);
 
       await waitFor(() => {
         expect(screen.getByText('Join Unimart')).toBeInTheDocument();
@@ -509,12 +521,12 @@ describe('LoginPage Component - Authentication Tests', () => {
       render(<LoginPage onBack={mockOnBack} />);
 
       const emailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
+      await typeText(emailInput, '1234567@students.wits.ac.za');
 
       expect(emailInput).toHaveValue('1234567@students.wits.ac.za');
 
       const toggleButton = screen.getByRole('button', { name: 'Sign Up' });
-      fireEvent.click(toggleButton);
+      await clickElement(toggleButton);
 
       const newEmailInput = screen.getByPlaceholderText('your-number@students.wits.ac.za');
       expect(newEmailInput).toHaveValue('');
@@ -540,19 +552,19 @@ describe('LoginPage Component - Authentication Tests', () => {
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const submitButton = screen.getByRole('button', { name: /Sign In/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInput, 'password123');
-      fireEvent.click(submitButton);
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInput, 'password123');
+      await clickElement(submitButton);
 
       expect(emailInput).toBeDisabled();
       expect(passwordInput).toBeDisabled();
     });
 
-    test('back button calls onBack callback', () => {
+    test('back button calls onBack callback', async () => {
       render(<LoginPage onBack={mockOnBack} />);
       
       const backButtons = screen.getAllByTitle('Go back');
-      fireEvent.click(backButtons[0]);
+      await clickElement(backButtons[0]);
 
       expect(mockOnBack).toHaveBeenCalledTimes(1);
     });
@@ -571,9 +583,9 @@ describe('LoginPage Component - Authentication Tests', () => {
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const submitButton = screen.getByRole('button', { name: /Sign In/i });
 
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInput, 'password');
-      fireEvent.click(submitButton);
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInput, 'password');
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/Test error message/)).toBeInTheDocument();
@@ -602,16 +614,16 @@ describe('LoginPage Component - Authentication Tests', () => {
       const submitButton = screen.getByRole('button', { name: /Sign In/i });
 
       // First attempt with error
-      await userEvent.type(emailInput, '1234567@students.wits.ac.za');
-      await userEvent.type(passwordInput, 'wrong');
-      fireEvent.click(submitButton);
+      await typeText(emailInput, '1234567@students.wits.ac.za');
+      await typeText(passwordInput, 'wrong');
+      await clickElement(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/First error/)).toBeInTheDocument();
       });
 
       // Second attempt - error should be cleared on submission
-      fireEvent.click(submitButton);
+      await clickElement(submitButton);
 
       // The error message should be gone before the request completes
       expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledTimes(2);

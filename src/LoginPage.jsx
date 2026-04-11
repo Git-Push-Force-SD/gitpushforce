@@ -197,7 +197,7 @@ export default function LoginPage({ onBack }) {
 
             {/* Message Display */}
             {message.text && (
-              <div className={`mb-4 p-3 rounded-lg flex items-start gap-2 ${
+              <section className={`mb-4 p-3 rounded-lg flex items-start gap-2 ${
                 message.type === 'error' ? 'bg-red-100 text-red-800' : 
                 message.type === 'success' ? 'bg-green-100 text-green-800' :
                 'bg-yellow-100 text-yellow-800'
@@ -208,12 +208,12 @@ export default function LoginPage({ onBack }) {
                   <CheckCircle size={20} className="flex-shrink-0 mt-0.5" />
                 )}
                 <p className="text-sm">{message.text}</p>
-              </div>
+              </section>
             )}
 
             {/* Verification Sent State */}
             {verificationSent && !isSignUp ? (
-              <div className="text-center">
+              <section className="text-center">
                 <CheckCircle size={48} className="mx-auto text-green-600 mb-4" />
                 <p className="text-sm text-gray-600">
                   Verification email sent! Check your inbox and click the link to verify your email.
@@ -229,7 +229,7 @@ export default function LoginPage({ onBack }) {
                 >
                   Back to login
                 </button>
-              </div>
+              </section>
             ) : (
               <>
                 {/* Google Sign-In Button */}
@@ -250,21 +250,21 @@ export default function LoginPage({ onBack }) {
                       {loading ? 'Signing in...' : 'Continue with Google'}
                     </button>
                     
-                    {/* Divider */}
-                    <div className="relative my-4">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300"></div>
-                      </div>
-                      <div className="relative flex justify-center text-sm">
+                    {/* sectionider */}
+                    <section className="relative my-4">
+                      <section className="absolute inset-0 flex items-center">
+                        <section className="w-full border-t border-gray-300"></section>
+                      </section>
+                      <section className="relative flex justify-center text-sm">
                         <span className="px-2 bg-white text-gray-600">or</span>
-                      </div>
-                    </div>
+                      </section>
+                    </section>
                   </>
                 )}
 
                 <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
                 {/* Email Input */}
-                <div>
+                <section>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email
                   </label>
@@ -277,10 +277,10 @@ export default function LoginPage({ onBack }) {
                     required
                     disabled={loading}
                   />
-                </div>
+                </section>
 
                 {/* Password Input */}
-                <div>
+                <section>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Password
                   </label>
@@ -293,11 +293,11 @@ export default function LoginPage({ onBack }) {
                     required
                     disabled={loading}
                   />
-                </div>
+                </section>
 
                 {/* Confirm Password (Sign Up Only) */}
                 {isSignUp && (
-                  <div>
+                  <section>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Confirm Password
                     </label>
@@ -310,7 +310,7 @@ export default function LoginPage({ onBack }) {
                       required
                       disabled={loading}
                     />
-                  </div>
+                  </section>
                 )}
 
                 {/* Submit Button */}
@@ -326,7 +326,7 @@ export default function LoginPage({ onBack }) {
 
               {/* Toggle between Sign In and Sign Up */}
               {!verificationSent && (
-                <div className="mt-6 text-center text-sm">
+                <section className="mt-6 text-center text-sm">
                   <span className="text-gray-600">
                     {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
                   </span>
@@ -343,7 +343,7 @@ export default function LoginPage({ onBack }) {
                   >
                     {isSignUp ? 'Sign In' : 'Sign Up'}
                   </button>
-                </div>
+                </section>
               )}
               </>
             )}
