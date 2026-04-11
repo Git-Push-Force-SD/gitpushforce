@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './utils/supabase';
 import { AlertCircle, CheckCircle, Loader, Plus, Trash2 } from 'lucide-react';
 
 export default function AdminPanel({ user, userRole }) {
