@@ -132,6 +132,12 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      setShowLogin(false);
+    }
+  }, [user]);
+
   const parallaxStyle = (speed) => ({
     transform: `translateY(${scrollY * speed}px)`
   });
