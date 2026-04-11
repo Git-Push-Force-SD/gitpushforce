@@ -159,6 +159,16 @@ export default function App() {
     );
   }
 
+  if (user && !userRole) {
+    return (
+      <main className="w-full min-h-screen bg-offwhite flex items-center justify-center">
+        <section className="text-center">
+          <p className="text-dark text-lg">Loading...</p>
+        </section>
+      </main>
+    );
+  }
+
   if (user && userRole === 'user') {
     return <StudentDashboard />;
   }
