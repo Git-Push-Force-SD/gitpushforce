@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminPanel from './AdminPanel';
-import * as supabaseModule from './utils/supabase';
+
 
 // Mock Supabase
 jest.mock('./utils/supabase', () => ({

@@ -3,7 +3,6 @@ import { Menu, X, ArrowRight, ShieldCheck, MapPin, Search } from 'lucide-react';
 import './index.css';
 import LoginPage from './LoginPage';
 import AdminPanel from './AdminPanel';
-import { supabase } from './utils/supabase';
 
 
 const RevealOnScroll = ({ children, className = "", style = {}, delay = 0 }) => {
