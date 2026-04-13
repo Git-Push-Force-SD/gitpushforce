@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { Menu, X, ArrowRight, ShieldCheck, MapPin, Search } from 'lucide-react';
 import './index.css';
 import LoginPage from './LoginPage';
-import AdminPanel from './AdminPanel';
 import StudentDashboard from './StudentDashboard';
-import { supabase } from './utils/supabase';
-import { validateWitsEmail, resolveUserRole } from './utils/constants';
+import AdminDashboard from './AdminDashboard';
+import StaffDashboard from './facilDashboard';
+import { AuthProvider, useAuth } from './AuthContext';
+import ProtectedRoute from './ProtectedRoute';
 
 
 const RevealOnScroll = ({ children, className = "", style = {}, delay = 0 }) => {
@@ -37,99 +39,12 @@ const RevealOnScroll = ({ children, className = "", style = {}, delay = 0 }) => 
   );
 };
 
-export default function App() {
-  //return <FacilDashboard />; // Uncomment this line to render the dashboard for testing, comment the other 2 lines
+function Landing() {
+  const navigate = useNavigate();
+  const { user, role, loading, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [scrollY, setScrollY] = useState(0);
-  const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // Check for existing session and subscribe to auth changes
-  useEffect(() => {
-    const checkUser = async () => {
-      let sessionUser = null;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        sessionUser = session?.user || null;
-        setUser(sessionUser);
-
-        if (sessionUser) {
-          try {
-            const { data, error } = await supabase
-              .from('users')
-              .select('role')
-              .eq('id', sessionUser.id)
-              .single();
-            if (error && error.code !== 'PGRST116') {
-              console.error('Error fetching user role:', error);
-            }
-            setUserRole(resolveUserRole(data?.role, sessionUser.email));
-          } catch (roleErr) {
-            console.error('Error fetching user role:', roleErr);
-            setUserRole(resolveUserRole(null, sessionUser.email));
-          }
-        }
-      } catch (error) {
-        console.error('Error checking user:', error);
-        if (sessionUser) {
-          setUserRole(resolveUserRole(null, sessionUser.email));
-        }
-      }
-    };
-
-    const maxWait = new Promise((resolve) => {
-      setTimeout(resolve, 12000);
-    });
-    Promise.race([checkUser(), maxWait]).finally(() => {
-      setLoading(false);
-    });
-
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const email = session.user.email;
-
-        // Validate Wits email FIRST - reject if invalid
-        if (!validateWitsEmail(email)) {
-          console.warn('Unauthorized email domain:', email);
-          await supabase.auth.signOut();
-          setUser(null);
-          setUserRole(null);
-          return;
-        }
-
-        setUser(session.user);
-
-        // Fetch user role from database (trigger creates it automatically)
-        try {
-          const { data: userData, error } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-
-          if (userData) {
-            setUserRole(resolveUserRole(userData.role, session.user.email));
-          } else if (error && error.code !== 'PGRST116') {
-            console.error('Error fetching user role:', error);
-            setUserRole(resolveUserRole(null, session.user.email));
-          } else {
-            setUserRole(resolveUserRole(null, session.user.email));
-          }
-        } catch (err) {
-          console.error('Error fetching user:', err);
-          setUserRole(resolveUserRole(null, session.user.email));
-        }
-      } else {
-        setUser(null);
-        setUserRole(null);
-      }
-    });
-
-    return () => subscription?.unsubscribe();
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -138,9 +53,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      setShowLogin(false);
-    }
+    if (user) setShowLogin(false);
   }, [user]);
 
   const parallaxStyle = (speed) => ({
@@ -148,9 +61,7 @@ export default function App() {
   });
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setUserRole(null);
+    await signOut();
     setShowLogin(false);
   };
 
@@ -164,7 +75,7 @@ export default function App() {
     );
   }
 
-  if (user && !userRole) {
+  if (user && !role) {
     return (
       <main className="w-full min-h-screen bg-offwhite flex items-center justify-center">
         <section className="text-center">
@@ -174,12 +85,20 @@ export default function App() {
     );
   }
 
-  if (user && (userRole === 'user' || userRole === 'admin')) {
-    return <StudentDashboard user={user} userRole={userRole} handleLogout={handleLogout} />;
+  if (user && role === 'student') {
+    return <Navigate to="/studentdashboard" replace />;
+  }
+
+  if (user && role === 'staff') {
+    return <Navigate to="/staffdashboard" replace />;
+  }
+
+  if (user && role === 'admin') {
+    return <Navigate to="/admindashboard" replace />;
   }
 
   if (showLogin) {
-    return <LoginPage onBack={() => setShowLogin(false)} />;
+    return <Navigate to="/login" replace />;
   }
 
   return (
@@ -203,7 +122,7 @@ export default function App() {
               {user ? (
                 <section className="flex items-center gap-4">
                   <span className="hidden md:block text-sm text-dark">
-                    {user.email} {userRole === 'admin' && <span className="text-primary font-semibold">[Admin]</span>}
+                    {user.email} {role === 'admin' && <span className="text-primary font-semibold">[Admin]</span>}
                   </span>
                   <button
                     onClick={handleLogout}
@@ -213,7 +132,7 @@ export default function App() {
                 </section>
               ) : (
                 <button
-                  onClick={() => setShowLogin(true)}
+                  onClick={() => navigate('/login')}
                   className="hidden md:block bg-dark text-white px-6 py-2.5 rounded-full font-semibold text-[0.85rem] hover:bg-primary transition-colors">
                   Sign In
                 </button>
@@ -242,7 +161,7 @@ export default function App() {
                 </>
               ) : (
                 <button
-                  onClick={() => { setShowLogin(true); setIsMenuOpen(false); }}
+                  onClick={() => { navigate('/login'); setIsMenuOpen(false); }}
                   className="bg-dark text-white px-6 py-2 rounded-full font-semibold text-sm">
                   Sign in
                 </button>
@@ -267,10 +186,10 @@ export default function App() {
 
               {/* Overlay Buttons */}
               <section className="absolute bottom-8 left-8 flex flex-wrap gap-4 z-10">
-                <button onClick={() => setShowLogin(true)} className="px-6 py-2 rounded-full font-semibold text-[0.85rem] flex items-center gap-3 bg-white text-dark hover:bg-gray-100 transition-colors">
+                <button onClick={() => navigate('/login')} className="px-6 py-2 rounded-full font-semibold text-[0.85rem] flex items-center gap-3 bg-white text-dark hover:bg-gray-100 transition-colors">
                   Browse Marketplace<span className="w-6 h-6 rounded-full flex justify-center items-center bg-dark text-white"><ArrowRight size={14} /></span>
                 </button>
-                <button onClick={() => setShowLogin(true)} className="px-6 py-2 rounded-full font-semibold text-[0.85rem] flex items-center gap-3 bg-transparent border border-white/40 text-white hover:bg-white/10 transition-colors">
+                <button onClick={() => navigate('/login')} className="px-6 py-2 rounded-full font-semibold text-[0.85rem] flex items-center gap-3 bg-transparent border border-white/40 text-white hover:bg-white/10 transition-colors">
                   Get started
                 </button>
               </section>
@@ -350,7 +269,7 @@ export default function App() {
               <section className="p-6 flex flex-col gap-3">
                 <h3 className="font-bold text-[1.1rem]">List in Minutes</h3>
                 <p className="text-text-muted text-[0.9rem] leading-relaxed mb-2">Add an item, price, and description so other verified students can discover it quickly.</p>
-                <button onClick={() => setShowLogin(true)} className="w-10 h-10 rounded-full border border-light bg-white text-dark flex items-center justify-center hover:bg-dark hover:text-white transition-colors"><ArrowRight size={16} /></button>
+                <button onClick={() => navigate('/login')} className="w-10 h-10 rounded-full border border-light bg-white text-dark flex items-center justify-center hover:bg-dark hover:text-white transition-colors"><ArrowRight size={16} /></button>
               </section>
             </RevealOnScroll>
 
@@ -363,7 +282,7 @@ export default function App() {
               <section className="p-6 flex flex-col gap-3">
                 <h3 className="font-bold text-[1.1rem]">Message Safely</h3>
                 <p className="text-text-muted text-[0.9rem] leading-relaxed mb-2">Talk to buyers and sellers inside the platform without sharing personal contact details.</p>
-                <button onClick={() => setShowLogin(true)} className="w-10 h-10 rounded-full border border-light bg-white text-dark flex items-center justify-center hover:bg-dark hover:text-white transition-colors"><ArrowRight size={16} /></button>
+                <button onClick={() => navigate('/login')} className="w-10 h-10 rounded-full border border-light bg-white text-dark flex items-center justify-center hover:bg-dark hover:text-white transition-colors"><ArrowRight size={16} /></button>
               </section>
             </RevealOnScroll>
 
@@ -378,7 +297,7 @@ export default function App() {
                   <h3 className="font-bold text-[1.1rem] mb-2">Secure Exchange</h3>
                   <p className="text-text-muted text-[0.9rem] leading-relaxed m-0">Items are exchanged through a structured campus process, ensuring both buyer and seller are protected without direct meetups.</p>
                 </section>
-                <button onClick={() => setShowLogin(true)} className="w-10 h-10 rounded-full flex-none border border-light bg-white text-dark flex items-center justify-center hover:bg-dark hover:text-white transition-colors"><ArrowRight size={16} /></button>
+                <button onClick={() => navigate('/login')} className="w-10 h-10 rounded-full flex-none border border-light bg-white text-dark flex items-center justify-center hover:bg-dark hover:text-white transition-colors"><ArrowRight size={16} /></button>
               </section>
             </RevealOnScroll>
 
@@ -460,23 +379,18 @@ export default function App() {
                 </section>
                 <section className="flex justify-between items-center mt-4 pt-4 border-t border-light">
                   <span className="font-bold text-[1.125rem] text-primary">{item.price}</span>
-                  <button onClick={() => setShowLogin(true)} className="flex items-center justify-center w-8 h-8 rounded-full border border-light bg-white text-dark hover:bg-primary hover:text-white transition-colors border-none"><ArrowRight size={14} /></button>
+                  <button onClick={() => navigate('/login')} className="flex items-center justify-center w-8 h-8 rounded-full border border-light bg-white text-dark hover:bg-primary hover:text-white transition-colors border-none"><ArrowRight size={14} /></button>
                 </section>
               </RevealOnScroll>
             ))}
           </section>
 
           <section className="flex justify-center mt-12">
-            <button onClick={() => setShowLogin(true)} className="flex items-center gap-2 px-8 py-3 rounded-full border border-dark font-semibold text-[0.9rem] hover:bg-dark hover:text-white transition-colors">
+            <button onClick={() => navigate('/login')} className="flex items-center gap-2 px-8 py-3 rounded-full border border-dark font-semibold text-[0.9rem] hover:bg-dark hover:text-white transition-colors">
               View All Marketplace <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[0.8rem] ml-2">+</span>
             </button>
           </section>
         </section>
-
-        {/* Admin Panel */}
-        {user && userRole === 'admin' && (
-          <AdminPanel user={user} userRole={userRole} />
-        )}
 
         {/* 6. Massive Footer CTA */}
         <footer className="pt-32 px-5 md:px-10 flex flex-col items-center text-center relative overflow-hidden bg-dark text-white">
@@ -508,8 +422,8 @@ export default function App() {
               <section>
                 <p className="text-zinc-500 mb-4 uppercase text-[0.875rem] font-bold tracking-[0.1em]">Account</p>
                 <ul className="space-y-2">
-                  <li><button onClick={() => setShowLogin(true)} className="text-white text-[0.875rem] font-medium uppercase transition-colors hover:text-primary">Get started</button></li>
-                  <li><button onClick={() => setShowLogin(true)} className="text-white text-[0.875rem] font-medium uppercase transition-colors hover:text-primary">Sign in</button></li>
+                  <li><button onClick={() => navigate('/login')} className="text-white text-[0.875rem] font-medium uppercase transition-colors hover:text-primary">Get started</button></li>
+                  <li><button onClick={() => navigate('/login')} className="text-white text-[0.875rem] font-medium uppercase transition-colors hover:text-primary">Sign in</button></li>
                 </ul>
               </section>
             </section>
@@ -521,5 +435,79 @@ export default function App() {
         </footer>
       </section>
     </main>
+  );
+}
+
+function LoginRoute() {
+  const navigate = useNavigate();
+  const { user, role, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <main className="w-full min-h-screen bg-offwhite flex items-center justify-center">
+        <section className="text-center">
+          <p className="text-dark text-lg">Loading...</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (user && role === 'student') return <Navigate to="/studentdashboard" replace />;
+  if (user && role === 'staff') return <Navigate to="/staffdashboard" replace />;
+  if (user && role === 'admin') return <Navigate to="/admindashboard" replace />;
+
+  return <LoginPage onBack={() => navigate('/')} />;
+}
+
+function StudentDashboardRoute() {
+  const { user, role, signOut } = useAuth();
+  return <StudentDashboard user={user} userRole={role} handleLogout={signOut} />;
+}
+
+function StaffDashboardRoute() {
+  const { signOut } = useAuth();
+  return <StaffDashboard handleLogout={signOut} />;
+}
+
+function AdminDashboardRoute() {
+  const { signOut } = useAuth();
+  return <AdminDashboard handleLogout={signOut} />;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<LoginRoute />} />
+          <Route
+            path="/studentdashboard"
+            element={
+              <ProtectedRoute allowedRole="student">
+                <StudentDashboardRoute />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staffdashboard"
+            element={
+              <ProtectedRoute allowedRole="staff">
+                <StaffDashboardRoute />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admindashboard"
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <AdminDashboardRoute />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

@@ -2,6 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import StudentDashboard from './StudentDashboard';
 
+jest.mock('./AdminPanel', () => function MockAdminPanel() {
+  return <div>Mock Admin Panel</div>;
+});
+
 describe('StudentDashboard Component', () => {
   test('renders home dashboard with recent listings', () => {
     render(<StudentDashboard />);

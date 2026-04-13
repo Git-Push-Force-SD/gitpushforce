@@ -1,9 +1,20 @@
-import React, { act } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 import * as supabaseModule from './utils/supabase';
 
-// Mock Supabase
+jest.mock('react-router-dom', () => {
+  const actual = jest.requireActual('react-router-dom');
+  return {
+    ...actual,
+    BrowserRouter: ({ children }) => (
+      <actual.MemoryRouter initialEntries={[global.__TEST_ROUTE__ || '/']}>
+        {children}
+      </actual.MemoryRouter>
+    ),
+  };
+});
+
 jest.mock('./utils/supabase', () => ({
   supabase: {
     auth: {
@@ -15,480 +26,172 @@ jest.mock('./utils/supabase', () => ({
   },
 }));
 
+jest.mock('./LoginPage', () => function MockLoginPage({ onBack }) {
+  return (
+    <div>
+      <p>Mock Login Page</p>
+      <button onClick={onBack}>Back</button>
+    </div>
+  );
+});
+
+jest.mock('./StudentDashboard', () => function MockStudentDashboard({ handleLogout }) {
+  return (
+    <div>
+      <p>Mock Student Dashboard</p>
+      <button onClick={handleLogout}>Logout Student</button>
+    </div>
+  );
+});
+
+jest.mock('./facilDashboard', () => function MockStaffDashboard({ handleLogout }) {
+  return (
+    <div>
+      <p>Mock Staff Dashboard</p>
+      <button onClick={handleLogout}>Logout Staff</button>
+    </div>
+  );
+});
+
+jest.mock('./AdminDashboard', () => function MockAdminDashboard({ handleLogout }) {
+  return (
+    <div>
+      <p>Mock Admin Dashboard</p>
+      <button onClick={handleLogout}>Logout Admin</button>
+    </div>
+  );
+});
+
 const mockSupabase = supabaseModule.supabase;
 
-const waitForAppLoad = async () => {
-  await waitFor(() => {
-    expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
-  });
+const mockUsersTable = ({ roleData = { role: 'student' }, selectError = null } = {}) => {
+  mockSupabase.from.mockImplementation(() => ({
+    select: jest.fn().mockReturnValue({
+      eq: jest.fn().mockReturnValue({
+        single: jest.fn().mockResolvedValue({ data: roleData, error: selectError }),
+      }),
+    }),
+    insert: jest.fn().mockResolvedValue({ error: null }),
+    update: jest.fn().mockReturnValue({
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    }),
+  }));
 };
 
-describe('App Component - Authentication Integration', () => {
+describe('App routing + auth integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  describe('Rendering', () => {
-    test('renders main App component', async () => {
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: null },
-      });
-
-      mockSupabase.auth.onAuthStateChange.mockReturnValue({
-        data: { subscription: { unsubscribe: jest.fn() } },
-      });
-
-      render(<App />);
-      expect(screen.getByRole('main')).toBeInTheDocument();
-    });
-
-    test('displays loading state initially', async () => {
-      mockSupabase.auth.getSession.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve({
-          data: { session: null },
-        }), 100))
-      );
-
-      mockSupabase.auth.onAuthStateChange.mockReturnValue({
-        data: { subscription: { unsubscribe: jest.fn() } },
-      });
-
-      render(<App />);
-      expect(screen.getByText(/Loading/i)).toBeInTheDocument();
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
-      }, { timeout: 500 });
+    global.__TEST_ROUTE__ = '/';
+    mockSupabase.auth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: jest.fn() } },
     });
   });
 
-  describe('Unauthenticated User Display', () => {
-    beforeEach(() => {
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: null },
-      });
+  test('renders landing page for unauthenticated user', async () => {
+    mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
 
-      mockSupabase.auth.onAuthStateChange.mockReturnValue({
-        data: { subscription: { unsubscribe: jest.fn() } },
-      });
-    });
+    render(<App />);
 
-    test('displays Sign In button when not logged in', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        const signInButtons = screen.getAllByText(/Sign [Ii]n/);
-        expect(signInButtons.length).toBeGreaterThan(0);
-      });
-    });
-
-    test('displays UNIMART logo', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.getAllByText('UNIMART')[0]).toBeInTheDocument();
-      });
-    });
-
-    test('displays navigation links', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.getAllByText('How It Works')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('Safety')[0]).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.getAllByText('UNIMART').length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Sign In/i).length).toBeGreaterThan(0);
     });
   });
 
-  describe('Authenticated User Display', () => {
-    beforeEach(() => {
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: {
-          session: {
-            user: {
-              id: 'user-123',
-              email: '1234567@students.wits.ac.za',
-            },
-          },
-        },
-      });
+  test('navigates to login route from landing sign in button', async () => {
+    mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
 
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: { role: 'user' },
-            }),
-          }),
-        }),
-      });
+    render(<App />);
 
-      mockSupabase.auth.onAuthStateChange.mockReturnValue({
-        data: { subscription: { unsubscribe: jest.fn() } },
-      });
-    });
+    const signInButton = (await screen.findAllByRole('button', { name: /Sign In/i }))[0];
+    fireEvent.click(signInButton);
 
-    test('renders StudentDashboard when logged in instead of landing page', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.getByText('Recent Listings')).toBeInTheDocument();
-        expect(screen.getByText('Sell Item')).toBeInTheDocument();
-      });
-    });
-
-    test('shows profile button for authenticated users', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Open profile')).toBeInTheDocument();
-      });
-    });
-
-    test('renders StudentDashboard for authenticated student users', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.getByText('Recent Listings')).toBeInTheDocument();
-        expect(screen.getByText('Sell Item')).toBeInTheDocument();
-      });
-    });
-
-    test('authenticated user lands on StudentDashboard and can access profile', async () => {
-      mockSupabase.auth.signOut.mockResolvedValue({ error: null });
-
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.getByText('Sell Item')).toBeInTheDocument();
-        expect(screen.getByLabelText('Open profile')).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.getByText('Mock Login Page')).toBeInTheDocument();
     });
   });
 
-  describe('Admin User Display', () => {
-    beforeEach(() => {
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: {
-          session: {
-            user: {
-              id: 'admin-123',
-              email: '2624301@students.wits.ac.za',
-            },
-          },
-        },
-      });
+  test('navigates back to landing from login route', async () => {
+    global.__TEST_ROUTE__ = '/login';
+    mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
 
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: { role: 'admin' },
-            }),
-          }),
-        }),
-      });
+    render(<App />);
 
-      mockSupabase.auth.onAuthStateChange.mockReturnValue({
-        data: { subscription: { unsubscribe: jest.fn() } },
-      });
-    });
+    const backButton = await screen.findByRole('button', { name: 'Back' });
+    fireEvent.click(backButton);
 
-    test('displays [Admin] label for admin users', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.getByText('[Admin]')).toBeInTheDocument();
-      });
-    });
-
-    test('renders Admin Panel for admin users', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.getByText('Admin Panel')).toBeInTheDocument();
-      });
-    });
-
-    test('Admin Panel does not render for regular users', async () => {
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: { role: 'user' },
-            }),
-          }),
-        }),
-      });
-
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.queryByText('Admin Panel')).not.toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.getAllByText('UNIMART').length).toBeGreaterThan(0);
     });
   });
 
-  describe('Auth State Changes', () => {
-    test('updates user state when auth state changes', async () => {
-      let authCallback;
-
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: null },
-      });
-
-      mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
-        authCallback = callback;
-        return {
-          data: { subscription: { unsubscribe: jest.fn() } },
-        };
-      });
-
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: { role: 'user' },
-            }),
-          }),
-        }),
-      });
-
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.queryByText(/1234567@students.wits.ac.za/)).not.toBeInTheDocument();
-      });
-
-      // Simulate auth state change
-      authCallback('SIGNED_IN', {
-        user: {
-          id: 'user-123',
-          email: '1234567@students.wits.ac.za',
-        },
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Recent Listings')).toBeInTheDocument();
-      });
+  test('redirects authenticated student to student dashboard', async () => {
+    mockSupabase.auth.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'u1', email: '1@students.wits.ac.za' } } },
     });
+    mockUsersTable({ roleData: { role: 'student' } });
 
-    test('unsubscribes from auth changes on unmount', async () => {
-      const mockUnsubscribe = jest.fn();
+    render(<App />);
 
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: null },
-      });
-
-      mockSupabase.auth.onAuthStateChange.mockReturnValue({
-        data: { subscription: { unsubscribe: mockUnsubscribe } },
-      });
-
-      const { unmount } = render(<App />);
-
-      await waitFor(() => {
-        expect(mockSupabase.auth.onAuthStateChange).toHaveBeenCalled();
-      });
-
-      unmount();
-
-      expect(mockUnsubscribe).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByText('Mock Student Dashboard')).toBeInTheDocument();
     });
   });
 
-  describe('Login Page Modal', () => {
-    beforeEach(() => {
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: null },
-      });
-
-      mockSupabase.auth.onAuthStateChange.mockReturnValue({
-        data: { subscription: { unsubscribe: jest.fn() } },
-      });
+  test('redirects authenticated staff to staff dashboard', async () => {
+    mockSupabase.auth.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'u2', email: '2@students.wits.ac.za' } } },
     });
+    mockUsersTable({ roleData: { role: 'staff' } });
 
-    test('displays Login Page when Sign In button is clicked', async () => {
-      render(<App />);
-      await waitForAppLoad();
+    render(<App />);
 
-      await act(async () => {
-        const signInButtons = screen.getAllByText(/Sign [Ii]n/);
-        fireEvent.click(signInButtons[0]);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Welcome back!')).toBeInTheDocument();
-      });
-    });
-
-    test('hides hero content when Login Page is shown', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        const heroText = screen.getAllByText(/SAFE TRADES/i)[0];
-        expect(heroText).toBeVisible();
-      });
-
-      await act(async () => {
-        const signInButtons = screen.getAllByText(/Sign [Ii]n/);
-        fireEvent.click(signInButtons[0]);
-      });
-
-      await waitFor(() => {
-        expect(screen.queryByText(/SAFE TRADES/i)).not.toBeInTheDocument();
-      });
-    });
-
-    test('hides Login Page when back button is clicked', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await act(async () => {
-        const signInButtons = screen.getAllByText(/Sign [Ii]n/);
-        fireEvent.click(signInButtons[0]);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Welcome back!')).toBeInTheDocument();
-      });
-
-      await act(async () => {
-        const backButtons = screen.getAllByTitle('Go back');
-        fireEvent.click(backButtons[0]);
-      });
-
-      await waitFor(() => {
-        expect(screen.queryByText('Welcome back!')).not.toBeInTheDocument();
-        expect(screen.getAllByText(/SAFE TRADES/i)[0]).toBeVisible();
-      });
+    await waitFor(() => {
+      expect(screen.getByText('Mock Staff Dashboard')).toBeInTheDocument();
     });
   });
 
-  describe('Email Validation for OAuth', () => {
-    test('validates Wits email domain for authenticated users', async () => {
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: null },
-      });
-
-      let authCallback;
-      mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
-        authCallback = callback;
-        return {
-          data: { subscription: { unsubscribe: jest.fn() } },
-        };
-      });
-
-      mockSupabase.auth.signOut.mockResolvedValue({ error: null });
-
-      render(<App />);
-
-      // Test with non-Wits email (should sign out)
-      authCallback('SIGNED_IN', {
-        user: {
-          id: 'oauth-user',
-          email: 'user@gmail.com',
-        },
-      });
-
-      await waitFor(() => {
-        expect(mockSupabase.auth.signOut).toHaveBeenCalled();
-      });
+  test('redirects authenticated admin from login route to admin dashboard', async () => {
+    global.__TEST_ROUTE__ = '/login';
+    mockSupabase.auth.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'u3', email: '3@students.wits.ac.za' } } },
     });
+    mockUsersTable({ roleData: { role: 'admin' } });
 
-    test('allows Wits email domain for authenticated users', async () => {
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: null },
-      });
+    render(<App />);
 
-      let authCallback;
-      mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
-        authCallback = callback;
-        return {
-          data: { subscription: { unsubscribe: jest.fn() } },
-        };
-      });
-
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: { role: 'user' },
-            }),
-          }),
-        }),
-      });
-
-      render(<App />);
-      await waitForAppLoad();
-
-      // Test with valid Wits email
-      act(() => {
-        authCallback('SIGNED_IN', {
-          user: {
-            id: 'oauth-user',
-            email: '1234567@students.wits.ac.za',
-          },
-        });
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Recent Listings')).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.getByText('Mock Admin Dashboard')).toBeInTheDocument();
     });
   });
 
-  describe('Existing App Features Still Work', () => {
-    beforeEach(() => {
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: null },
-      });
+  test('protects dashboard route and redirects unauthenticated user to login', async () => {
+    global.__TEST_ROUTE__ = '/studentdashboard';
+    mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
 
-      mockSupabase.auth.onAuthStateChange.mockReturnValue({
-        data: { subscription: { unsubscribe: jest.fn() } },
-      });
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Mock Login Page')).toBeInTheDocument();
     });
+  });
 
-    test('renders header with UNIMART logo', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        const logo = screen.getAllByText('UNIMART')[0];
-        expect(logo).toBeInTheDocument();
-      });
+  test('logout from student dashboard calls supabase signOut', async () => {
+    global.__TEST_ROUTE__ = '/studentdashboard';
+    mockSupabase.auth.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'u4', email: '4@students.wits.ac.za' } } },
     });
+    mockSupabase.auth.signOut.mockResolvedValue({ error: null });
+    mockUsersTable({ roleData: { role: 'student' } });
 
-    test('displays navigation links', async () => {
-      render(<App />);
-      await waitForAppLoad();
+    render(<App />);
 
-      await waitFor(() => {
-        expect(screen.getAllByText('How It Works')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('Safety')[0]).toBeInTheDocument();
-      });
-    });
+    const logoutButton = await screen.findByRole('button', { name: 'Logout Student' });
+    fireEvent.click(logoutButton);
 
-    test('displays hero heading with SAFE TRADES FOR VERIFIED STUDENTS', async () => {
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => {
-        expect(screen.getAllByText(/SAFE TRADES/i)[0]).toBeInTheDocument();
-        expect(screen.getAllByText(/VERIFIED/i)[0]).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(mockSupabase.auth.signOut).toHaveBeenCalled();
+      expect(screen.getByText('Mock Login Page')).toBeInTheDocument();
     });
   });
 });
-

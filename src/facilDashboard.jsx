@@ -14,6 +14,7 @@ import {
   UserCheck,
   CalendarDays,
   XCircle,
+  LogOut,
 } from 'lucide-react';
 
 const stats = [
@@ -156,7 +157,7 @@ function badgeClasses(value) {
   return 'bg-light text-dark border-light';
 }
 
-export default function CampusMarketplaceDashboard() {
+export default function CampusMarketplaceDashboard({ handleLogout }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
@@ -232,6 +233,15 @@ export default function CampusMarketplaceDashboard() {
                 <CheckCircle2 className="h-7 w-7 text-primary" />
               </div>
             </div>
+            {handleLogout && (
+              <button
+                onClick={handleLogout}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-dark transition hover:bg-light"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            )}
           </div>
         </aside>
 

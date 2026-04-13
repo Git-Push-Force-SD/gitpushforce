@@ -23,7 +23,7 @@ const FACILITIES = [
   "Engineering Quarter",
 ];
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ handleLogout }) {
   const [fullName, setFullName] = useState("");
   const [facility, setFacility] = useState("");
 
@@ -133,6 +133,7 @@ export default function AdminDashboard() {
           {BOTTOM_NAV.map(({ icon, label }) => (
             <div
               key={label}
+              onClick={label === "Logout" ? handleLogout : undefined}
               style={{
                 display: "flex",
                 alignItems: "center",
