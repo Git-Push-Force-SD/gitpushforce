@@ -71,9 +71,9 @@ const Profile = ({ onBack, onAddNew }) => {
                 className="w-28 h-28 rounded-2xl object-cover shadow-sm bg-gray-100"
               />
             ) : (
-              <div className="w-28 h-28 rounded-2xl bg-gray-200 flex items-center justify-center shadow-sm">
+              <section className="w-28 h-28 rounded-2xl bg-gray-200 flex items-center justify-center shadow-sm">
                 <Camera size={32} className="text-gray-400" />
-              </div>
+              </section>
             )}
             <button
               onClick={triggerFileInput}
