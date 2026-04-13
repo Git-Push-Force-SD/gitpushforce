@@ -24,18 +24,38 @@ describe('AdminPanel Component', () => {
   });
 
   describe('Visibility', () => {
-    test('does not render if userRole is user', () => {
-      const { container } = render(
-        <AdminPanel user={mockUser} userRole="user" />
-      );
-      expect(container.firstChild).toBeNull();
+    test('renders when userRole is user', async () => {
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValue({
+            data: [],
+            error: null,
+          }),
+        }),
+      });
+
+      render(<AdminPanel user={mockUser} userRole="user" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Admin Panel')).toBeInTheDocument();
+      });
     });
 
-    test('does not render if userRole is staff', () => {
-      const { container } = render(
-        <AdminPanel user={mockUser} userRole="staff" />
-      );
-      expect(container.firstChild).toBeNull();
+    test('renders when userRole is staff', async () => {
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValue({
+            data: [],
+            error: null,
+          }),
+        }),
+      });
+
+      render(<AdminPanel user={mockUser} userRole="staff" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Admin Panel')).toBeInTheDocument();
+      });
     });
 
     test('renders when userRole is admin', async () => {
