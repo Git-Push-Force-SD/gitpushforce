@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './LoginPage.css';
 import { ArrowLeft, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { supabase } from './utils/supabase';
-import { validateWitsEmail } from './utils/constants';
+import { ADMIN_USERS, validateWitsEmail, isAdminUser } from './utils/constants';
 
 export default function LoginPage({ onBack }) {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -45,7 +45,7 @@ export default function LoginPage({ onBack }) {
         options: {
           emailRedirectTo: `${window.location.origin}`,
           data: {
-            role: 'student'
+            role: isAdminUser(email) ? 'admin' : 'user'
           }
         }
       });
