@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
-import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, Settings, LogOut } from 'lucide-react';
+import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, LogOut } from 'lucide-react';
 import Profile from './Profile';
 import SellItemModal from './SellItemModal';
-import AdminPanel from './AdminPanel';
-import { isAdminUser } from './utils/constants';
 
 const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const [activeCategory, setActiveCategory] = useState('All Items');
   const [viewMode, setViewMode] = useState('grid');
-  const [currentView, setCurrentView] = useState('home'); // 'home' | 'profile' | 'admin'
+  const [currentView, setCurrentView] = useState('home'); // 'home' | 'profile'
   const [showSellModal, setShowSellModal] = useState(false);
-  
-  const isAdmin = userRole === 'admin' || isAdminUser(user?.email);
 
   const categories = [
     { name: 'All Items', count: '1.2k' },
@@ -96,12 +92,6 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
     }
   ];
 
-  if (currentView === 'admin') {
-    return (
-      <AdminPanel user={user} userRole={userRole} onBack={() => setCurrentView('home')} />
-    );
-  }
-
   if (currentView === 'profile') {
     return (
       <>
@@ -140,16 +130,6 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
           <button className="text-dark hover:text-primary transition-colors">
             <MessageCircle size={22} className="stroke-[1.5]" />
           </button>
-          {isAdmin && (
-            <button 
-              aria-label="Admin panel"
-              className="text-dark hover:text-primary transition-colors relative"
-              onClick={() => setCurrentView('admin')}
-              title="Admin Panel"
-            >
-              <Settings size={22} className="stroke-[1.5]" />
-            </button>
-          )}
           <button 
             aria-label="Open profile"
             className="text-dark hover:text-primary transition-colors relative"

@@ -376,12 +376,7 @@ describe('LoginPage Component - Authentication Tests', () => {
       });
     });
 
-    test('sign up creates user profile in database', async () => {
-      const mockInsert = jest.fn().mockResolvedValue({ 
-        data: [],
-        error: null 
-      });
-      
+    test('sign up submits auth request and shows verification message', async () => {
       mockSupabase.auth.signUp.mockResolvedValue({
         data: {
           user: {
@@ -390,10 +385,6 @@ describe('LoginPage Component - Authentication Tests', () => {
           },
         },
         error: null,
-      });
-
-      mockSupabase.from.mockReturnValue({
-        insert: mockInsert,
       });
 
       render(<LoginPage onBack={mockOnBack} />);
@@ -417,8 +408,12 @@ describe('LoginPage Component - Authentication Tests', () => {
       await clickElement(submitButton);
 
       await waitFor(() => {
-        expect(mockSupabase.from).toHaveBeenCalledWith('users');
-        expect(mockInsert).toHaveBeenCalled();
+        expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
+          email: '1234567@students.wits.ac.za',
+          password: 'password123',
+          options: expect.any(Object),
+        });
+        expect(screen.getByText(/Check your email to verify your account/)).toBeInTheDocument();
       }, { timeout: 3000 });
     });
 
