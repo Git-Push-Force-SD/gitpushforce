@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './utils/supabase';
 import { AlertCircle, CheckCircle, Loader, Plus, Trash2, ArrowLeft } from 'lucide-react';
-import { isAdminUser } from './utils/constants';
 
 export default function AdminPanel({ user, userRole, onBack }) {
   const [staff, setStaff] = useState([]);
@@ -10,7 +9,7 @@ export default function AdminPanel({ user, userRole, onBack }) {
   const [newStaffName, setNewStaffName] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const canAccessAdmin = userRole === 'admin' || isAdminUser(user?.email);
+  const canAccessAdmin = userRole === 'admin';
   if (!canAccessAdmin) {
     return null;
   }
