@@ -28,7 +28,7 @@ export default function AdminDashboard({ handleLogout }) {
   const [facility, setFacility] = useState("");
 
   return (
-    <div
+    <section
       style={{
         display: "flex",
         height: "100vh",
@@ -51,9 +51,9 @@ export default function AdminDashboard({ handleLogout }) {
         }}
       >
         {/* Logo - Larger */}
-        <div style={{ padding: "0 24px 32px", borderBottom: "1px solid #e8e8f0" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div
+        <section style={{ padding: "0 24px 32px", borderBottom: "1px solid #e8e8f0" }}>
+          <section style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <section
               style={{
                 width: 40,
                 height: 40,
@@ -67,12 +67,12 @@ export default function AdminDashboard({ handleLogout }) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
                 <path d="M19 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm-9 8H7v-2h3v2zm5 0h-3v-2h3v2zm3-4H6V8h12v2z" />
               </svg>
-            </div>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 18, color: "#1a1a2e", lineHeight: 1.2 }}>
+            </section>
+            <section>
+              <section style={{ fontWeight: 800, fontSize: 18, color: "#1a1a2e", lineHeight: 1.2 }}>
                 Uni-Mart
-              </div>
-              <div
+              </section>
+              <section
                 style={{
                   fontSize: 10,
                   color: "#8b8fa8",
@@ -81,10 +81,10 @@ export default function AdminDashboard({ handleLogout }) {
                 }}
               >
                 Admin Portal
-              </div>
-            </div>
-          </div>
-        </div>
+              </section>
+            </section>
+          </section>
+        </section>
 
         {/* Nav - Larger items */}
         <nav
@@ -97,7 +97,7 @@ export default function AdminDashboard({ handleLogout }) {
           }}
         >
           {NAV_ITEMS.map(({ icon, label, active }) => (
-            <div
+            <section
               key={label}
               style={{
                 display: "flex",
@@ -116,12 +116,12 @@ export default function AdminDashboard({ handleLogout }) {
                 {icon}
               </span>
               {label}
-            </div>
+            </section>
           ))}
         </nav>
 
         {/* Bottom nav - Larger items */}
-        <div
+        <section
           style={{
             padding: "16px",
             borderTop: "1px solid #e8e8f0",
@@ -131,7 +131,7 @@ export default function AdminDashboard({ handleLogout }) {
           }}
         >
           {BOTTOM_NAV.map(({ icon, label }) => (
-            <div
+            <section
               key={label}
               onClick={label === "Logout" ? handleLogout : undefined}
               style={{
@@ -149,13 +149,13 @@ export default function AdminDashboard({ handleLogout }) {
                 {icon}
               </span>
               {label}
-            </div>
+            </section>
           ))}
-        </div>
+        </section>
       </aside>
 
       {/* Main */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <section style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Top bar */}
         <header
           style={{
@@ -168,7 +168,7 @@ export default function AdminDashboard({ handleLogout }) {
             padding: "0 32px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <section style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 16, fontWeight: 600, color: "#1a1a2e" }}>
               Create Staff Profile
             </span>
@@ -176,9 +176,9 @@ export default function AdminDashboard({ handleLogout }) {
             <span style={{ fontSize: 14, color: "#9ca3af" }}>Users</span>
             <span style={{ fontSize: 14, color: "#9ca3af" }}>›</span>
             <span style={{ fontSize: 14, color: "#4f46e5", fontWeight: 500 }}>Add Staff</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <div
+          </section>
+          <section style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <section
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -197,8 +197,8 @@ export default function AdminDashboard({ handleLogout }) {
                 search
               </span>
               <span style={{ fontSize: 14, color: "#9ca3af" }}>Search resources...</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            </section>
+            <section style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <span
                 className="material-symbols-outlined"
                 style={{ fontSize: 22, color: "#6b7280", cursor: "pointer" }}
@@ -211,7 +211,7 @@ export default function AdminDashboard({ handleLogout }) {
               >
                 help_outline
               </span>
-              <div
+              <section
                 style={{
                   width: 36,
                   height: 36,
@@ -227,9 +227,9 @@ export default function AdminDashboard({ handleLogout }) {
                 }}
               >
                 A
-              </div>
-            </div>
-          </div>
+              </section>
+            </section>
+          </section>
         </header>
 
         {/* Content - Expanded to fill space */}
@@ -243,7 +243,7 @@ export default function AdminDashboard({ handleLogout }) {
             justifyContent: "center",
           }}
         >
-          <div
+          <section
             style={{
               background: "#ffffff",
               borderRadius: 16,
@@ -254,7 +254,7 @@ export default function AdminDashboard({ handleLogout }) {
             }}
           >
             {/* Card header */}
-            <div style={{ marginBottom: 36 }}>
+            <section style={{ marginBottom: 36 }}>
               <h1
                 style={{ fontSize: 24, fontWeight: 700, color: "#1a1a2e", margin: "0 0 8px" }}
               >
@@ -264,12 +264,12 @@ export default function AdminDashboard({ handleLogout }) {
                 Onboard a new facilitator to manage campus marketplace transactions and safety
                 protocols.
               </p>
-            </div>
+            </section>
 
             {/* Form */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+            <section style={{ display: "flex", flexDirection: "column", gap: 28 }}>
               {/* Full Name */}
-              <div>
+              <section>
                 <label
                   style={{
                     display: "block",
@@ -300,11 +300,11 @@ export default function AdminDashboard({ handleLogout }) {
                     boxSizing: "border-box",
                   }}
                 />
-              </div>
+              </section>
 
               {/* Facility + Role */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                <div>
+              <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                <section>
                   <label
                     style={{
                       display: "block",
@@ -344,9 +344,9 @@ export default function AdminDashboard({ handleLogout }) {
                       </option>
                     ))}
                   </select>
-                </div>
+                </section>
 
-                <div>
+                <section>
                   <label
                     style={{
                       display: "block",
@@ -360,7 +360,7 @@ export default function AdminDashboard({ handleLogout }) {
                   >
                     Role
                   </label>
-                  <div
+                  <section
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -381,12 +381,12 @@ export default function AdminDashboard({ handleLogout }) {
                     >
                       settings
                     </span>
-                  </div>
-                </div>
-              </div>
+                  </section>
+                </section>
+              </section>
 
               {/* Actions */}
-              <div
+              <section
                 style={{
                   display: "flex",
                   justifyContent: "flex-end",
@@ -426,9 +426,9 @@ export default function AdminDashboard({ handleLogout }) {
                 >
                   Create Staff Profile
                 </button>
-              </div>
-            </div>
-          </div>
+              </section>
+            </section>
+          </section>
         </main>
 
         {/* Footer */}
@@ -446,15 +446,15 @@ export default function AdminDashboard({ handleLogout }) {
           }}
         >
           <span>© 2024 Uni-Mart Campus Marketplace. All Rights Reserved.</span>
-          <div style={{ display: "flex", gap: 24 }}>
+          <section style={{ display: "flex", gap: 24 }}>
             {["Privacy Policy", "Security Standards", "System Status"].map((item) => (
               <span key={item} style={{ cursor: "pointer" }}>
                 {item}
               </span>
             ))}
-          </div>
+          </section>
         </footer>
-      </div>
-    </div>
+      </section>
+    </section>
   );
 }
