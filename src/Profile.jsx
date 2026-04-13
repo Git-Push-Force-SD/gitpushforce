@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Edit2, Plus, Trash2, LogOut, Camera } from 'lucide-react';
+import { ArrowLeft, Edit2, Plus, Trash2, LogOut, Camera, X } from 'lucide-react';
 
 const Profile = ({ onBack, onAddNew }) => {
   const [profileImage, setProfileImage] = useState(null);
+  const [imageError, setImageError] = useState(null);
   const fileInputRef = useRef(null);
 
   const activeListings = [
@@ -31,19 +32,52 @@ const Profile = ({ onBack, onAddNew }) => {
 
   const handleImageUpload = (event) => {
     const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfileImage(e.target.result);
-      };
-      reader.readAsDataURL(file);
+    
+    // Reset error state
+    setImageError(null);
+    
+    // No file selected
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setImageError('Please select a valid image file (JPEG, PNG, GIF, etc.)');
+      return;
     }
+    
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      setImageError('Image size must be less than 5MB');
+      return;
+    }
+    
+    // Read and set the image
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setProfileImage(e.target.result);
+      setImageError(null);
+    };
+    reader.onerror = () => {
+      setImageError('Failed to load image. Please try again.');
+    };
+    reader.readAsDataURL(file);
+    
     // Reset input so the same file can be re-selected if needed
     event.target.value = '';
   };
 
   const triggerFileInput = () => {
     fileInputRef.current.click();
+  };
+
+  const handleRemoveImage = () => {
+    setProfileImage(null);
+    setImageError(null);
+    // Clear file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -65,11 +99,20 @@ const Profile = ({ onBack, onAddNew }) => {
         <section className="flex flex-col md:flex-row items-center gap-8 mb-16">
           <section className="relative">
             {profileImage ? (
-              <img
-                src={profileImage}
-                alt="User avatar"
-                className="w-28 h-28 rounded-2xl object-cover shadow-sm bg-gray-100"
-              />
+              <div className="relative group">
+                <img
+                  src={profileImage}
+                  alt="User avatar"
+                  className="w-28 h-28 rounded-2xl object-cover shadow-sm bg-gray-100"
+                />
+                <button
+                  onClick={handleRemoveImage}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600 transition-colors border-2 border-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Remove profile picture"
+                >
+                  <X size={12} />
+                </button>
+              </div>
             ) : (
               <div className="w-28 h-28 rounded-2xl bg-gray-200 flex items-center justify-center shadow-sm">
                 <Camera size={32} className="text-gray-400" />
@@ -78,6 +121,7 @@ const Profile = ({ onBack, onAddNew }) => {
             <button
               onClick={triggerFileInput}
               className="absolute -bottom-2 -right-2 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center shadow-md hover:bg-dark transition-colors border-2 border-white"
+              aria-label="Upload profile picture"
             >
               <Edit2 size={14} />
             </button>
@@ -85,9 +129,14 @@ const Profile = ({ onBack, onAddNew }) => {
               type="file"
               ref={fileInputRef}
               onChange={handleImageUpload}
-              accept="image/*"
+              accept="image/jpeg,image/png,image/gif,image/webp"
               className="hidden"
             />
+            {imageError && (
+              <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-red-100 text-red-600 text-xs px-2 py-1 rounded shadow-sm">
+                {imageError}
+              </div>
+            )}
           </section>
 
           <section className="text-center md:text-left">
