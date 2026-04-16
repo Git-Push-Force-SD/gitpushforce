@@ -1,34 +1,102 @@
-import React, { useState, useRef } from 'react';
-import { ArrowLeft, Edit2, Plus, Trash2, LogOut, Camera, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ArrowLeft, Edit2, Plus, Trash2, LogOut, Camera, X, Loader, Check } from 'lucide-react';
+import { useAuth } from './AuthContext';
+import { supabase } from './utils/supabase';
 
 const Profile = ({ onBack, onAddNew }) => {
+  const { user } = useAuth();
   const [profileImage, setProfileImage] = useState(null);
   const [imageError, setImageError] = useState(null);
+  
+  // Listings state
+  const [activeListings, setActiveListings] = useState([]);
+  const [isLoadingListings, setIsLoadingListings] = useState(true);
+  const [listingsError, setListingsError] = useState(null);
+  
+  // Edit modal state
+  const [editingId, setEditingId] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    price: '',
+    category: 'textbooks',
+    condition: 'good',
+  });
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState(null);
+  
   const fileInputRef = useRef(null);
 
-  const activeListings = [
-    {
-      id: 1,
-      category: 'BOOKS',
-      title: 'Advanced Macroeconomics',
-      price: 'R450.00',
-      image: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=200&q=80',
-    },
-    {
-      id: 2,
-      category: 'ELECTRONICS',
-      title: 'Vintage Film Camera (Working)',
-      price: 'R1200.00',
-      image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=200&q=80',
-    },
-    {
-      id: 3,
-      category: 'FURNITURE',
-      title: 'Minimalist Desk Lamp',
-      price: 'R250.00',
-      image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=200&q=80',
-    },
-  ];
+  // Fetch listings from database
+  useEffect(() => {
+    const fetchListings = async () => {
+      if (!user?.id) {
+        setIsLoadingListings(false);
+        return;
+      }
+
+      try {
+        setIsLoadingListings(true);
+        setListingsError(null);
+
+        const { data, error } = await supabase
+          .from('listings')
+          .select('*')
+          .eq('seller_id', user.id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Format the data for display
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        console.log('Supabase URL:', supabaseUrl);
+        
+        const formattedListings = (data || []).map((listing) => {
+          // Generate public URL from storage path (or fallback to image_url for old data)
+          let imageUrl = 'https://images.unsplash.com/photo-1557821552-17105176677c?auto=format&fit=crop&w=200&q=80';
+          
+          if (listing.image_path) {
+            imageUrl = `${supabaseUrl}/storage/v1/object/public/Listings/${listing.image_path}`;
+            console.log(`Image URL for ${listing.title}:`, imageUrl);
+          } else if (listing.image_url) {
+            // Fallback for old data that still has image_url
+            imageUrl = listing.image_url;
+            console.log('Using image_url from database:', imageUrl);
+          } else {
+            console.log(`No image found for ${listing.title}`);
+          }
+          
+          return {
+            id: listing.id,
+            category: listing.category
+              .replace(/_/g, ' ')
+              .split(' ')
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' '),
+            categoryValue: listing.category,
+            title: listing.title,
+            description: listing.description,
+            price: `R${parseFloat(listing.price).toFixed(2)}`,
+            priceValue: listing.price,
+            image: imageUrl,
+            condition: listing.condition,
+          };
+        });
+
+        setActiveListings(formattedListings);
+      } catch (error) {
+        console.error('Error fetching listings:', error);
+        setListingsError('Failed to load listings. Please try again.');
+        setActiveListings([]);
+      } finally {
+        setIsLoadingListings(false);
+      }
+    };
+
+    fetchListings();
+  }, [user?.id]);
+
 
   const handleImageUpload = (event) => {
     const file = event.target.files[0];
@@ -45,10 +113,10 @@ const Profile = ({ onBack, onAddNew }) => {
       return;
     }
     
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Validate file size (max 1MB)
+    const maxSize = 1 * 1024 * 1024; // 1MB
     if (file.size > maxSize) {
-      setImageError('Image size must be less than 5MB');
+      setImageError('Image size must be less than 1MB');
       return;
     }
     
@@ -68,7 +136,11 @@ const Profile = ({ onBack, onAddNew }) => {
   };
 
   const triggerFileInput = () => {
-    fileInputRef.current.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    } else {
+      console.error('File input ref is not available');
+    }
   };
 
   const handleRemoveImage = () => {
@@ -77,6 +149,105 @@ const Profile = ({ onBack, onAddNew }) => {
     // Clear file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  // Edit listing handlers
+  const handleEditClick = (listing) => {
+    setEditingId(listing.id);
+    setEditFormData({
+      title: listing.title,
+      description: listing.description,
+      price: listing.priceValue.toString(),
+      category: listing.categoryValue,
+      condition: listing.condition,
+    });
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editFormData.title.trim() || !editFormData.price) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setIsSubmittingEdit(true);
+
+      const { error } = await supabase
+        .from('listings')
+        .update({
+          title: editFormData.title,
+          description: editFormData.description,
+          price: parseFloat(editFormData.price),
+          category: editFormData.category,
+          condition: editFormData.condition,
+          updated_at: new Date(),
+        })
+        .eq('id', editingId);
+
+      if (error) throw error;
+
+      // Update local state
+      setActiveListings((prev) =>
+        prev.map((listing) =>
+          listing.id === editingId
+            ? {
+                ...listing,
+                title: editFormData.title,
+                description: editFormData.description,
+                price: `R${parseFloat(editFormData.price).toFixed(2)}`,
+                priceValue: parseFloat(editFormData.price),
+                category: editFormData.category
+                  .replace(/_/g, ' ')
+                  .split(' ')
+                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' '),
+                categoryValue: editFormData.category,
+                condition: editFormData.condition,
+              }
+            : listing
+        )
+      );
+
+      setEditingId(null);
+    } catch (error) {
+      console.error('Error updating listing:', error);
+      alert('Failed to update listing. Please try again.');
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
+  const handleDeleteListing = async (listingId) => {
+    if (!window.confirm('Are you sure you want to delete this listing?')) {
+      return;
+    }
+
+    try {
+      setIsDeletingId(listingId);
+
+      const { error } = await supabase
+        .from('listings')
+        .update({ status: 'removed' })
+        .eq('id', listingId);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setActiveListings((prev) => prev.filter((listing) => listing.id !== listingId));
+    } catch (error) {
+      console.error('Error deleting listing:', error);
+      alert('Failed to delete listing. Please try again.');
+    } finally {
+      setIsDeletingId(null);
     }
   };
 
@@ -119,6 +290,7 @@ const Profile = ({ onBack, onAddNew }) => {
               </section>
             )}
             <button
+              type="button"
               onClick={triggerFileInput}
               className="absolute -bottom-2 -right-2 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center shadow-md hover:bg-dark transition-colors border-2 border-white"
               aria-label="Upload profile picture"
@@ -157,7 +329,15 @@ const Profile = ({ onBack, onAddNew }) => {
         <section>
           <section className="flex justify-between items-end mb-4">
             <h2 className="text-xl font-bold text-dark">My Listings</h2>
-            <span className="text-primary text-sm font-semibold">{activeListings.length} active</span>
+            <span className="text-primary text-sm font-semibold">
+              {isLoadingListings ? (
+                <span className="inline-flex items-center gap-1">
+                  <Loader size={14} className="animate-spin" />
+                </span>
+              ) : (
+                `${activeListings.length} active`
+              )}
+            </span>
           </section>
 
           <button
@@ -168,37 +348,191 @@ const Profile = ({ onBack, onAddNew }) => {
             Add New Listing
           </button>
 
-          <section className="space-y-4">
-            {activeListings.map((listing) => (
-              <section
-                key={listing.id}
-                className="bg-white p-4 rounded-xl flex items-center shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-gray-50 gap-5 relative group"
-              >
-                <section className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0 border border-gray-100">
-                  <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" />
-                </section>
+          {isLoadingListings ? (
+            <section className="flex items-center justify-center py-12">
+              <Loader size={32} className="animate-spin text-primary" />
+            </section>
+          ) : listingsError ? (
+            <section className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+              <p className="text-red-600 text-sm">{listingsError}</p>
+            </section>
+          ) : activeListings.length === 0 ? (
+            <section className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+              <p className="text-gray-500 text-sm">No active listings yet. Start by adding a new listing!</p>
+            </section>
+          ) : (
+            <section className="space-y-4">
+              {activeListings.map((listing) => (
+                <section
+                  key={listing.id}
+                  className="bg-white p-4 rounded-xl flex items-center shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-gray-50 gap-5 relative group"
+                >
+                  <section className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0 border border-gray-100">
+                    <img
+                      src={listing.image}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = 'https://images.unsplash.com/photo-1557821552-17105176677c?auto=format&fit=crop&w=200&q=80';
+                      }}
+                    />
+                  </section>
 
-                <section className="flex-1 pr-10">
-                  <span className="text-primary font-bold text-[0.6rem] tracking-widest uppercase mb-1 block">
-                    {listing.category}
-                  </span>
-                  <h3 className="font-semibold text-dark text-sm mb-1">{listing.title}</h3>
-                  <p className="text-dark font-medium text-sm">{listing.price}</p>
-                </section>
+                  <section className="flex-1 pr-16">
+                    <span className="text-primary font-bold text-[0.6rem] tracking-widest uppercase mb-1 block">
+                      {listing.category}
+                    </span>
+                    <h3 className="font-semibold text-dark text-sm mb-1">{listing.title}</h3>
+                    <p className="text-dark font-medium text-sm">{listing.price}</p>
+                  </section>
 
-                <button className="absolute right-6 text-red-300 hover:text-red-600 transition-colors">
-                  <Trash2 size={18} />
-                </button>
-              </section>
-            ))}
-          </section>
+                  <section className="absolute right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEditClick(listing)}
+                      className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                      aria-label="Edit listing"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteListing(listing.id)}
+                      disabled={isDeletingId === listing.id}
+                      className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
+                      aria-label="Delete listing"
+                    >
+                      {isDeletingId === listing.id ? (
+                        <Loader size={16} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                    </button>
+                  </section>
+                </section>
+              ))}
+            </section>
+          )}
         </section>
 
-        {/* Log Out */}
-        <button className="w-full mt-12 bg-red-50 hover:bg-red-100 text-red-600 py-4 rounded-xl flex items-center justify-center gap-3 font-semibold transition-colors">
-          <LogOut size={18} />
-          Log Out
-        </button>
+        {/* Edit Modal */}
+        {editingId && (
+          <section className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <section className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-dark">Edit Listing</h2>
+                <button
+                  onClick={() => setEditingId(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                  aria-label="Close modal"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-semibold text-dark mb-2">Title *</label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={editFormData.title}
+                    onChange={handleEditChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    placeholder="Item title"
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-semibold text-dark mb-2">Description</label>
+                  <textarea
+                    name="description"
+                    value={editFormData.description}
+                    onChange={handleEditChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none"
+                    placeholder="Item description"
+                    rows="3"
+                  />
+                </div>
+
+                {/* Price */}
+                <div>
+                  <label className="block text-sm font-semibold text-dark mb-2">Price (R) *</label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={editFormData.price}
+                    onChange={handleEditChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-sm font-semibold text-dark mb-2">Category</label>
+                  <select
+                    name="category"
+                    value={editFormData.category}
+                    onChange={handleEditChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  >
+                    <option value="textbooks">Textbooks</option>
+                    <option value="electronics">Electronics</option>
+                    <option value="furniture">Furniture</option>
+                    <option value="clothing">Clothing</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                {/* Condition */}
+                <div>
+                  <label className="block text-sm font-semibold text-dark mb-2">Condition</label>
+                  <select
+                    name="condition"
+                    value={editFormData.condition}
+                    onChange={handleEditChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  >
+                    <option value="new">New</option>
+                    <option value="like_new">Like New</option>
+                    <option value="good">Good</option>
+                    <option value="fair">Fair</option>
+                    <option value="poor">Poor</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setEditingId(null)}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEditSubmit}
+                  disabled={isSubmittingEdit}
+                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmittingEdit ? (
+                    <>
+                      <Loader size={16} className="animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={16} />
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+            </section>
+          </section>
+        )}
 
         {/* Footer */}
         <section className="text-center mt-12 text-gray-400 text-xs tracking-wider uppercase font-semibold">

@@ -1,7 +1,122 @@
-import React from 'react';
-import { X, UploadCloud } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, UploadCloud, Loader } from 'lucide-react';
+import { useAuth } from './AuthContext';
+import { supabase } from './utils/supabase';
 
 const SellItemModal = ({ onClose }) => {
+  const { user } = useAuth();
+  const fileInputRef = useRef(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    title: '',
+    price: '',
+    category: '',
+    condition: 'New',
+    description: '',
+  });
+  
+  // Upload state
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files?.[0];
+    
+    // Reset error state
+    setUploadError(null);
+    
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select a valid image file');
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setUploadError('Image size must be less than 5MB');
+      return;
+    }
+    
+    setUploadedFile(file);
+    setUploadError(null);
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.title.trim() || !formData.price || !formData.category) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    if (!uploadedFile) {
+      alert('Please upload an image');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // Upload image to Supabase storage
+      const fileName = `${user.id}/${Date.now()}_${uploadedFile.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('Listings')
+        .upload(fileName, uploadedFile);
+      
+      if (uploadError) throw uploadError;
+      
+      // Insert listing into database (store only the path)
+      const { error: insertError } = await supabase
+        .from('listings')
+        .insert({
+          seller_id: user.id,
+          title: formData.title,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          category: formData.category,
+          condition: formData.condition.toLowerCase().replace(' ', '_'),
+          image_path: fileName,
+          status: 'active',
+          listing_type: 'sale',
+        });
+      
+      if (insertError) throw insertError;
+      
+      alert('Listing posted successfully!');
+      onClose();
+    } catch (error) {
+      console.error('Error posting listing:', error);
+      alert('Failed to post listing. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <section className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 sm:p-6 pb-20 sm:pb-6 backdrop-blur-sm overflow-y-auto">
       <section className="bg-white w-full max-w-xl rounded-2xl shadow-xl relative animate-in fade-in zoom-in duration-200 mt-auto sm:mt-0">
@@ -19,16 +134,39 @@ const SellItemModal = ({ onClose }) => {
 
         {/* Form Body */}
         <section className="p-6">
-          <form className="space-y-5">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             
             {/* Image Upload Area */}
             <section>
               <label className="block text-sm font-semibold text-dark mb-2">Item Photos</label>
-              <section className="w-full h-32 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-gray-400 transition-colors cursor-pointer">
-                <UploadCloud size={28} className="mb-2" />
-                <span className="text-sm font-medium">Click to upload images</span>
-                <span className="text-xs mt-1">PNG, JPG up to 5MB</span>
-              </section>
+              <button
+                type="button"
+                onClick={triggerFileInput}
+                className="w-full h-32 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-gray-400 transition-colors cursor-pointer"
+              >
+                {uploadedFile ? (
+                  <>
+                    <span className="text-sm font-medium text-green-600">✓ Image selected</span>
+                    <span className="text-xs text-green-500 mt-1">{uploadedFile.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud size={28} className="mb-2" />
+                    <span className="text-sm font-medium">Click to upload images</span>
+                    <span className="text-xs mt-1">PNG, JPG up to 5MB</span>
+                  </>
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileUpload}
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+              />
+              {uploadError && (
+                <p className="text-red-600 text-xs mt-2">{uploadError}</p>
+              )}
             </section>
 
             <section className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -36,9 +174,13 @@ const SellItemModal = ({ onClose }) => {
               <section className="sm:col-span-2">
                 <label className="block text-sm font-semibold text-dark mb-2">Item Title</label>
                 <input 
-                  type="text" 
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleFormChange}
                   placeholder="e.g. Minimalist Desk Lamp" 
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                  required
                 />
               </section>
 
@@ -46,21 +188,34 @@ const SellItemModal = ({ onClose }) => {
               <section>
                 <label className="block text-sm font-semibold text-dark mb-2">Price (R)</label>
                 <input 
-                  type="number" 
-                  placeholder="0.00" 
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleFormChange}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                  required
                 />
               </section>
 
               {/* Category */}
               <section>
                 <label className="block text-sm font-semibold text-dark mb-2">Category</label>
-                <select className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm bg-white cursor-pointer">
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleFormChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm bg-white cursor-pointer"
+                  required
+                >
                   <option value="">Select category...</option>
                   <option value="textbooks">Textbooks</option>
                   <option value="electronics">Electronics</option>
                   <option value="furniture">Furniture</option>
                   <option value="clothing">Clothing</option>
+                  <option value="other">Other</option>
                 </select>
               </section>
 
@@ -70,7 +225,14 @@ const SellItemModal = ({ onClose }) => {
                 <section className="flex gap-4">
                   {['New', 'Like New', 'Good'].map((cond) => (
                     <label key={cond} className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="condition" value={cond} className="text-primary focus:ring-primary" />
+                      <input 
+                        type="radio" 
+                        name="condition" 
+                        value={cond}
+                        checked={formData.condition === cond}
+                        onChange={handleFormChange}
+                        className="text-primary focus:ring-primary" 
+                      />
                       <span className="text-sm text-gray-700">{cond}</span>
                     </label>
                   ))}
@@ -81,7 +243,10 @@ const SellItemModal = ({ onClose }) => {
               <section className="sm:col-span-2">
                 <label className="block text-sm font-semibold text-dark mb-2">Description</label>
                 <textarea 
-                  rows="3" 
+                  rows="3"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleFormChange}
                   placeholder="Describe your item, mention any flaws..." 
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm resize-none"
                 ></textarea>
@@ -99,10 +264,19 @@ const SellItemModal = ({ onClose }) => {
           >
             Cancel
           </button>
-          <button 
-            className="px-6 py-2.5 rounded-lg font-semibold bg-dark text-white hover:bg-primary transition-colors text-sm shadow-sm"
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="px-6 py-2.5 rounded-lg font-semibold bg-dark text-white hover:bg-primary transition-colors text-sm shadow-sm disabled:opacity-50 flex items-center gap-2"
           >
-            Post Listing
+            {isSubmitting ? (
+              <>
+                <Loader size={16} className="animate-spin" />
+                Posting...
+              </>
+            ) : (
+              'Post Listing'
+            )}
           </button>
         </section>
 
