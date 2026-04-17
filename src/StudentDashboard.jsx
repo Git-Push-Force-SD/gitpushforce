@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, LogOut } from 'lucide-react';
 import Profile from './Profile';
 import SellItemModal from './SellItemModal';
+import { supabase } from './utils/supabase';
 
 const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const [activeCategory, setActiveCategory] = useState('All Items');
   const [viewMode, setViewMode] = useState('grid');
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'profile'
   const [showSellModal, setShowSellModal] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [loadingListings, setLoadingListings] = useState(true);
 
   const categories = [
     { name: 'All Items', count: '1.2k' },
@@ -17,80 +20,109 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
     { name: 'Clothing', count: '210' }
   ];
 
-  const products = [
-    {
-      id: 1,
-      title: 'Introduction to Psychology',
-      price: 'R450',
-      condition: 'LIKE NEW',
-      timePosted: '2 hours ago',
-      category: 'TEXTBOOK',
-      sellerName: 'Alex M.',
-      sellerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
-      image: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80',
-      isFavorite: false,
-    },
-    {
-      id: 2,
-      title: 'Mid-Century Desk Chair',
-      price: 'R1200',
-      condition: 'GOOD',
-      timePosted: '5 hours ago',
-      category: 'FURNITURE',
-      sellerName: 'Sarah K.',
-      sellerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60',
-      image: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?auto=format&fit=crop&w=800&q=80',
-      isFavorite: false,
-    },
-    {
-      id: 3,
-      title: 'Wireless Headphones',
-      price: 'R850',
-      condition: 'NEW',
-      timePosted: '1 day ago',
-      category: 'ELECTRONICS',
-      sellerName: 'James L.',
-      sellerAvatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100&auto=format&fit=crop&q=60',
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
-      isFavorite: false,
-    },
-    {
-      id: 4,
-      title: 'Laptop Stand + Mouse',
-      price: 'R300',
-      condition: 'LIKE NEW',
-      timePosted: '3 hours ago',
-      category: 'ELECTRONICS',
-      sellerName: 'Emily R.',
-      sellerAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=60',
-      image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=800&q=80',
-      isFavorite: false,
-    },
-    {
-      id: 5,
-      title: 'University Hoodie',
-      price: 'R250',
-      condition: 'NEW',
-      timePosted: '10 mins ago',
-      category: 'CLOTHING',
-      sellerName: 'Daniel W.',
-      sellerAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=60',
-      image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=800&q=80',
-      isFavorite: false,
-    },
-    {
-      id: 6,
-      title: 'Canon EOS Rebel T7',
-      price: 'R3100',
-      condition: 'LIKE NEW',
-      timePosted: '8 hours ago',
-      category: 'ELECTRONICS',
-      sellerName: 'Chloe B.',
-      sellerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60',
-      image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80',
-      isFavorite: false,
-    }
-  ];
+  // Helper function to calculate time ago
+  const calculateTimeAgo = (createdAt) => {
+    if (!createdAt) return 'unknown';
+    
+    const now = new Date();
+    const created = new Date(createdAt);
+    
+    // Handle invalid dates
+    if (isNaN(created.getTime())) return 'unknown';
+    
+    const diffMs = now - created;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    
+    return created.toLocaleDateString('en-ZA');
+  };
+
+  // Fetch listings from database, excluding the logged-in user's listings
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        setLoadingListings(true);
+        
+        // Fetch all active listings
+        let query = supabase
+          .from('listings')
+          .select('id, seller_id, title, description, price, image_path, category, condition, created_at')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+
+        // Exclude current user's listings if user is logged in
+        if (user?.id) {
+          query = query.neq('seller_id', user.id);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          setProducts([]);
+          setLoadingListings(false);
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          setProducts([]);
+          setLoadingListings(false);
+          return;
+        }
+
+        // Get unique seller IDs
+        const sellerIds = [...new Set((data || []).map(listing => listing.seller_id))];
+
+        // Fetch seller information
+        let sellerMap = {};
+        if (sellerIds.length > 0) {
+          const { data: sellers, error: sellersError } = await supabase
+            .from('users')
+            .select('id, username, email')
+            .in('id', sellerIds);
+
+          if (!sellersError && sellers && sellers.length > 0) {
+            sellerMap = sellers.reduce((acc, seller) => {
+              acc[seller.id] = seller;
+              return acc;
+            }, {});
+          }
+        }
+
+        // Transform database listings to product format
+        const formattedProducts = (data || []).map((listing) => {
+          const seller = sellerMap[listing.seller_id];
+          const displayName = seller?.username || (seller?.email ? seller.email.split('@')[0] : 'User');
+          return {
+            id: listing.id,
+            seller_id: listing.seller_id,
+            title: listing.title,
+            price: `R${parseFloat(listing.price).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            condition: listing.condition?.toUpperCase() || 'UNKNOWN',
+            timePosted: calculateTimeAgo(listing.created_at),
+            category: listing.category?.toUpperCase() || 'OTHER',
+            sellerName: displayName,
+            sellerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+            image: listing.image_path ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${listing.image_path}` : 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80',
+            isFavorite: false,
+          };
+        });
+
+        setProducts(formattedProducts);
+        setLoadingListings(false);
+      } catch (err) {
+        setProducts([]);
+        setLoadingListings(false);
+      }
+    };
+
+    fetchListings();
+  }, [user?.id]);
 
   if (currentView === 'profile') {
     return (
@@ -207,7 +239,33 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
 
         {/* Product Grid Layout */}
         <section className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-          {products.map((product) => (
+          {loadingListings ? (
+            // Skeleton loaders
+            Array.from({ length: 6 }).map((_, idx) => (
+              <section 
+                key={`skeleton-${idx}`}
+                className={`bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex ${viewMode === 'list' ? 'flex-row h-48' : 'flex-col'}`}
+              >
+                <section className={`relative overflow-hidden bg-gray-200 animate-pulse ${viewMode === 'list' ? 'w-48 shrink-0' : 'h-64 w-full'}`} />
+                <section className="p-5 flex flex-col flex-1 gap-3 w-full">
+                  <section className="h-5 bg-gray-200 rounded animate-pulse w-3/4"></section>
+                  <section className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></section>
+                  <section className="flex gap-2 mt-2">
+                    <section className="h-4 bg-gray-200 rounded animate-pulse w-16"></section>
+                    <section className="h-4 bg-gray-200 rounded animate-pulse w-24"></section>
+                  </section>
+                  <section className="mt-auto border-t border-gray-100 pt-4">
+                    <section className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></section>
+                  </section>
+                </section>
+              </section>
+            ))
+          ) : products.length === 0 ? (
+            <section className="col-span-full flex items-center justify-center py-12">
+              <p className="text-gray-500 text-lg">No listings available</p>
+            </section>
+          ) : (
+            products.map((product) => (
             <section 
               key={product.id} 
               className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 cursor-pointer group flex ${viewMode === 'list' ? 'flex-row h-48' : 'flex-col'}`}
@@ -259,7 +317,8 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
               </section>
               
             </section>
-          ))}
+            ))
+          )}
         </section>
       </main>
 
