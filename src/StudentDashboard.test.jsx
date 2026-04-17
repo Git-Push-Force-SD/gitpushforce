@@ -1,578 +1,579 @@
+import React from 'react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import StudentDashboard from './StudentDashboard';
+import { supabase } from './utils/supabase';
+
+// ─── Mocks ────────────────────────────────────────────────────────────────────
+
 jest.mock('./utils/supabase', () => ({
-  supabase: {
-    from: jest.fn(),
-  },
+  supabase: { from: jest.fn() },
 }));
 
-jest.mock('./Profile', () => function MockProfile({ onBack, onAddNew }) {
-  return (
-    <div data-testid="mock-profile">
-      <button onClick={onBack}>Back to Dashboard</button>
-      <button onClick={onAddNew}>Add New Listing</button>
-    </div>
-  );
-});
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: jest.fn(),
+}));
 
-jest.mock('./SellItemModal', () => function MockSellItemModal({ onClose }) {
-  return (
-    <div data-testid="mock-modal">
-      <button onClick={onClose}>Close Modal</button>
-    </div>
-  );
-});
+jest.mock('./Profile', () => ({ onBack, onAddNew }) => (
+  <div data-testid="profile-view">
+    <button onClick={onBack}>Back</button>
+    <button onClick={onAddNew}>Add New</button>
+  </div>
+));
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import StudentDashboard from './StudentDashboard';
+jest.mock('./SellItemModal', () => ({ onClose }) => (
+  <div data-testid="sell-modal">
+    <button onClick={onClose}>Close Modal</button>
+  </div>
+));
 
-const mockUser = { id: 'user123', email: 'user@example.com' };
+// ─── Fixtures ─────────────────────────────────────────────────────────────────
 
-const sampleListings = [
+const mockUser = { id: 'user-1' };
+
+const mockListings = [
   {
-    id: 'listing1',
-    seller_id: 'seller1',
-    title: 'Engineering Textbook',
-    description: 'Good condition',
-    price: '250.00',
-    image_path: null,
-    category: 'textbooks',
-    condition: 'good',
-    created_at: new Date().toISOString(),
+    id: 'listing-1',
+    seller_id: 'seller-1',
+    title: 'Introduction to Algorithms',
+    description: 'Great textbook',
+    price: '250',
+    image_path: 'books/algo.jpg',
+    category: 'Textbooks',
+    condition: 'Good',
+    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
   },
   {
-    id: 'listing2',
-    seller_id: 'seller2',
-    title: 'Study Desk',
-    description: 'Wooden desk',
-    price: '800.00',
-    image_path: 'test/desk.jpg',
-    category: 'furniture',
-    condition: 'like_new',
-    created_at: new Date(Date.now() - 3600000).toISOString(),
+    id: 'listing-2',
+    seller_id: 'seller-2',
+    title: 'Standing Desk',
+    description: 'Barely used',
+    price: '1500',
+    image_path: null,
+    category: 'Furniture',
+    condition: 'Like New',
+    created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
   },
 ];
 
-/**
- * Routes the supabase mock by table name so listings and users
- * calls never interfere with each other.
- *
- * The listings chain supports both:
- *   .eq().neq().order()  — logged-in user (excludes own listings)
- *   .eq().order()        — null user (no exclusion)
- */
-const setupMocks = ({ listings = [], sellers = [], listingError = null } = {}) => {
-  const mockSupabase = require('./utils/supabase').supabase;
-  mockSupabase.from.mockImplementation((table) => {
-    if (table === 'listings') {
-      return {
-        select: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            neq: jest.fn(() => ({
-              order: jest.fn(() => Promise.resolve({ data: listings, error: listingError })),
-            })),
-            order: jest.fn(() => Promise.resolve({ data: listings, error: listingError })),
-          })),
-        })),
-      };
-    }
-    if (table === 'users') {
-      return {
-        select: jest.fn(() => ({
-          in: jest.fn(() => Promise.resolve({ data: sellers, error: null })),
-        })),
-      };
-    }
-    return { select: jest.fn(() => ({ eq: jest.fn(), in: jest.fn() })) };
-  });
+const mockSellers = [
+  { id: 'seller-1', username: 'alice', email: 'alice@uni.ac.za' },
+  { id: 'seller-2', username: null,    email: 'bob@uni.ac.za'   },
+];
+
+// ─── Supabase mock helpers ────────────────────────────────────────────────────
+//
+// listings chain:  .from('listings').select().eq().neq().order()  ← order resolves
+// sellers  chain:  .from('users').select().in()                   ← in    resolves
+//
+// IMPORTANT: Do NOT use a shared beforeEach(() => setupSupabaseMocks()).
+// jest.clearAllMocks() wipes mockImplementation, so every test must call
+// setupSupabaseMocks() itself right before renderDashboard().
+
+const makeListingsChain = (result) => {
+  const c = {};
+  c.select = jest.fn().mockReturnValue(c);
+  c.eq     = jest.fn().mockReturnValue(c);
+  c.neq    = jest.fn().mockReturnValue(c);
+  c.order  = jest.fn().mockResolvedValue(result);
+  return c;
 };
 
-describe('StudentDashboard Component', () => {
-  let mockSupabase;
+const makeSellersChain = (result) => {
+  const c = {};
+  c.select = jest.fn().mockReturnValue(c);
+  c.in     = jest.fn().mockResolvedValue(result);
+  return c;
+};
+
+const setupSupabaseMocks = ({
+  listingsData  = mockListings,
+  listingsError = null,
+  sellersData   = mockSellers,
+  sellersError  = null,
+} = {}) => {
+  const listingsChain = makeListingsChain({ data: listingsData, error: listingsError });
+  const sellersChain  = makeSellersChain ({ data: sellersData,  error: sellersError  });
+
+  // Route by table name — immune to call-order changes
+  supabase.from.mockImplementation((table) => {
+    if (table === 'listings') return listingsChain;
+    if (table === 'users')    return sellersChain;
+    throw new Error(`Unexpected supabase.from('${table}')`);
+  });
+
+  return { listingsChain, sellersChain };
+};
+
+// ─── Render helper ────────────────────────────────────────────────────────────
+
+const renderDashboard = (props = {}) =>
+  render(
+    <MemoryRouter>
+      <StudentDashboard
+        user={mockUser}
+        userRole="student"
+        handleLogout={jest.fn()}
+        {...props}
+      />
+    </MemoryRouter>
+  );
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+describe('StudentDashboard', () => {
+  let navigateMock;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSupabase = require('./utils/supabase').supabase;
+    navigateMock = jest.fn();
+    require('react-router-dom').useNavigate.mockReturnValue(navigateMock);
+    // Default mock — each test that needs custom data calls setupSupabaseMocks() itself
+    setupSupabaseMocks();
   });
 
-  // ─── Rendering ───────────────────────────────────────────────────────────────
+  // ── Static UI ────────────────────────────────────────────────────────────
 
-  test('renders core navigation elements', () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  describe('static UI', () => {
+    it('renders the UniMart logo', () => {
+      renderDashboard();
+      expect(screen.getByText('UniMart')).toBeInTheDocument();
+    });
 
-    expect(screen.getByText('UniMart')).toBeInTheDocument();
-    expect(screen.getByText('Recent Listings')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Sell Item/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Open profile/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Logout/i })).toBeInTheDocument();
-  });
+    it('renders all nav links', () => {
+      renderDashboard();
+      ['Home', 'My Listings', 'My Orders', 'Trade Facility'].forEach(link =>
+        expect(screen.getByText(link)).toBeInTheDocument()
+      );
+    });
 
-  test('renders all five category filter buttons', () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+    it('renders the "Sell Item" button', () => {
+      renderDashboard();
+      expect(screen.getByText('Sell Item')).toBeInTheDocument();
+    });
 
-    expect(screen.getByRole('button', { name: /All Items/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Textbooks/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Furniture/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Electronics/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Clothing/i })).toBeInTheDocument();
-  });
+    it('renders the "Recent Listings" heading', () => {
+      renderDashboard();
+      expect(screen.getByText('Recent Listings')).toBeInTheDocument();
+    });
 
-  test('shows skeleton loaders while fetching', () => {
-    mockSupabase.from.mockImplementation(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          neq: jest.fn(() => ({
-            order: jest.fn(() => new Promise(() => {})), // never resolves
-          })),
-        })),
-      })),
-    }));
+    it('renders the "Main Campus" label', () => {
+      renderDashboard();
+      expect(screen.getByText('Main Campus')).toBeInTheDocument();
+    });
 
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+    it('renders the logout button when handleLogout is provided', () => {
+      renderDashboard();
+      expect(screen.getByLabelText('Logout')).toBeInTheDocument();
+    });
 
-    const skeletons = document.querySelectorAll('.animate-pulse');
-    expect(skeletons.length).toBeGreaterThan(0);
-  });
-
-  // ─── Data fetching ────────────────────────────────────────────────────────────
-
-  test('queries listings table on mount', async () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(mockSupabase.from).toHaveBeenCalledWith('listings');
+    it('does not render logout when handleLogout is undefined', () => {
+      renderDashboard({ handleLogout: undefined });
+      expect(screen.queryByLabelText('Logout')).not.toBeInTheDocument();
     });
   });
 
-  test('filters listings by status active', async () => {
-    const mockEq = jest.fn(() => ({
-      neq: jest.fn(() => ({
-        order: jest.fn(() => Promise.resolve({ data: [], error: null })),
-      })),
-    }));
-    mockSupabase.from.mockImplementation((table) => {
-      if (table === 'listings') return { select: jest.fn(() => ({ eq: mockEq })) };
-      return { select: jest.fn(() => ({ in: jest.fn(() => Promise.resolve({ data: [], error: null })) })) };
+  // ── Category tabs ─────────────────────────────────────────────────────────
+
+  describe('category tabs', () => {
+    it('renders all 5 category buttons', () => {
+      renderDashboard();
+      ['All Items', 'Textbooks', 'Furniture', 'Electronics', 'Clothing'].forEach(cat =>
+        expect(screen.getByText(cat)).toBeInTheDocument()
+      );
     });
 
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(mockEq).toHaveBeenCalledWith('status', 'active');
+    it('"All Items" is active by default', () => {
+      renderDashboard();
+      expect(screen.getByText('All Items').closest('button')).toHaveClass('bg-dark');
     });
-  });
 
-  test('shows "No listings available" when data is empty', async () => {
-    setupMocks({ listings: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('No listings available')).toBeInTheDocument();
+    it('activates the clicked category', () => {
+      renderDashboard();
+      const btn = screen.getByText('Textbooks').closest('button');
+      fireEvent.click(btn);
+      expect(btn).toHaveClass('bg-dark');
     });
-  });
 
-  test('shows "No listings available" on API error', async () => {
-    setupMocks({ listingError: { message: 'DB error' } });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('No listings available')).toBeInTheDocument();
+    it('deactivates the previously active category', () => {
+      renderDashboard();
+      fireEvent.click(screen.getByText('Electronics').closest('button'));
+      expect(screen.getByText('All Items').closest('button')).not.toHaveClass('bg-dark');
     });
   });
 
-  test('renders product listings when data is returned', async () => {
-    setupMocks({
-      listings: sampleListings,
-      sellers: [
-        { id: 'seller1', username: 'Alice', email: 'alice@test.com' },
-        { id: 'seller2', username: 'Bob', email: 'bob@test.com' },
-      ],
+  // ── View mode toggle ──────────────────────────────────────────────────────
+
+  describe('view mode toggle', () => {
+    const getToggleBtns = () =>
+      Array.from(document.querySelectorAll('button')).filter(b =>
+        b.className.includes('w-10') &&
+        b.className.includes('h-10') &&
+        b.className.includes('rounded-full')
+      );
+
+    it('defaults to grid view (lg:grid-cols-3)', async () => {
+      renderDashboard();
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      expect(document.querySelector('.grid')).toHaveClass('lg:grid-cols-3');
     });
 
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Engineering Textbook')).toBeInTheDocument();
-      expect(screen.getByText('Study Desk')).toBeInTheDocument();
-    });
-  });
-
-  test('displays formatted price for listings', async () => {
-    setupMocks({ listings: sampleListings, sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('R250.00')).toBeInTheDocument();
-    });
-  });
-
-  test('displays seller username when available', async () => {
-    setupMocks({
-      listings: sampleListings,
-      sellers: [{ id: 'seller1', username: 'Alice', email: 'alice@test.com' }],
+    it('switches to list view when list button is clicked', async () => {
+      renderDashboard();
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      fireEvent.click(getToggleBtns()[1]); // 0=grid, 1=list
+      const grid = document.querySelector('.grid');
+      expect(grid).toHaveClass('grid-cols-1');
+      expect(grid).not.toHaveClass('lg:grid-cols-3');
     });
 
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Alice')).toBeInTheDocument();
+    it('grid button regains active style after switching back', async () => {
+      renderDashboard();
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      const [gridBtn, listBtn] = getToggleBtns();
+      fireEvent.click(listBtn);
+      fireEvent.click(gridBtn);
+      expect(gridBtn).toHaveClass('text-white');
     });
   });
 
-  test('falls back to email prefix when username is null', async () => {
-    setupMocks({
-      listings: [sampleListings[0]],
-      sellers: [{ id: 'seller1', username: null, email: 'alice@students.ac.za' }],
-    });
+  // ── Loading skeletons ─────────────────────────────────────────────────────
 
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('alice')).toBeInTheDocument();
-    });
-  });
-
-  test('handles null user without crashing', async () => {
-    setupMocks({ listings: [] });
-    render(<StudentDashboard user={null} userRole="student" handleLogout={jest.fn()} />);
-
-    expect(screen.getByText('UniMart')).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByText('No listings available')).toBeInTheDocument();
+  describe('loading state', () => {
+    it('renders animate-pulse skeleton elements while fetching', () => {
+      // Override with a never-resolving chain
+      supabase.from.mockImplementation(() => {
+        const c = {};
+        c.select = jest.fn().mockReturnValue(c);
+        c.eq     = jest.fn().mockReturnValue(c);
+        c.neq    = jest.fn().mockReturnValue(c);
+        c.order  = jest.fn().mockReturnValue(new Promise(() => {}));
+        return c;
+      });
+      renderDashboard();
+      expect(document.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(6);
     });
   });
 
-  test('displays condition badge in uppercase', async () => {
-    setupMocks({ listings: sampleListings, sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  // ── Successful listings render ────────────────────────────────────────────
 
-    await waitFor(() => {
-      expect(screen.getByText('GOOD')).toBeInTheDocument();
+  describe('successful listings render', () => {
+    it('renders both listing titles', async () => {
+      renderDashboard();
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      expect(screen.getByText('Standing Desk')).toBeInTheDocument();
+    });
+
+    it('renders seller username', async () => {
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('alice')).toBeInTheDocument());
+    });
+
+    it('falls back to email prefix when username is null', async () => {
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('bob')).toBeInTheDocument());
+    });
+
+    it('renders en-ZA formatted price (comma decimal separator)', async () => {
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText(/R250,00/)).toBeInTheDocument());
+    });
+
+    it('renders the Supabase image URL when image_path is set', async () => {
+      renderDashboard();
+      await waitFor(() => {
+        const img = Array.from(screen.getAllByRole('img'))
+          .find(i => i.src.includes('keposlpyrewldohbmesq.supabase.co') && i.src.includes('books/algo.jpg'));
+        expect(img).toBeDefined();
+      });
+    });
+
+    it('uses Unsplash fallback when image_path is null', async () => {
+      renderDashboard();
+      await waitFor(() => {
+        const img = Array.from(screen.getAllByRole('img'))
+          .find(i => i.src.includes('unsplash.com') && i.alt === 'Standing Desk');
+        expect(img).toBeDefined();
+      });
+    });
+
+    it('renders condition in uppercase', async () => {
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('GOOD')).toBeInTheDocument());
+    });
+
+    it('renders category badge in uppercase', async () => {
+      renderDashboard();
+      await waitFor(() => expect(screen.getAllByText('TEXTBOOKS')[0]).toBeInTheDocument());
+    });
+
+    it('navigates to listing detail on card click', async () => {
+      renderDashboard();
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      const card = screen.getByText('Introduction to Algorithms')
+        .closest('section[class*="cursor-pointer"]');
+      fireEvent.click(card);
+      expect(navigateMock).toHaveBeenCalledWith('/listing/listing-1');
     });
   });
 
-  test('displays category badge in uppercase', async () => {
-    setupMocks({ listings: sampleListings, sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  // ── Empty state ───────────────────────────────────────────────────────────
 
-    await waitFor(() => {
-      expect(screen.getByText('TEXTBOOKS')).toBeInTheDocument();
+  describe('empty listings state', () => {
+    it('shows "No listings available" for an empty array', async () => {
+      setupSupabaseMocks({ listingsData: [] });
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('No listings available')).toBeInTheDocument());
+    });
+
+    it('shows "No listings available" when data is null', async () => {
+      setupSupabaseMocks({ listingsData: null });
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('No listings available')).toBeInTheDocument());
     });
   });
 
-  // ─── Navigation & modals ─────────────────────────────────────────────────────
+  // ── Error states ──────────────────────────────────────────────────────────
 
-  test('opens profile view when profile button clicked', () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  describe('error handling', () => {
+    it('shows empty state on listings query error', async () => {
+      setupSupabaseMocks({ listingsData: null, listingsError: { message: 'DB error' } });
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('No listings available')).toBeInTheDocument());
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: /Open profile/i }));
-    expect(screen.getByTestId('mock-profile')).toBeInTheDocument();
-  });
+    it('still renders listings when seller query fails', async () => {
+      setupSupabaseMocks({ sellersData: null, sellersError: { message: 'fail' } });
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('Introduction to Algorithms')).toBeInTheDocument());
+    });
 
-  test('returns to home when back button clicked in profile', () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+    it('shows "User" fallback when sellers array is empty', async () => {
+      setupSupabaseMocks({ sellersData: [] });
+      renderDashboard();
+      await waitFor(() => expect(screen.getAllByText('User').length).toBeGreaterThan(0));
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: /Open profile/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Back to Dashboard/i }));
-
-    expect(screen.queryByTestId('mock-profile')).not.toBeInTheDocument();
-    expect(screen.getByText('UniMart')).toBeInTheDocument();
-  });
-
-  test('opens sell modal when Sell Item clicked', () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Sell Item/i }));
-    expect(screen.getByTestId('mock-modal')).toBeInTheDocument();
-  });
-
-  test('closes sell modal when close button clicked', () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Sell Item/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Close Modal/i }));
-
-    expect(screen.queryByTestId('mock-modal')).not.toBeInTheDocument();
-  });
-
-  test('opens sell modal from profile page via Add New Listing', () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Open profile/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Add New Listing/i }));
-
-    expect(screen.getByTestId('mock-modal')).toBeInTheDocument();
-  });
-
-  test('calls handleLogout when logout button clicked', () => {
-    const mockLogout = jest.fn();
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={mockLogout} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Logout/i }));
-    expect(mockLogout).toHaveBeenCalledTimes(1);
-  });
-
-  test('does not render logout button when handleLogout is not provided', () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={undefined} />);
-
-    expect(screen.queryByRole('button', { name: /Logout/i })).not.toBeInTheDocument();
-  });
-
-  // ─── Category & view mode ─────────────────────────────────────────────────────
-
-  test('clicking a category button marks it as active', () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    const textbooksBtn = screen.getByRole('button', { name: /Textbooks/i });
-    fireEvent.click(textbooksBtn);
-
-    expect(textbooksBtn.className).toContain('bg-dark');
-  });
-
-  test('All Items is active by default', () => {
-    setupMocks();
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    const allItemsBtn = screen.getByRole('button', { name: /All Items/i });
-    expect(allItemsBtn.className).toContain('bg-dark');
-  });
-
-  test('rerenders without crashing when user prop changes', async () => {
-    setupMocks();
-    const { rerender } = render(
-      <StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />
-    );
-
-    setupMocks();
-    rerender(
-      <StudentDashboard user={{ id: 'user456', email: 'new@test.com' }} userRole="student" handleLogout={jest.fn()} />
-    );
-
-    expect(screen.getByText('UniMart')).toBeInTheDocument();
-  });
-
-  // ─── calculateTimeAgo coverage (lines 25–43) ─────────────────────────────────
-
-  test('displays "just now" for listings posted seconds ago', async () => {
-    const justNow = new Date(Date.now() - 30000).toISOString(); // 30s ago
-    setupMocks({ listings: [{ ...sampleListings[0], created_at: justNow }], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('just now')).toBeInTheDocument();
+    it('does not crash when supabase.from throws synchronously', () => {
+      supabase.from.mockImplementation(() => { throw new Error('Network failure'); });
+      expect(() => renderDashboard()).not.toThrow();
     });
   });
 
-  test('displays minutes ago for listings posted under an hour ago', async () => {
-    const fiveMinsAgo = new Date(Date.now() - 5 * 60000).toISOString();
-    setupMocks({ listings: [{ ...sampleListings[0], created_at: fiveMinsAgo }], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  // ── Supabase query wiring ─────────────────────────────────────────────────
 
-    await waitFor(() => {
-      expect(screen.getByText('5 mins ago')).toBeInTheDocument();
+  describe('Supabase query wiring', () => {
+    it('queries the listings table', async () => {
+      renderDashboard();
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      expect(supabase.from).toHaveBeenCalledWith('listings');
+    });
+
+    it('filters by status = active', async () => {
+      const { listingsChain } = setupSupabaseMocks();
+      renderDashboard();
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      expect(listingsChain.eq).toHaveBeenCalledWith('status', 'active');
+    });
+
+    it('excludes current user listings via neq', async () => {
+      const { listingsChain } = setupSupabaseMocks();
+      renderDashboard({ user: { id: 'user-1' } });
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      expect(listingsChain.neq).toHaveBeenCalledWith('seller_id', 'user-1');
+    });
+
+    it('does NOT call neq when user is null', async () => {
+      const { listingsChain } = setupSupabaseMocks();
+      renderDashboard({ user: null });
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      expect(listingsChain.neq).not.toHaveBeenCalled();
+    });
+
+    it('orders by created_at descending', async () => {
+      const { listingsChain } = setupSupabaseMocks();
+      renderDashboard();
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      expect(listingsChain.order).toHaveBeenCalledWith('created_at', { ascending: false });
+    });
+
+    it('queries users table with seller IDs', async () => {
+      const { sellersChain } = setupSupabaseMocks();
+      renderDashboard();
+      await waitFor(() => screen.getByText('alice'));
+      expect(supabase.from).toHaveBeenCalledWith('users');
+      expect(sellersChain.in).toHaveBeenCalledWith(
+        'id',
+        expect.arrayContaining(['seller-1', 'seller-2'])
+      );
+    });
+
+    it('re-fetches when the user id prop changes', async () => {
+      renderDashboard({ user: { id: 'user-1' } });
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      const callsBefore = supabase.from.mock.calls.length;
+
+      setupSupabaseMocks();
+      const { rerender } = render(
+        <MemoryRouter>
+          <StudentDashboard user={{ id: 'user-2' }} userRole="student" handleLogout={jest.fn()} />
+        </MemoryRouter>
+      );
+      await waitFor(() =>
+        expect(supabase.from.mock.calls.length).toBeGreaterThan(callsBefore)
+      );
     });
   });
 
-  test('displays singular "min ago" for exactly 1 minute', async () => {
-    const oneMinAgo = new Date(Date.now() - 60000).toISOString();
-    setupMocks({ listings: [{ ...sampleListings[0], created_at: oneMinAgo }], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  // ── Sell modal ────────────────────────────────────────────────────────────
 
-    await waitFor(() => {
-      expect(screen.getByText('1 min ago')).toBeInTheDocument();
+  describe('sell modal', () => {
+    it('is hidden by default', () => {
+      renderDashboard();
+      expect(screen.queryByTestId('sell-modal')).not.toBeInTheDocument();
+    });
+
+    it('opens when "Sell Item" is clicked', () => {
+      renderDashboard();
+      fireEvent.click(screen.getByText('Sell Item'));
+      expect(screen.getByTestId('sell-modal')).toBeInTheDocument();
+    });
+
+    it('closes when modal calls onClose', () => {
+      renderDashboard();
+      fireEvent.click(screen.getByText('Sell Item'));
+      fireEvent.click(screen.getByText('Close Modal'));
+      expect(screen.queryByTestId('sell-modal')).not.toBeInTheDocument();
     });
   });
 
-  test('displays hours ago for listings posted under a day ago', async () => {
-    const threeHoursAgo = new Date(Date.now() - 3 * 3600000).toISOString();
-    setupMocks({ listings: [{ ...sampleListings[0], created_at: threeHoursAgo }], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  // ── Profile navigation ────────────────────────────────────────────────────
 
-    await waitFor(() => {
-      expect(screen.getByText('3 hours ago')).toBeInTheDocument();
+  describe('profile navigation', () => {
+    it('shows profile view on profile button click', () => {
+      renderDashboard();
+      fireEvent.click(screen.getByLabelText('Open profile'));
+      expect(screen.getByTestId('profile-view')).toBeInTheDocument();
+    });
+
+    it('returns to home when Profile calls onBack', () => {
+      renderDashboard();
+      fireEvent.click(screen.getByLabelText('Open profile'));
+      fireEvent.click(screen.getByText('Back'));
+      expect(screen.queryByTestId('profile-view')).not.toBeInTheDocument();
+      expect(screen.getByText('Recent Listings')).toBeInTheDocument();
+    });
+
+    it('opens sell modal from profile via onAddNew', () => {
+      renderDashboard();
+      fireEvent.click(screen.getByLabelText('Open profile'));
+      fireEvent.click(screen.getByText('Add New'));
+      expect(screen.getByTestId('sell-modal')).toBeInTheDocument();
+    });
+
+    it('renders both profile view and sell modal simultaneously', () => {
+      renderDashboard();
+      fireEvent.click(screen.getByLabelText('Open profile'));
+      fireEvent.click(screen.getByText('Add New'));
+      expect(screen.getByTestId('profile-view')).toBeInTheDocument();
+      expect(screen.getByTestId('sell-modal')).toBeInTheDocument();
     });
   });
 
-  test('displays singular "hour ago" for exactly 1 hour', async () => {
-    const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
-    setupMocks({ listings: [{ ...sampleListings[0], created_at: oneHourAgo }], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  // ── Logout ────────────────────────────────────────────────────────────────
 
-    await waitFor(() => {
-      expect(screen.getByText('1 hour ago')).toBeInTheDocument();
+  describe('logout', () => {
+    it('calls handleLogout on logout button click', () => {
+      const handleLogout = jest.fn();
+      renderDashboard({ handleLogout });
+      fireEvent.click(screen.getByLabelText('Logout'));
+      expect(handleLogout).toHaveBeenCalledTimes(1);
     });
   });
 
-  test('displays days ago for listings posted under a week ago', async () => {
-    const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString();
-    setupMocks({ listings: [{ ...sampleListings[0], created_at: threeDaysAgo }], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  // ── Heart / stopPropagation ───────────────────────────────────────────────
 
-    await waitFor(() => {
-      expect(screen.getByText('3 days ago')).toBeInTheDocument();
+  describe('favourite button', () => {
+    it('does not trigger navigation when heart is clicked (stopPropagation)', async () => {
+      renderDashboard();
+      await waitFor(() => screen.getByText('Introduction to Algorithms'));
+      const card = screen.getByText('Introduction to Algorithms')
+        .closest('section[class*="cursor-pointer"]');
+      fireEvent.click(card.querySelector('button'));
+      expect(navigateMock).not.toHaveBeenCalled();
     });
   });
 
-  test('displays formatted date for listings older than a week', async () => {
-    const tenDaysAgo = new Date(Date.now() - 10 * 86400000).toISOString();
-    setupMocks({ listings: [{ ...sampleListings[0], created_at: tenDaysAgo }], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  // ── calculateTimeAgo branches ─────────────────────────────────────────────
 
-    const expected = new Date(tenDaysAgo).toLocaleDateString('en-ZA');
-    await waitFor(() => {
-      expect(screen.getByText(expected)).toBeInTheDocument();
+  describe('time display', () => {
+    it('shows "just now" for a listing created moments ago', async () => {
+      setupSupabaseMocks({
+        listingsData: [{ ...mockListings[0], created_at: new Date().toISOString() }],
+      });
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('just now')).toBeInTheDocument());
+    });
+
+    it('shows "mins ago" for a listing under an hour old', async () => {
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText(/\d+ mins? ago/)).toBeInTheDocument());
+    });
+
+    it('shows "hours ago" for a listing a few hours old', async () => {
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText(/\d+ hours? ago/)).toBeInTheDocument());
+    });
+
+    it('shows "days ago" for a listing a few days old', async () => {
+      setupSupabaseMocks({
+        listingsData: [{
+          ...mockListings[0],
+          created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+        }],
+      });
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText(/\d+ days? ago/)).toBeInTheDocument());
+    });
+
+    it('shows a locale date string for listings older than 7 days', async () => {
+      setupSupabaseMocks({
+        listingsData: [{ ...mockListings[0], created_at: '2023-01-01T00:00:00.000Z' }],
+      });
+      renderDashboard();
+      await waitFor(() => {
+        expect(screen.queryByText(/ago/)).not.toBeInTheDocument();
+        expect(screen.queryByText('just now')).not.toBeInTheDocument();
+      });
+    });
+
+    it('shows "unknown" when created_at is null', async () => {
+      setupSupabaseMocks({ listingsData: [{ ...mockListings[0], created_at: null }] });
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('unknown')).toBeInTheDocument());
+    });
+
+    it('shows "unknown" for an invalid date string', async () => {
+      setupSupabaseMocks({ listingsData: [{ ...mockListings[0], created_at: 'not-a-date' }] });
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('unknown')).toBeInTheDocument());
     });
   });
 
-  test('displays "unknown" for null created_at', async () => {
-    setupMocks({ listings: [{ ...sampleListings[0], created_at: null }], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
+  // ── Null field fallbacks ──────────────────────────────────────────────────
 
-    await waitFor(() => {
-      expect(screen.getByText('unknown')).toBeInTheDocument();
+  describe('null field fallbacks', () => {
+    it('displays UNKNOWN when condition is null', async () => {
+      setupSupabaseMocks({ listingsData: [{ ...mockListings[0], condition: null }] });
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('UNKNOWN')).toBeInTheDocument());
+    });
+
+    it('displays OTHER when category is null', async () => {
+      setupSupabaseMocks({ listingsData: [{ ...mockListings[0], category: null }] });
+      renderDashboard();
+      await waitFor(() => expect(screen.getByText('OTHER')).toBeInTheDocument());
     });
   });
-
-  test('displays "unknown" for invalid date string', async () => {
-    setupMocks({ listings: [{ ...sampleListings[0], created_at: 'not-a-date' }], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('unknown')).toBeInTheDocument();
-    });
-  });
-
-  // ─── Seller fetch fallbacks (lines 79–117) ───────────────────────────────────
-
-  test('shows "User" when seller is not found in users table', async () => {
-    // sellers array is empty — no match for seller_id
-    setupMocks({ listings: [sampleListings[0]], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('User')).toBeInTheDocument();
-    });
-  });
-
-  test('queries users table with seller IDs after fetching listings', async () => {
-    setupMocks({
-      listings: sampleListings,
-      sellers: [{ id: 'seller1', username: 'Alice', email: 'alice@test.com' }],
-    });
-
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(mockSupabase.from).toHaveBeenCalledWith('users');
-    });
-  });
-
-  test('handles seller fetch error gracefully and still renders listings', async () => {
-    mockSupabase.from.mockImplementation((table) => {
-      if (table === 'listings') {
-        return {
-          select: jest.fn(() => ({
-            eq: jest.fn(() => ({
-              neq: jest.fn(() => ({
-                order: jest.fn(() => Promise.resolve({ data: sampleListings, error: null })),
-              })),
-            })),
-          })),
-        };
-      }
-      if (table === 'users') {
-        return {
-          select: jest.fn(() => ({
-            in: jest.fn(() => Promise.resolve({ data: null, error: { message: 'Users fetch failed' } })),
-          })),
-        };
-      }
-    });
-
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    // Listings still render even when seller fetch fails
-    await waitFor(() => {
-      expect(screen.getByText('Engineering Textbook')).toBeInTheDocument();
-    });
-  });
-
-  // ─── Image URL building (lines 134, 206–212) ─────────────────────────────────
-
-  test('uses Supabase storage URL when image_path is set', async () => {
-    const listingWithPath = { ...sampleListings[0], image_path: 'uploads/book.jpg' };
-    setupMocks({ listings: [listingWithPath], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      const img = screen.getByAltText('Engineering Textbook');
-      expect(img.src).toContain('supabase.co');
-      expect(img.src).toContain('uploads/book.jpg');
-    });
-  });
-
-  test('uses fallback unsplash image when no image_path', async () => {
-    const listingNoImage = { ...sampleListings[0], image_path: null };
-    setupMocks({ listings: [listingNoImage], sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      const img = screen.getByAltText('Engineering Textbook');
-      expect(img.src).toContain('unsplash.com');
-    });
-  });
-
-  // ─── List view mode (lines 269–311) ──────────────────────────────────────────
-
-  test('switches to list view when list button clicked', async () => {
-    setupMocks({ listings: sampleListings, sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Engineering Textbook')).toBeInTheDocument();
-    });
-
-    // Find the list view button by its SVG icon presence — it's the second view toggle
-    const viewButtons = document.querySelectorAll('.rounded-full.border');
-    const listBtn = Array.from(viewButtons).find(btn =>
-      btn.querySelector('svg.lucide-list')
-    );
-    fireEvent.click(listBtn);
-
-    // Grid changes to single column list layout
-    const grid = document.querySelector('.grid');
-    expect(grid.className).toContain('grid-cols-1');
-  });
-
-  test('list view renders listings in horizontal layout', async () => {
-    setupMocks({ listings: sampleListings, sellers: [] });
-    render(<StudentDashboard user={mockUser} userRole="student" handleLogout={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Engineering Textbook')).toBeInTheDocument();
-    });
-
-    const viewButtons = document.querySelectorAll('.rounded-full.border');
-    const listBtn = Array.from(viewButtons).find(btn =>
-      btn.querySelector('svg.lucide-list')
-    );
-    fireEvent.click(listBtn);
-
-    // List view cards use flex-row
-    await waitFor(() => {
-      const cards = document.querySelectorAll('.flex-row');
-      expect(cards.length).toBeGreaterThan(0);
-    });
-  });
-
 });

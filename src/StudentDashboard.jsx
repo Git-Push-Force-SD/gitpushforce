@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, LogOut } from 'lucide-react';
 import Profile from './Profile';
 import SellItemModal from './SellItemModal';
 import { supabase } from './utils/supabase';
 
 const StudentDashboard = ({ user, userRole, handleLogout }) => {
+  const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('All Items');
   const [viewMode, setViewMode] = useState('grid');
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'profile'
@@ -268,6 +270,7 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
             products.map((product) => (
             <section 
               key={product.id} 
+              onClick={() => navigate(`/listing/${product.id}`)}
               className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 cursor-pointer group flex ${viewMode === 'list' ? 'flex-row h-48' : 'flex-col'}`}
             >
               

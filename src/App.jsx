@@ -8,6 +8,7 @@ import AdminDashboard from './AdminDashboard';
 import StaffDashboard from './facilDashboard';
 import { AuthProvider, useAuth } from './AuthContext';
 import ProtectedRoute from './ProtectedRoute';
+import ListingDetails from './ListingDetails';
 
 
 const RevealOnScroll = ({ children, className = "", style = {}, delay = 0 }) => {
@@ -474,6 +475,11 @@ function AdminDashboardRoute() {
   return <AdminDashboard handleLogout={signOut} />;
 }
 
+function ListingDetailsRoute() {
+  const { user } = useAuth();
+  return <ListingDetails user={user} />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -505,6 +511,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/listing/:id" element={<ListingDetailsRoute />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
