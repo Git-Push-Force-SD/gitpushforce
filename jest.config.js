@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.js'],
   moduleNameMapper: {
@@ -25,4 +25,4 @@ export default {
     '^.+\\.(js|jsx)$': 'babel-jest',
   },
   moduleFileExtensions: ['js', 'jsx', 'json'],
-}
+};
