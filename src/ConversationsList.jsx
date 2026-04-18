@@ -60,17 +60,21 @@ export default function ConversationsList() {
           .select('id, listing_id')
           .in('id', uniqueConvIds);
 
-        // If no conversations exist in DB, create them on the fly
+        // Ensure all unique conversation IDs are accounted for
         let finalConvs = convs || [];
-        if (finalConvs.length === 0 && uniqueConvIds.length > 0) {
-          // For each conversation ID that doesn't exist, we'll get listing_id from messages
-          finalConvs = uniqueConvIds.map((convId) => {
+        const existingConvIds = finalConvs.map(c => c.id);
+        const missingConvIds = uniqueConvIds.filter(id => !existingConvIds.includes(id));
+        
+        if (missingConvIds.length > 0) {
+          // For each conversation ID that doesn't exist in DB, create on the fly
+          const missingConvs = missingConvIds.map((convId) => {
             const msg = userMessages.find((m) => m.conversation_id === convId);
             return {
               id: convId,
               listing_id: msg?.listing_id || null,
             };
           });
+          finalConvs = [...finalConvs, ...missingConvs];
         }
 
         if (!finalConvs || finalConvs.length === 0) {
