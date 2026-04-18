@@ -13,6 +13,7 @@ const ListingDetails = ({ user }) => {
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [seller, setSeller] = useState(null);
+  const [buyLoading, setBuyLoading] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -67,6 +68,33 @@ const ListingDetails = ({ user }) => {
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     return created.toLocaleDateString('en-ZA');
+  };
+
+  const handleBuy = async () => {
+    if (!authUser) {
+      navigate('/login');
+      return;
+    }
+
+    if (authUser.id === listing.seller_id) {
+      alert('You cannot buy your own item');
+      return;
+    }
+
+    setBuyLoading(true);
+    try {
+      const res = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price: listing.price, name: listing.title }),
+      });
+      const data = await res.json();
+      window.location.href = data.url;
+    } catch (err) {
+      console.error(err);
+      alert('Payment failed. Please try again.');
+      setBuyLoading(false);
+    }
   };
 
   const handleMessageSeller = async () => {
@@ -165,6 +193,18 @@ const ListingDetails = ({ user }) => {
                 {formattedPrice}
               </span>
             </section>
+
+            {/* Buy Now Button */}
+            {listing && authUser && authUser.id !== listing.seller_id && (
+              <button
+                onClick={handleBuy}
+                disabled={buyLoading}
+                className="w-full bg-primary text-white font-bold py-4 px-6 rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-6 flex items-center justify-center gap-2"
+              >
+                {buyLoading ? 'Processing...' : 'Buy Now'}
+                <ShoppingBag size={20} />
+              </button>
+            )}
 
             {/* Seller Card */}
             <section className="bg-white rounded-2xl p-4 flex items-center justify-between border border-gray-200 shadow-sm mb-6 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group">
