@@ -9,6 +9,8 @@ import StaffDashboard from './facilDashboard';
 import { AuthProvider, useAuth } from './AuthContext';
 import ProtectedRoute from './ProtectedRoute';
 import ListingDetails from './ListingDetails';
+import MessagesPage from './Message';
+import ConversationsList from './ConversationsList';
 
 
 const RevealOnScroll = ({ children, className = "", style = {}, delay = 0 }) => {
@@ -172,7 +174,7 @@ function Landing() {
         </header>
 
         {/* 1. Bento Hero Section */}
-        <section className="px-5 md:px-10 pb-16 max-w-[1400px] mx-auto">
+        <section className="px-5 md:px-10 pb-16 w-full">
           <section className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 min-h-[65vh]">
 
             {/* Left Large Column */}
@@ -258,7 +260,7 @@ function Landing() {
         </section>
 
         {/* 2. Asymmetrical Grid */}
-        <section className="py-24 px-5 md:px-10 max-w-[1400px] mx-auto">
+        <section className="py-24 px-5 md:px-10 w-full">
           <section className="flex flex-col md:grid md:grid-cols-12 gap-8">
 
             {/* Card 1 */}
@@ -324,7 +326,7 @@ function Landing() {
         </section>
 
         {/* 4. Rounded Feature Showcase */}
-        <section className="py-20 px-5 md:px-10 max-w-[1400px] mx-auto">
+        <section className="py-20 px-5 md:px-10 w-full">
           <RevealOnScroll className="rounded-[32px] overflow-hidden relative flex min-h-[600px] bg-dark text-white">
 
             <section className="absolute inset-0 z-0">
@@ -359,7 +361,7 @@ function Landing() {
         </section>
 
         {/* 5. Minimalist Product Browse Grid */}
-        <section className="py-24 px-5 md:px-10 max-w-[1400px] mx-auto">
+        <section className="py-24 px-5 md:px-10 w-full">
           <RevealOnScroll>
             <h2 className="text-center text-[2rem] font-bold mb-10 uppercase tracking-[-0.02em]">Browse The Feed</h2>
           </RevealOnScroll>
@@ -512,6 +514,22 @@ export default function App() {
             }
           />
           <Route path="/listing/:id" element={<ListingDetailsRoute />} />
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <ConversationsList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/messages/:conversationId"
+            element={
+              <ProtectedRoute>
+                <MessagesPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
