@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, Settings, LogOut } from 'lucide-react';
+import React, { useMemo,useState } from 'react';
+import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, Settings, LogOut,X } from 'lucide-react';
 import Profile from './Profile';
 import SellItemModal from './SellItemModal';
 import AdminPanel from './AdminPanel';
@@ -10,6 +10,12 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const [viewMode, setViewMode] = useState('grid');
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'profile' | 'admin'
   const [showSellModal, setShowSellModal] = useState(false);
+
+  // Search filter states
+ const [showSearchFilters, setShowSearchFilters] = useState(false);
+ const [searchQuery, setSearchQuery] = useState('');
+ const [minPrice, setMinPrice] = useState('');
+ const [maxPrice, setMaxPrice] = useState('');
   
   const isAdmin = userRole === 'admin' || isAdminUser(user?.email);
 
@@ -96,6 +102,47 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
     }
   ];
 
+  const getNumericPrice = (price) => Number(price.replace(/[^\d]/g, '') || 0);
+
+const matchesCategory = (product) => {
+  if (activeCategory === 'All Items') return true;
+
+  const categoryMap = {
+    Textbooks: 'TEXTBOOK',
+    Furniture: 'FURNITURE',
+    Electronics: 'ELECTRONICS',
+    Clothing: 'CLOTHING',
+  };
+
+  return product.category === categoryMap[activeCategory];
+};
+
+// Memoized filtered products based on active category, search query, and price range
+const filteredProducts = useMemo(() => {
+  return products.filter((product) => {
+    const priceValue = getNumericPrice(product.price);
+    const min = minPrice === '' ? null : Number(minPrice);
+    const max = maxPrice === '' ? null : Number(maxPrice);
+
+    const matchesSearch =
+      product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.sellerName.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const withinMin = min === null || priceValue >= min;
+    const withinMax = max === null || priceValue <= max;
+
+    return matchesCategory(product) && matchesSearch && withinMin && withinMax;
+  });
+}, [activeCategory, searchQuery, minPrice, maxPrice]);
+
+const clearFilters = () => {
+  setSearchQuery('');
+  setMinPrice('');
+  setMaxPrice('');
+  setActiveCategory('All Items');
+};
+
   if (currentView === 'admin') {
     return (
       <AdminPanel user={user} userRole={userRole} onBack={() => setCurrentView('home')} />
@@ -134,9 +181,14 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
         </section>
 
         <section className="flex items-center gap-6">
-          <button className="text-dark hover:text-primary transition-colors">
+
+          // Search Button (toggles search filters)
+          <button className="text-dark hover:text-primary transition-colors"
+            onClick={() => setShowSearchFilters(!showSearchFilters)}
+            >
             <Search size={22} className="stroke-[1.5]" />
           </button>
+
           <button className="text-dark hover:text-primary transition-colors">
             <MessageCircle size={22} className="stroke-[1.5]" />
           </button>
@@ -180,6 +232,46 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
 
       {/* Main Content Area */}
       <main className="max-w-[1400px] mx-auto px-4 sm:px-8">
+
+// Search Filters Section (conditionally rendered)
+        {showSearchFilters && (
+<section className="mb-8 bg-white border rounded-2xl p-5 shadow-sm">
+
+<input
+type="text"
+placeholder="Search..."
+value={searchQuery}
+onChange={(e) => setSearchQuery(e.target.value)}
+className="w-full border rounded-xl px-4 py-3 mb-4"
+/>
+
+<div className="grid grid-cols-2 gap-4">
+<input
+type="number"
+placeholder="Min Price"
+value={minPrice}
+onChange={(e) => setMinPrice(e.target.value)}
+className="border rounded-xl px-4 py-3"
+/>
+
+<input
+type="number"
+placeholder="Max Price"
+value={maxPrice}
+onChange={(e) => setMaxPrice(e.target.value)}
+className="border rounded-xl px-4 py-3"
+/>
+</div>
+
+<button
+onClick={clearFilters}
+className="mt-4 px-4 py-2 bg-dark text-white rounded-full"
+>
+Clear Filters
+</button>
+
+</section>
+)}
         
         {/* Categories & Filter Bar */}
         <section className="mt-8 flex flex-col gap-6 mb-8">
@@ -227,7 +319,8 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
 
         {/* Product Grid Layout */}
         <section className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-          {products.map((product) => (
+          {/*products.map((product) => ( */}
+            {filteredProducts.map((product) => (
             <section 
               key={product.id} 
               className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 cursor-pointer group flex ${viewMode === 'list' ? 'flex-row h-48' : 'flex-col'}`}
