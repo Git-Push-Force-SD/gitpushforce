@@ -2,10 +2,16 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: './',
+  base: '/',
   plugins: [react()],
   server: {
-    port: 3001,
-    open: true
-  }
+    port: 3000,
+    host: 'localhost',
+    proxy: {
+      '/create-checkout-session': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
 })
