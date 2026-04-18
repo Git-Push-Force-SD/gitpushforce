@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, LogOut } from 'lucide-react';
 import Profile from './Profile';
@@ -14,6 +14,10 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const [showSellModal, setShowSellModal] = useState(false);
   const [products, setProducts] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
   
   // Use unread messages hook
   const { unreadCount } = useUnreadMessages(user?.id);
@@ -25,6 +29,54 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
     { name: 'Electronics', count: '89' },
     { name: 'Clothing', count: '210' }
   ];
+
+  const normalizeCategory = (categoryName) => {
+    const map ={
+       'All Items': 'ALL',
+    Textbooks: 'TEXTBOOK',
+    Furniture: 'FURNITURE',
+    Electronics: 'ELECTRONICS',
+    Clothing: 'CLOTHING',
+  };
+    return map[categoryName] || categoryName.toUpperCase();
+};
+const getNumericPrice = (price) => {
+  if(typeof price == 'number') return price;
+  return Number(String(price).replace(/[^\d.]/g, '')) || 0;
+};
+
+const filteredProducts = useMemo(() => {
+  return products.filter((product) => {
+    const matchesCategory =
+      activeCategory === 'All Items' ||
+      product.category == normalizeCategory(activeCategory);
+
+      const q = searchQuery.trim().toLowerCase();
+
+      const matchesSearch =
+        q === '' ||
+        product.title?.toLowerCase().includes(q) ||
+        product.description?.toLowerCase().includes(q) ||
+        product.sellerName.toLowerCase().includes(q)||
+        product.condition?.toLowerCase().includes(q);
+
+        const numericPrice = getNumericPrice(product.price);
+        const min = minPrice == ''? null : Number(minPrice);
+        const max = maxPrice == ''? null : Number(maxPrice);
+
+        const matchesMin = min === null || numericPrice >= min;
+        const matchesMax = max === null || numericPrice <= max;
+
+    return matchesCategory && matchesSearch && matchesMin && matchesMax;
+  });
+    }, [products, activeCategory, searchQuery, minPrice, maxPrice]);
+  
+  const clearFilters = () => {
+    setSearchQuery('');
+    setMinPrice('');
+    setMaxPrice('');
+    setActiveCategory('All Items');
+  };
 
   // Helper function to calculate time ago
   const calculateTimeAgo = (createdAt) => {
@@ -108,6 +160,7 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
             id: listing.id,
             seller_id: listing.seller_id,
             title: listing.title,
+            description: listing.description,
             price: `R${parseFloat(listing.price).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             condition: listing.condition?.toUpperCase() || 'UNKNOWN',
             timePosted: calculateTimeAgo(listing.created_at),
@@ -162,7 +215,10 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
         </section>
 
         <section className="flex items-center gap-6">
-          <button className="text-dark hover:text-primary transition-colors">
+          <button
+           className="text-dark hover:text-primary transition-colors"
+           onClick={() => setShowSearch(!showSearch)}
+           >
             <Search size={22} className="stroke-[1.5]" />
           </button>
           <button 
@@ -206,6 +262,45 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
 
       {/* Main Content Area */}
       <main className="w-full px-4 sm:px-8">
+
+        {showSearch && (
+          <section className="mt -6 mb -4 bg-white border rounded -2xl p-5 shadow-sm " >
+            <input
+              type="text"
+              placeholder="Search listings..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full border rounded-xl px-4 py-3 mb-4"
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="number"
+                  placeholder="Min Price"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  className="border rounded-xl px-4 py-3"
+                  />
+
+                <input
+                  type="number"
+                  placeholder="Max Price"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className="border rounded-xl px-4 py-3"
+                  />
+
+              </div>
+              <button
+                onClick={clearFilters}
+                className="mt-4 px-4 py-2 bg-dark text-white rounded-full"
+                >
+                Clear Filters
+                </button>
+                <p className="mt-3 text-sm text-gray-500">
+                  {filteredProducts.length} items found
+                </p>
+          </section>
+        )}
         
         {/* Categories & Filter Bar */}
         <section className="mt-8 flex flex-col gap-6 mb-8">
@@ -228,7 +323,9 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
               >
                 <List size={16} />
               </button>
-              <button className="ml-2 flex items-center justify-center bg-white border border-gray-200 text-dark w-10 h-10 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
+              <button 
+              onClick={() => setShowSearch(!showSearch)}
+              className="ml-2 flex items-center justify-center bg-white border border-gray-200 text-dark w-10 h-10 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
                 <SlidersHorizontal size={16} />
               </button>
             </section>
@@ -274,12 +371,12 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
                 </section>
               </section>
             ))
-          ) : products.length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <section className="col-span-full flex items-center justify-center py-12">
-              <p className="text-gray-500 text-lg">No listings available</p>
+              <p className="text-gray-500 text-lg">No matching listings available</p>
             </section>
           ) : (
-            products.map((product) => (
+            filteredProducts.map((product) => (
             <section 
               key={product.id} 
               onClick={() => navigate(`/listing/${product.id}`)}
