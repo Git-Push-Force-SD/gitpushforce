@@ -221,11 +221,11 @@ export default function MessagesPage() {
   }
 
   return (
-    <section className="bg-offwhite font-body text-dark antialiased flex h-screen overflow-hidden">
+    <section className="bg-offwhite font-body text-dark antialiased flex flex-col h-[100dvh] w-full overflow-hidden">
       {/* Main Chat */}
-      <section className="flex-1 flex flex-col h-full bg-offwhite">
+      <section className="flex-1 flex flex-col h-full w-full min-w-0 bg-offwhite">
         {/* Header */}
-        <header className="sticky top-0 z-50 bg-offwhite border-b border-light flex justify-between items-center px-6 py-3">
+        <header className="sticky top-0 z-50 bg-offwhite border-b border-light flex justify-between items-center px-4 md:px-6 py-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
@@ -265,7 +265,7 @@ export default function MessagesPage() {
 
             {/* Dropdown Menu */}
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-40 bg-offwhite border border-light rounded-lg shadow-xl z-10 overflow-hidden">
+              <div className="absolute right-0 mt-2 w-40 bg-offwhite border border-light rounded-lg shadow-xl z-10 overflow-hidden text-sm">
                 {isBuyer ? (
                   <>
                     <button
@@ -314,10 +314,10 @@ export default function MessagesPage() {
 
         {/* Negotiated Item Banner */}
         {negotiatedItem && (
-          <div className="bg-white border-b border-light px-6 py-3 shadow-sm flex-shrink-0 z-40 relative">
+          <div className="bg-white border-b border-light px-4 md:px-6 py-3 shadow-sm flex-shrink-0 z-40 relative">
             <div className="w-full flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
                   <img 
                     src={negotiatedItem.image_path ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${negotiatedItem.image_path}` : 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80'} 
                     alt={negotiatedItem.title}
@@ -325,7 +325,7 @@ export default function MessagesPage() {
                   />
                 </div>
                 <div>
-                  <h3 className="font-bold text-dark text-sm truncate max-w-[200px] sm:max-w-md">{negotiatedItem.title}</h3>
+                  <h3 className="font-bold text-dark text-sm truncate max-w-[140px] sm:max-w-md">{negotiatedItem.title}</h3>
                   <p className="text-primary font-bold text-sm">R{(parseFloat(negotiatedItem.price) || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
               </div>
@@ -342,7 +342,7 @@ export default function MessagesPage() {
         )}
 
         {/* Chat Messages */}
-        <main className="flex-1 overflow-y-auto px-4 py-6">
+        <main className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
           <section className="w-full flex flex-col gap-4">
             {messagesLoading && !messages.length && (
               <section className="text-center py-8">
@@ -370,13 +370,13 @@ export default function MessagesPage() {
                 }`}
               >
                 <div
-                  className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
+                  className={`max-w-[90%] sm:max-w-[70%] px-4 py-2.5 rounded-2xl ${
                     message.sender_id === user?.id
                       ? "bg-primary text-offwhite rounded-br-none"
                       : "bg-light text-dark rounded-bl-none"
                   }`}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.body}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-hidden [word-break:break-word]">{message.body}</p>
                   <span className={`text-xs mt-1.5 block ${
                     message.sender_id === user?.id
                       ? "text-offwhite/70"
@@ -395,14 +395,14 @@ export default function MessagesPage() {
         </main>
 
         {/* Message Input */}
-        <section className="sticky bottom-0 bg-offwhite border-t border-light p-4">
+        <section className="sticky bottom-0 bg-offwhite border-t border-light p-3 sm:p-4 w-full">
           <div className="w-full flex items-end gap-3">
             <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={sending || messagesLoading}
-              className="flex-1 p-3 rounded-2xl bg-light text-dark placeholder-text-muted disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary border-none resize-none max-h-32 leading-relaxed"
+              className="flex-1 p-3 rounded-2xl bg-light text-dark placeholder-text-muted disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary border-none resize-none max-h-32 leading-relaxed text-sm sm:text-base"
               placeholder="Type a message..."
               rows="1"
               style={{ minHeight: '44px' }}
@@ -421,8 +421,8 @@ export default function MessagesPage() {
 
       {/* Profile Modal */}
       {profileOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 animate-slide-up">
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
+          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 md:rounded-3xl md:mb-10 animate-slide-up mx-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-dark">User Profile</h2>
               <button
