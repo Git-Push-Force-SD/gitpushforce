@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Heart, ShieldCheck, Clock, MessageCircle, ShoppingBag, ChevronRight } from 'lucide-react';
 import { supabase } from './utils/supabase';
+import { useAuth } from './AuthContext';
+import { useConversation } from './hooks/useConversation';
 
 const ListingDetails = ({ user }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
+  const { getOrCreateConversation, loading: conversationLoading } = useConversation();
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [seller, setSeller] = useState(null);
@@ -65,6 +69,32 @@ const ListingDetails = ({ user }) => {
     return created.toLocaleDateString('en-ZA');
   };
 
+  const handleMessageSeller = async () => {
+    if (!authUser) {
+      navigate('/login');
+      return;
+    }
+
+    if (authUser.id === seller?.id) {
+      alert('You cannot message yourself');
+      return;
+    }
+
+    try {
+      const conversationId = await getOrCreateConversation(id, seller.id, authUser.id);
+      navigate(`/messages/${conversationId}`, {
+        state: {
+          receiverId: seller.id,
+          receiverName: seller.username || seller.email?.split('@')[0],
+          listingId: id,
+        },
+      });
+    } catch (err) {
+      console.error('Error opening conversation:', err);
+      alert('Failed to open conversation. Please try again.');
+    }
+  };
+
   if (!loading && !listing) {
     return (
       <section className="min-h-screen bg-offwhite flex flex-col items-center justify-center">
@@ -83,7 +113,7 @@ const ListingDetails = ({ user }) => {
     : 'R---.--';
   return (
     <section className="min-h-screen bg-offwhite font-main text-dark pb-20">
-      <section className="max-w-[1200px] mx-auto px-5 md:px-10 pt-8">
+      <section className="w-full px-5 md:px-10 pt-8">
         
         {/* Back Button */}
         <button 
@@ -156,8 +186,13 @@ const ListingDetails = ({ user }) => {
 
             {/* Action Buttons */}
             <section className="flex flex-col gap-3 mb-4">
-              <button className="w-full bg-dark hover:bg-black text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg">
-                <MessageCircle size={22} className="stroke-[2.5]" /> Message Seller
+              <button 
+                onClick={handleMessageSeller}
+                disabled={conversationLoading || !seller}
+                className="w-full bg-dark hover:bg-black text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <MessageCircle size={22} className="stroke-[2.5]" /> 
+                {conversationLoading ? 'Opening chat...' : 'Message Seller'}
               </button>
               <button className="w-full bg-white text-dark border border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg">
                 <ShoppingBag size={22} className="stroke-[2.5]" /> Buy / Offer

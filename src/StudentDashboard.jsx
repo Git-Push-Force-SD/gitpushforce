@@ -4,6 +4,7 @@ import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHori
 import Profile from './Profile';
 import SellItemModal from './SellItemModal';
 import { supabase } from './utils/supabase';
+import { useUnreadMessages } from './hooks/useUnreadMessages';
 
 const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const navigate = useNavigate();
@@ -13,6 +14,9 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const [showSellModal, setShowSellModal] = useState(false);
   const [products, setProducts] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
+  
+  // Use unread messages hook
+  const { unreadCount } = useUnreadMessages(user?.id);
 
   const categories = [
     { name: 'All Items', count: '1.2k' },
@@ -142,7 +146,7 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
     <section className="min-h-screen bg-offwhite font-main text-dark pb-20">
       
       {/* Top Navigation */}
-      <nav className="flex items-center justify-between px-8 py-6 max-w-[1400px] mx-auto">
+      <nav className="flex items-center justify-between px-8 py-6 w-full">
         <section className="flex items-center gap-10">
           {/* Logo */}
           <section className="text-2xl font-display uppercase tracking-wider font-bold text-dark">
@@ -161,8 +165,16 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
           <button className="text-dark hover:text-primary transition-colors">
             <Search size={22} className="stroke-[1.5]" />
           </button>
-          <button className="text-dark hover:text-primary transition-colors">
+          <button 
+            onClick={() => navigate('/messages')}
+            className="text-dark hover:text-primary transition-colors relative"
+          >
             <MessageCircle size={22} className="stroke-[1.5]" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </button>
           <button 
             aria-label="Open profile"
@@ -193,7 +205,7 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
       </nav>
 
       {/* Main Content Area */}
-      <main className="max-w-[1400px] mx-auto px-4 sm:px-8">
+      <main className="w-full px-4 sm:px-8">
         
         {/* Categories & Filter Bar */}
         <section className="mt-8 flex flex-col gap-6 mb-8">
