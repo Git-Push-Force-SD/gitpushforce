@@ -16,34 +16,65 @@ export default function MessagesPage() {
   const [isBuyer, setIsBuyer] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [receiverProfile, setReceiverProfile] = useState(null);
+  const [negotiatedItem, setNegotiatedItem] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Get receiver info from navigation state
   const { receiverId, receiverName, listingId } = location.state || {};
 
-  // Determine if current user is buyer or seller
+  // Determine if current user is buyer or seller and fetch listing details
   useEffect(() => {
-    const checkUserRole = async () => {
-      if (!listingId || !user?.id) {
+    const fetchListingAndRole = async () => {
+      let currentListingId = listingId;
+      
+      if (!currentListingId && conversationId) {
+        try {
+          const { data: conv } = await supabase
+            .from('conversations')
+            .select('listing_id')
+            .eq('id', conversationId)
+            .single();
+          if (conv && conv.listing_id) {
+            currentListingId = conv.listing_id;
+          } else {
+            // Fallback: conversations table might not have this, check messages
+            const { data: msgs } = await supabase
+              .from('messages')
+              .select('listing_id')
+              .eq('conversation_id', conversationId)
+              .not('listing_id', 'is', null)
+              .limit(1);
+            if (msgs && msgs.length > 0 && msgs[0].listing_id) {
+              currentListingId = msgs[0].listing_id;
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching conversation:', err);
+        }
+      }
+
+      if (!currentListingId || !user?.id) {
         return;
       }
+      
       try {
         const { data: listing } = await supabase
           .from('listings')
-          .select('seller_id')
-          .eq('id', listingId)
+          .select('id, seller_id, title, price, image_path, condition')
+          .eq('id', currentListingId)
           .single();
         
         if (listing) {
+          setNegotiatedItem(listing);
           const buyer = user.id !== listing.seller_id;
           setIsBuyer(buyer);
         }
       } catch (err) {
-        console.error('Error checking user role:', err);
+        console.error('Error fetching listing and role:', err);
       }
     };
-    checkUserRole();
-  }, [listingId, user?.id]);
+    fetchListingAndRole();
+  }, [listingId, conversationId, user?.id]);
 
   // Fetch receiver's profile
   useEffect(() => {
@@ -93,7 +124,12 @@ export default function MessagesPage() {
           .eq('receiver_id', user.id)
           .eq('is_read', false);
 
-     
+        console.log('[READ_RECEIPT] SELECT query result:', { 
+          matched: matchingMessages?.length || 0, 
+          error: checkError?.message || 'none',
+          conversationId,
+          userId: user.id
+        });
 
         if (checkError) {
           console.error('[READ_RECEIPT] SELECT error details:', checkError);
@@ -108,7 +144,7 @@ export default function MessagesPage() {
         // Get the IDs of messages to update
         const messageIdsToUpdate = matchingMessages.map(m => m.id);
         
-
+        console.log('[READ_RECEIPT] About to update', messageIdsToUpdate.length, 'messages');
         
         // Mark all unread messages from receiver as read using IN query
         const { data: updateResult, error } = await supabase
@@ -116,11 +152,13 @@ export default function MessagesPage() {
           .update({ is_read: true })
           .in('id', messageIdsToUpdate);
         
-
+        console.log('[READ_RECEIPT] UPDATE response:', { affectedRows: updateResult?.length || 0, error });
         
         if (error) {
-
+          console.error('[READ_RECEIPT] ERROR marking messages as read:', error.message, error.code);
         } else {
+          console.log('[READ_RECEIPT] Marked', messageIdsToUpdate.length, 'messages as read');
+          console.log('[READ_RECEIPT] Message IDs:', messageIdsToUpdate);
         }
       } catch (err) {
         console.error('Error marking messages as read:', err);
@@ -183,11 +221,11 @@ export default function MessagesPage() {
   }
 
   return (
-    <section className="bg-light/30 lg:bg-offwhite/30 font-body text-dark antialiased flex h-screen w-full items-center justify-center lg:p-6 overflow-hidden">
-      {/* Main Chat Container */}
-      <div className="w-full h-full lg:max-w-5xl lg:max-h-[900px] lg:h-[90vh] bg-offwhite lg:bg-white lg:rounded-[2rem] lg:shadow-[0_8px_30px_rgb(0,0,0,0.08)] lg:border lg:border-light/60 flex flex-col overflow-hidden relative">
+    <section className="bg-offwhite font-body text-dark antialiased flex h-screen overflow-hidden">
+      {/* Main Chat */}
+      <section className="flex-1 flex flex-col h-full bg-offwhite">
         {/* Header */}
-        <header className="flex-none z-50 bg-offwhite lg:bg-white/90 backdrop-blur-md border-b border-light flex justify-between items-center px-6 py-4">
+        <header className="sticky top-0 z-50 bg-offwhite border-b border-light flex justify-between items-center px-6 py-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
@@ -274,9 +312,38 @@ export default function MessagesPage() {
           </div>
         </header>
 
+        {/* Negotiated Item Banner */}
+        {negotiatedItem && (
+          <div className="bg-white border-b border-light px-6 py-3 shadow-sm flex-shrink-0 z-40 relative">
+            <div className="w-full flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                  <img 
+                    src={negotiatedItem.image_path ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${negotiatedItem.image_path}` : 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80'} 
+                    alt={negotiatedItem.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-bold text-dark text-sm truncate max-w-[200px] sm:max-w-md">{negotiatedItem.title}</h3>
+                  <p className="text-primary font-bold text-sm">R{(parseFloat(negotiatedItem.price) || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+              {isBuyer && (
+                <button 
+                  onClick={() => navigate(`/listing/${negotiatedItem.id}`)}
+                  className="text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 px-4 py-2 rounded-full transition-colors"
+                >
+                  View Item
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Chat Messages */}
-        <main className="flex-1 overflow-y-auto px-4 lg:px-8 py-6 bg-offwhite lg:bg-transparent">
-          <section className="max-w-3xl mx-auto flex flex-col gap-6">
+        <main className="flex-1 overflow-y-auto px-4 py-6">
+          <section className="w-full flex flex-col gap-4">
             {messagesLoading && !messages.length && (
               <section className="text-center py-8">
                 <p className="text-text-muted">Loading messages...</p>
@@ -298,73 +365,59 @@ export default function MessagesPage() {
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex w-full ${
+                className={`flex ${
                   message.sender_id === user?.id ? "justify-end" : "justify-start"
-                } group`}
+                }`}
               >
-                <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] lg:max-w-[65%] ${
-                  message.sender_id === user?.id ? "flex-row-reverse" : "flex-row"
-                }`}>
-                  <div
-                    className={`px-5 py-3.5 shadow-sm relative transition-shadow duration-200 ${
-                      message.sender_id === user?.id
-                        ? "bg-primary text-offwhite rounded-3xl rounded-br-sm"
-                        : "bg-white lg:bg-light text-dark rounded-3xl rounded-bl-sm border border-light lg:border-transparent"
-                    }`}
-                  >
-                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{message.body}</p>
-                    <div className={`flex items-center gap-1 mt-1.5 ${
-                        message.sender_id === user?.id ? "justify-end" : "justify-start"
-                    }`}>
-                      <span className={`text-[11px] font-medium tracking-wide ${
-                        message.sender_id === user?.id
-                          ? "text-offwhite/80"
-                          : "text-text-muted/80"
-                      }`}>
-                        {new Date(message.sent_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  </div>
+                <div
+                  className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
+                    message.sender_id === user?.id
+                      ? "bg-primary text-offwhite rounded-br-none"
+                      : "bg-light text-dark rounded-bl-none"
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.body}</p>
+                  <span className={`text-xs mt-1.5 block ${
+                    message.sender_id === user?.id
+                      ? "text-offwhite/70"
+                      : "text-text-muted"
+                  }`}>
+                    {new Date(message.sent_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </div>
               </div>
             ))}
-            <div ref={messagesEndRef} className="h-2" />
+            <div ref={messagesEndRef} />
           </section>
         </main>
 
         {/* Message Input */}
-        <section className="flex-none bg-offwhite lg:bg-white border-t border-light p-4 lg:p-6 lg:pb-8">
-          <div className="max-w-3xl mx-auto flex items-end gap-3 bg-white lg:bg-light/50 p-2 rounded-3xl border border-light focus-within:border-primary/30 focus-within:bg-white focus-within:shadow-md transition-all duration-300">
+        <section className="sticky bottom-0 bg-offwhite border-t border-light p-4">
+          <div className="w-full flex items-end gap-3">
             <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={sending || messagesLoading}
-              className="flex-1 p-3 px-5 rounded-3xl bg-transparent text-dark placeholder-text-muted/70 disabled:opacity-50 focus:outline-none border-none resize-none max-h-32 leading-relaxed"
+              className="flex-1 p-3 rounded-2xl bg-light text-dark placeholder-text-muted disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary border-none resize-none max-h-32 leading-relaxed"
               placeholder="Type a message..."
               rows="1"
-              style={{ minHeight: '48px' }}
+              style={{ minHeight: '44px' }}
             />
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || sending || messagesLoading}
-              className="bg-primary text-offwhite p-3 rounded-full hover:bg-[#32b464] hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none font-bold flex-shrink-0 flex items-center justify-center w-[48px] h-[48px] mb-[1px] mr-[1px]"
+              className="bg-primary text-offwhite p-3 rounded-full hover:bg-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold flex-shrink-0 flex items-center justify-center w-12 h-12"
               title="Send message"
             >
-              {sending ? (
-                <span className="animate-spin text-xl font-bold">⟳</span>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[18px] h-[18px] ml-0.5">
-                  <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
-                </svg>
-              )}
+              {sending ? "⟳" : "➤"}
             </button>
           </div>
         </section>
-      </div>
+      </section>
 
       {/* Profile Modal */}
       {profileOpen && (
