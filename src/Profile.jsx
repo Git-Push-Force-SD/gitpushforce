@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Edit2, Plus, Trash2, LogOut, Camera, X, Loader, Check } from 'lucide-react';
+import { ArrowLeft, Edit2, Plus, Trash2, Camera, X, Loader, Check, Heart } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { supabase } from './utils/supabase';
 
 
-const Profile = ({ onBack, onAddNew }) => {
+const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
   const { user } = useAuth();
   const [profileImage, setProfileImage] = useState(null);
   const [imageError, setImageError] = useState(null);
@@ -334,6 +334,21 @@ const Profile = ({ onBack, onAddNew }) => {
 
         {/* Listings Section */}
         <section>
+          <section className="mb-6">
+            <button
+              onClick={onOpenWishlist}
+              className="w-full bg-white hover:bg-gray-50 border border-gray-200 text-dark py-3.5 rounded-xl flex items-center justify-between px-4 font-semibold shadow-sm transition-colors"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Heart size={18} className="text-red-500" />
+                Wishlist
+              </span>
+              <span className="text-sm text-gray-500">
+                {wishlistCount} item{wishlistCount === 1 ? '' : 's'}
+              </span>
+            </button>
+          </section>
+
           <section className="flex justify-between items-end mb-4">
             <h2 className="text-xl font-bold text-dark">My Listings</h2>
             <span className="text-primary text-sm font-semibold">
