@@ -5,7 +5,13 @@ export default defineConfig({
   base: './',
   plugins: [react()],
   server: {
-    port: 3000,
-    open: true
-  }
+    port: 5173,
+    open: true,
+    proxy: {
+      '/create-checkout-session': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
 })

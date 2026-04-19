@@ -1,0 +1,133 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`PaymentSuccess Snapshot matches snapshot 1`] = `
+<div>
+  <section
+    class="w-full min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center px-5"
+  >
+    <section
+      class="text-center max-w-[500px] bg-white rounded-3xl p-12 shadow-lg"
+    >
+      <section
+        class="flex justify-center mb-8"
+      >
+        <section
+          class="relative"
+        >
+          <svg
+            class="text-green-500 animate-bounce"
+            data-testid="check-circle-icon"
+            width="80"
+          />
+          <section
+            class="absolute inset-0 rounded-full animate-pulse bg-green-500/20"
+          />
+        </section>
+      </section>
+      <h1
+        class="text-4xl font-bold text-dark mb-4 font-display uppercase"
+      >
+        Payment Successful!
+      </h1>
+      <p
+        class="text-lg text-text-muted mb-8 leading-relaxed"
+      >
+        Thank you for your purchase! Your order has been confirmed and will be processed shortly. You'll receive a confirmation email with your order details.
+      </p>
+      <section
+        class="bg-gray-50 rounded-2xl p-6 mb-8 text-left border border-gray-200"
+      >
+        <h3
+          class="font-semibold text-dark mb-4 uppercase text-sm"
+        >
+          Order Details
+        </h3>
+        <section
+          class="space-y-3 text-sm text-text-muted"
+        >
+          <section
+            class="flex justify-between"
+          >
+            <span>
+              Order Status:
+            </span>
+            <span
+              class="font-semibold text-green-600"
+            >
+              Confirmed
+            </span>
+          </section>
+          <section
+            class="flex justify-between"
+          >
+            <span>
+              Currency:
+            </span>
+            <span
+              class="font-semibold text-green-600"
+            >
+              ZAR (South African Rand)
+            </span>
+          </section>
+          <section
+            class="flex justify-between"
+          >
+            <span>
+              Payment Status:
+            </span>
+            <span
+              class="font-semibold text-green-600"
+            >
+              Completed
+            </span>
+          </section>
+          <section
+            class="flex justify-between"
+          >
+            <span>
+              Transaction ID:
+            </span>
+            <span
+              class="font-mono text-xs"
+            >
+              1700000000000
+            </span>
+          </section>
+        </section>
+      </section>
+      <section
+        class="flex flex-col sm:flex-row gap-4"
+      >
+        <button
+          class="flex-1 flex items-center justify-center gap-2 bg-primary text-white font-semibold py-3 px-6 rounded-xl hover:bg-primary-dark transition-colors uppercase text-sm"
+        >
+          <svg
+            data-testid="home-icon"
+            width="18"
+          />
+          Back to Dashboard
+        </button>
+        <button
+          class="flex-1 flex items-center justify-center gap-2 bg-dark text-white font-semibold py-3 px-6 rounded-xl hover:bg-gray-800 transition-colors uppercase text-sm"
+        >
+          <svg
+            data-testid="shopping-bag-icon"
+            width="18"
+          />
+          Continue Shopping
+        </button>
+      </section>
+      <p
+        class="mt-8 text-xs text-text-muted"
+      >
+        Questions? Contact us at 
+        <span
+          class="font-semibold"
+        >
+          support@unimart.com
+        </span>
+      </p>
+    </section>
+  </section>
+</div>
+`;

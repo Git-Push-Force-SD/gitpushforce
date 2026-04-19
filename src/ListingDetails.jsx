@@ -13,6 +13,9 @@ const ListingDetails = ({ user }) => {
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [seller, setSeller] = useState(null);
+  const [buyLoading, setBuyLoading] = useState(false);
+  const [showOfferInput, setShowOfferInput] = useState(false);
+  const [offerAmount, setOfferAmount] = useState('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -67,6 +70,40 @@ const ListingDetails = ({ user }) => {
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     return created.toLocaleDateString('en-ZA');
+  };
+    const handleBuy = async () => {
+    if (!authUser) { navigate('/login'); return; }
+    
+    const amount = parseFloat(offerAmount);
+    if (!offerAmount || isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid amount greater than 0.");
+      return;
+    }
+
+    if (amount > parseFloat(listing.price)) {
+      alert(`You cannot offer more than the asking price of R${parseFloat(listing.price).toFixed(2)}.`);
+      return;
+    }
+
+    setBuyLoading(true);
+    try {
+      const res = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          price: parseFloat(offerAmount), 
+          name: listing.title,
+          paymentType: 'custom'
+        }),
+      });
+      const data = await res.json();
+      if (!data.url) throw new Error(data.error || 'No checkout URL');
+      window.location.href = data.url;
+    } catch (err) {
+      console.error(err);
+      alert('Payment failed. Please try again.');
+      setBuyLoading(false);
+    }
   };
 
   const handleMessageSeller = async () => {
@@ -194,9 +231,38 @@ const ListingDetails = ({ user }) => {
                 <MessageCircle size={22} className="stroke-[2.5]" /> 
                 {conversationLoading ? 'Opening chat...' : 'Message Seller'}
               </button>
-              <button className="w-full bg-white text-dark border border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg">
-                <ShoppingBag size={22} className="stroke-[2.5]" /> Buy / Offer
-              </button>
+
+               {(!authUser || authUser.id !== listing?.seller_id) && (
+                !showOfferInput ? (
+                  <button 
+                    onClick={() => setShowOfferInput(true)}
+                    className="w-full bg-white text-dark border border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
+                  >
+                    <ShoppingBag size={22} className="stroke-[2.5]" /> Buy / Offer
+                  </button>
+                ) : (
+                  <section className="w-full flex flex-col gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Enter amount (R)"
+                      value={offerAmount}
+                      onChange={(e) => setOfferAmount(e.target.value)}
+                      className="w-full border border-gray-300 py-3.5 px-4 rounded-xl font-bold text-center text-lg focus:outline-none focus:ring-2 focus:ring-dark"
+                      autoFocus
+                    />
+                    <button 
+                      onClick={handleBuy}
+                      disabled={buyLoading || !offerAmount}
+                      className="w-full bg-primary text-white hover:bg-primary-dark py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg disabled:opacity-50"
+                    >
+                      {buyLoading ? 'Processing...' : 'Proceed to Payment'}
+                      <ShoppingBag size={20} />
+                    </button>
+                  </section>
+                )
+              )}
             </section>
 
             {/* Campus Secure Guarantee */}

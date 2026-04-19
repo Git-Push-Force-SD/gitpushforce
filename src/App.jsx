@@ -11,6 +11,8 @@ import ProtectedRoute from './ProtectedRoute';
 import ListingDetails from './ListingDetails';
 import MessagesPage from './Message';
 import ConversationsList from './ConversationsList';
+import PaymentSuccess from './PaymentSuccess';
+import PaymentCancel from './PaymentCancel';
 
 
 const RevealOnScroll = ({ children, className = "", style = {}, delay = 0 }) => {
@@ -530,6 +532,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+              <Route path="/success" element={<PaymentSuccess />} />
+          <Route path="/cancel" element={<PaymentCancel />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
