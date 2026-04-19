@@ -4,10 +4,8 @@ import userEvent from '@testing-library/user-event';
 import SellItemModal from './SellItemModal';
 import * as AuthContext from './AuthContext';
 
-// Mock window.alert
 global.alert = jest.fn();
 
-// Mock Supabase
 jest.mock('./utils/supabase', () => ({
   supabase: {
     from: jest.fn(() => ({
@@ -15,7 +13,13 @@ jest.mock('./utils/supabase', () => ({
     })),
     storage: {
       from: jest.fn(() => ({
-        upload: jest.fn(() => Promise.resolve({ data: { path: 'test/uplod.jpg' }, error: null }))
+        upload: jest.fn(() => Promise.resolve({ data: { path: 'test/upload.jpg' }, error: null }))
+      }))
+    },
+    functions: {
+      invoke: jest.fn(() => Promise.resolve({
+        data: { min: 500, max: 1500, reason: 'Based on CPI data' },
+        error: null
       }))
     }
   }
@@ -33,6 +37,7 @@ describe('SellItemModal Component', () => {
       role: 'student',
       loading: false
     });
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -40,9 +45,7 @@ describe('SellItemModal Component', () => {
   });
 
   test('Modal opens with all form fields', () => {
-    const handleClose = jest.fn();
-
-    render(<SellItemModal onClose={handleClose} />);
+    render(<SellItemModal onClose={jest.fn()} />);
 
     expect(screen.getByText(/List New Item/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i)).toBeInTheDocument();
@@ -53,23 +56,18 @@ describe('SellItemModal Component', () => {
 
   test('Modal closes when Cancel button is clicked', () => {
     const handleClose = jest.fn();
-
     render(<SellItemModal onClose={handleClose} />);
 
-    const cancelButton = screen.getByRole('button', { name: /Cancel/i });
-    fireEvent.click(cancelButton);
-    
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
   test('Modal closes when X button is clicked', () => {
     const handleClose = jest.fn();
-
     render(<SellItemModal onClose={handleClose} />);
 
     const allButtons = screen.getAllByRole('button');
-    const xButton = allButtons.find(btn => btn.textContent === '');
-    
+    const xButton = allButtons.find(btn => btn.querySelector('svg'));
     if (xButton) {
       fireEvent.click(xButton);
       expect(handleClose).toHaveBeenCalled();
@@ -77,10 +75,8 @@ describe('SellItemModal Component', () => {
   });
 
   test('Form inputs update correctly when user types', async () => {
-    const handleClose = jest.fn();
     const user = userEvent.setup();
-
-    render(<SellItemModal onClose={handleClose} />);
+    render(<SellItemModal onClose={jest.fn()} />);
 
     const titleInput = screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i);
     const priceInput = screen.getByPlaceholderText(/0.00/i);
@@ -96,341 +92,310 @@ describe('SellItemModal Component', () => {
   });
 
   test('Category can be selected', async () => {
-    const handleClose = jest.fn();
     const user = userEvent.setup();
-
-    render(<SellItemModal onClose={handleClose} />);
+    render(<SellItemModal onClose={jest.fn()} />);
 
     const categorySelect = screen.getByDisplayValue(/Select category/i);
-    
     await user.selectOptions(categorySelect, 'electronics');
-    
     expect(categorySelect).toHaveValue('electronics');
   });
 
-  test('Condition radio button can be selected', async () => {
-    const handleClose = jest.fn();
+  test('Listing type defaults to sale', () => {
+    render(<SellItemModal onClose={jest.fn()} />);
 
-    render(<SellItemModal onClose={handleClose} />);
+    const listingTypeSelect = screen.getByDisplayValue(/Sale/i);
+    expect(listingTypeSelect).toHaveValue('sale');
+  });
+
+  test('Listing type can be changed to trade', async () => {
+    const user = userEvent.setup();
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    const listingTypeSelect = screen.getByDisplayValue(/Sale/i);
+    await user.selectOptions(listingTypeSelect, 'trade');
+    expect(listingTypeSelect).toHaveValue('trade');
+  });
+
+  test('Listing type can be changed to either', async () => {
+    const user = userEvent.setup();
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    const listingTypeSelect = screen.getByDisplayValue(/Sale/i);
+    await user.selectOptions(listingTypeSelect, 'either');
+    expect(listingTypeSelect).toHaveValue('either');
+  });
+
+  test('Condition is optional and not selected by default', () => {
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    const newRadio = screen.getByRole('radio', { name: /^New$/i });
+    const likeNewRadio = screen.getByRole('radio', { name: /Like New/i });
+    const goodRadio = screen.getByRole('radio', { name: /Good/i });
+
+    expect(newRadio).not.toBeChecked();
+    expect(likeNewRadio).not.toBeChecked();
+    expect(goodRadio).not.toBeChecked();
+  });
+
+  test('Condition radio button can be selected', () => {
+    render(<SellItemModal onClose={jest.fn()} />);
 
     const likeNewRadio = screen.getByRole('radio', { name: /Like New/i });
     fireEvent.click(likeNewRadio);
-    
     expect(likeNewRadio).toBeChecked();
   });
 
-  test('Form validation prevents submission without required fields', async () => {
-    const handleClose = jest.fn();
+  test('Condition clear button appears after selection and clears condition', async () => {
+    render(<SellItemModal onClose={jest.fn()} />);
 
-    render(<SellItemModal onClose={handleClose} />);
+    const goodRadio = screen.getByRole('radio', { name: /Good/i });
+    fireEvent.click(goodRadio);
+    expect(goodRadio).toBeChecked();
 
-    const submitButton = screen.getByRole('button', { name: /Post Listing/i });
-    
-    // Try to submit empty form - should trigger alert or validation
-    fireEvent.click(submitButton);
-    
-    // Verify modal is still open (not submitted)
+    const clearButton = screen.getByRole('button', { name: /Clear/i });
+    expect(clearButton).toBeInTheDocument();
+    fireEvent.click(clearButton);
+
+    expect(goodRadio).not.toBeChecked();
+    expect(screen.queryByRole('button', { name: /Clear/i })).not.toBeInTheDocument();
+  });
+
+  test('Condition label shows optional text', () => {
+    render(<SellItemModal onClose={jest.fn()} />);
+    expect(screen.getByText(/optional/i)).toBeInTheDocument();
+  });
+
+  test('Form validation prevents submission without required fields', () => {
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Post Listing/i }));
     expect(screen.getByText(/List New Item/i)).toBeInTheDocument();
   });
 
-  test('File upload button allows image selection', async () => {
-    const handleClose = jest.fn();
+  test('File upload button allows image selection', () => {
+    render(<SellItemModal onClose={jest.fn()} />);
 
-    render(<SellItemModal onClose={handleClose} />);
-
-    const fileInput = screen.getByRole('button', { name: /Click to upload images/i })
-      .closest('section')
-      .querySelector('input[type="file"]');
-
+    const fileInput = document.querySelector('input[type="file"]');
     expect(fileInput).toBeInTheDocument();
     expect(fileInput).toHaveAttribute('accept', expect.stringContaining('image'));
   });
 
   test('Upload area shows feedback when image is selected', async () => {
-    const handleClose = jest.fn();
-
-    render(<SellItemModal onClose={handleClose} />);
+    render(<SellItemModal onClose={jest.fn()} />);
 
     const fileInput = document.querySelector('input[type="file"]');
     const file = new File(['dummy content'], 'test.jpg', { type: 'image/jpeg' });
-
     fireEvent.change(fileInput, { target: { files: [file] } });
 
-    // Wait for image feedback to appear
     await waitFor(() => {
       expect(screen.getByText(/Image selected/i)).toBeInTheDocument();
     });
   });
 
-  test('Form submission triggers Supabase upload and insert', async () => {
-    const handleClose = jest.fn();
+  test('Price suggestion is fetched when title and category are filled', async () => {
     const mockSupabase = require('./utils/supabase').supabase;
     const user = userEvent.setup();
+    render(<SellItemModal onClose={jest.fn()} />);
 
-    render(<SellItemModal onClose={handleClose} />);
-
-    // Fill form fields
     const titleInput = screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i);
-    const priceInput = screen.getByPlaceholderText(/0.00/i);
+    await user.type(titleInput, 'Samsung Laptop');
+
     const categorySelect = screen.getByDisplayValue(/Select category/i);
-    const descriptionInput = screen.getByPlaceholderText(/Describe your item/i);
+    await user.selectOptions(categorySelect, 'electronics');
 
-    await user.type(titleInput, 'Test Item');
-    await user.type(priceInput, '100');
-    await user.selectOptions(categorySelect, 'textbooks');
-    await user.type(descriptionInput, 'Test description');
+    await waitFor(() => {
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith(
+        'suggest-price',
+        expect.objectContaining({
+          body: expect.objectContaining({
+            title: 'Samsung Laptop',
+            category: 'ELECTRONICS',
+          })
+        })
+      );
+    }, { timeout: 2000 });
+  });
 
-    // Add file
+  test('Price suggestion banner displays when suggestion is returned', async () => {
+    const user = userEvent.setup();
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    await user.type(screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i), 'Samsung Laptop');
+    await user.selectOptions(screen.getByDisplayValue(/Select category/i), 'electronics');
+
+    await waitFor(() => {
+      expect(screen.getByText(/Suggested:/i)).toBeInTheDocument();
+    }, { timeout: 2000 });
+  });
+
+  test('Use suggested price button fills price input', async () => {
+    const user = userEvent.setup();
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    await user.type(screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i), 'Samsung Laptop');
+    await user.selectOptions(screen.getByDisplayValue(/Select category/i), 'electronics');
+
+    await waitFor(() => {
+      expect(screen.getByText(/Use suggested price/i)).toBeInTheDocument();
+    }, { timeout: 2000 });
+
+    fireEvent.click(screen.getByText(/Use suggested price/i));
+    expect(screen.getByPlaceholderText(/0.00/i)).toHaveValue(500);
+  });
+
+  test('Form submission triggers Supabase upload and insert', async () => {
+    const mockSupabase = require('./utils/supabase').supabase;
+    const user = userEvent.setup();
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    await user.type(screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i), 'Test Item');
+    await user.type(screen.getByPlaceholderText(/0.00/i), '100');
+    await user.selectOptions(screen.getByDisplayValue(/Select category/i), 'textbooks');
+    await user.type(screen.getByPlaceholderText(/Describe your item/i), 'Test description');
+
     const fileInput = document.querySelector('input[type="file"]');
-    const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.change(fileInput, { target: { files: [new File(['test'], 'test.jpg', { type: 'image/jpeg' })] } });
 
-    // Submit form
-    const submitButton = screen.getByRole('button', { name: /Post Listing/i });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole('button', { name: /Post Listing/i }));
 
-    // Verify Supabase was called
     await waitFor(() => {
       expect(mockSupabase.storage.from).toHaveBeenCalledWith('Listings');
     });
   });
 
   test('Error message displays for invalid file type', async () => {
-    const handleClose = jest.fn();
-
-    render(<SellItemModal onClose={handleClose} />);
+    render(<SellItemModal onClose={jest.fn()} />);
 
     const fileInput = document.querySelector('input[type="file"]');
-    const file = new File(['test'], 'test.txt', { type: 'text/plain' });
+    fireEvent.change(fileInput, { target: { files: [new File(['test'], 'test.txt', { type: 'text/plain' })] } });
 
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    // Error should display
     await waitFor(() => {
       expect(screen.getByText(/valid image file/i)).toBeInTheDocument();
     });
   });
 
   test('Error message displays for oversized file', async () => {
-    const handleClose = jest.fn();
-
-    render(<SellItemModal onClose={handleClose} />);
+    render(<SellItemModal onClose={jest.fn()} />);
 
     const fileInput = document.querySelector('input[type="file"]');
-    
-    // Create a file larger than 5MB
     const largeFile = new File(['x'.repeat(6 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
-
     fireEvent.change(fileInput, { target: { files: [largeFile] } });
 
-    // Error should display
     await waitFor(() => {
       expect(screen.getByText(/less than 5MB/i)).toBeInTheDocument();
     });
   });
 
-  test('Post button states change during submission', async () => {
-    const handleClose = jest.fn();
-    const user = userEvent.setup();
-
-    render(<SellItemModal onClose={handleClose} />);
-
-    const titleInput = screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i);
-    const priceInput = screen.getByPlaceholderText(/0.00/i);
-    const categorySelect = screen.getByDisplayValue(/Select category/i);
-
-    await user.type(titleInput, 'Test Item');
-    await user.type(priceInput, '100');
-    await user.selectOptions(categorySelect, 'textbooks');
+  test('Error clears when valid file is uploaded after error', async () => {
+    render(<SellItemModal onClose={jest.fn()} />);
 
     const fileInput = document.querySelector('input[type="file"]');
-    const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-    fireEvent.change(fileInput, { target: { files: [file] } });
 
-    const submitButton = screen.getByRole('button', { name: /Post Listing/i });
-    expect(submitButton).not.toBeDisabled();
+    fireEvent.change(fileInput, { target: { files: [new File(['test'], 'test.txt', { type: 'text/plain' })] } });
+    await waitFor(() => expect(screen.getByText(/valid image file/i)).toBeInTheDocument());
+
+    fireEvent.change(fileInput, { target: { files: [new File(['test'], 'test.jpg', { type: 'image/jpeg' })] } });
+    await waitFor(() => expect(screen.getByText(/Image selected/i)).toBeInTheDocument());
   });
 
   test('File upload feedback displays selected file name', async () => {
-    const handleClose = jest.fn();
-
-    render(<SellItemModal onClose={handleClose} />);
+    render(<SellItemModal onClose={jest.fn()} />);
 
     const fileInput = document.querySelector('input[type="file"]');
-    const file = new File(['test'], 'my-item.jpg', { type: 'image/jpeg' });
-
-    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.change(fileInput, { target: { files: [new File(['test'], 'my-item.jpg', { type: 'image/jpeg' })] } });
 
     await waitFor(() => {
       expect(screen.getByText(/my-item.jpg/i)).toBeInTheDocument();
     });
   });
 
-  test('Error clears when valid file is uploaded after error', async () => {
-    const handleClose = jest.fn();
-
-    render(<SellItemModal onClose={handleClose} />);
-
-    const fileInput = document.querySelector('input[type="file"]');
-
-    // First upload invalid file
-    const invalidFile = new File(['test'], 'test.txt', { type: 'text/plain' });
-    fireEvent.change(fileInput, { target: { files: [invalidFile] } });
-
-    await waitFor(() => {
-      expect(screen.getByText(/valid image file/i)).toBeInTheDocument();
-    });
-
-    // Then upload valid file
-    const validFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-    fireEvent.change(fileInput, { target: { files: [validFile] } });
-
-    await waitFor(() => {
-      expect(screen.getByText(/Image selected/i)).toBeInTheDocument();
-    });
-  });
-
-  test('Description input can be filled with requirements text', async () => {
-    const handleClose = jest.fn();
-    const user = userEvent.setup();
-
-    render(<SellItemModal onClose={handleClose} />);
-
-    const descriptionInput = screen.getByPlaceholderText(/Describe your item/i);
-    const testDescription = 'Slightly used, missing page 23, otherwise perfect';
-
-    await user.type(descriptionInput, testDescription);
-
-    expect(descriptionInput).toHaveValue(testDescription);
-  });
-
-  test('Radio buttons for condition work correctly', async () => {
-    const handleClose = jest.fn();
-
-    render(<SellItemModal onClose={handleClose} />);
+  test('Radio buttons for condition work correctly', () => {
+    render(<SellItemModal onClose={jest.fn()} />);
 
     const goodRadio = screen.getByRole('radio', { name: /Good/i });
-    expect(goodRadio).not.toBeChecked();
+    const likeNewRadio = screen.getByRole('radio', { name: /Like New/i });
 
     fireEvent.click(goodRadio);
     expect(goodRadio).toBeChecked();
 
-    const likeNewRadio = screen.getByRole('radio', { name: /Like New/i });
     fireEvent.click(likeNewRadio);
-
     expect(likeNewRadio).toBeChecked();
     expect(goodRadio).not.toBeChecked();
   });
 
-  test('Category select shows all options', async () => {
-    const handleClose = jest.fn();
+  test('Category select shows all options', () => {
+    render(<SellItemModal onClose={jest.fn()} />);
 
-    render(<SellItemModal onClose={handleClose} />);
-
-    const categorySelect = screen.getByDisplayValue(/Select category/i);
-    const options = categorySelect.querySelectorAll('option');
-
-    expect(options.length).toBeGreaterThan(1);
     expect(screen.getByRole('option', { name: /Textbooks/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Electronics/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Furniture/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Clothing/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Other/i })).toBeInTheDocument();
+  });
+
+  test('Listing type select shows all options', () => {
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    expect(screen.getByRole('option', { name: /Sale/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Trade/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Either/i })).toBeInTheDocument();
   });
 
   test('Price input accepts only numbers', async () => {
-    const handleClose = jest.fn();
     const user = userEvent.setup();
-
-    render(<SellItemModal onClose={handleClose} />);
+    render(<SellItemModal onClose={jest.fn()} />);
 
     const priceInput = screen.getByPlaceholderText(/0.00/i);
-
     await user.type(priceInput, '1999.99');
     expect(priceInput).toHaveValue(1999.99);
   });
 
-  test('Form retains data when re-rendered', async () => {
-    const handleClose = jest.fn();
-    const user = userEvent.setup();
-
-    const { rerender } = render(<SellItemModal onClose={handleClose} />);
-
-    const titleInput = screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i);
-    await user.type(titleInput, 'Laptop');
-
-    rerender(<SellItemModal onClose={handleClose} />);
-
-    // Note: In a real scenario, data might persist depending on implementation
-    expect(screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i)).toBeInTheDocument();
-  });
-
   test('Modal header displays correct title', () => {
-    const handleClose = jest.fn();
-
-    render(<SellItemModal onClose={handleClose} />);
-
+    render(<SellItemModal onClose={jest.fn()} />);
     expect(screen.getByText(/List New Item/i)).toBeInTheDocument();
   });
 
   test('Photo upload area shows correct instructions', () => {
-    const handleClose = jest.fn();
-
-    render(<SellItemModal onClose={handleClose} />);
-
+    render(<SellItemModal onClose={jest.fn()} />);
     expect(screen.getByText(/Click to upload images/i)).toBeInTheDocument();
     expect(screen.getByText(/PNG, JPG up to 5MB/i)).toBeInTheDocument();
   });
 
-  test('Form validation fails when only title is filled', async () => {
-    const handleClose = jest.fn();
-    const user = userEvent.setup();
-
-    render(<SellItemModal onClose={handleClose} />);
-
-    const titleInput = screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i);
-    await user.type(titleInput, 'Test Item');
-
-    const submitButton = screen.getByRole('button', { name: /Post Listing/i });
-    fireEvent.click(submitButton);
-
-    // Modal should still be open
-    expect(screen.getByText(/List New Item/i)).toBeInTheDocument();
-  });
-
-  test('Cancel button and X button both close modal', () => {
-    const handleClose = jest.fn();
-
-    render(<SellItemModal onClose={handleClose} />);
-
-    const cancelButton = screen.getByRole('button', { name: /Cancel/i });
-    fireEvent.click(cancelButton);
-
-    expect(handleClose).toHaveBeenCalledTimes(1);
-  });
-
   test('Supabase storage is called with correct bucket name', async () => {
-    const handleClose = jest.fn();
     const mockSupabase = require('./utils/supabase').supabase;
     const user = userEvent.setup();
+    render(<SellItemModal onClose={jest.fn()} />);
 
-    render(<SellItemModal onClose={handleClose} />);
-
-    const titleInput = screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i);
-    const priceInput = screen.getByPlaceholderText(/0.00/i);
-    const categorySelect = screen.getByDisplayValue(/Select category/i);
-
-    await user.type(titleInput, 'Test Item');
-    await user.type(priceInput, '100');
-    await user.selectOptions(categorySelect, 'textbooks');
+    await user.type(screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i), 'Test Item');
+    await user.type(screen.getByPlaceholderText(/0.00/i), '100');
+    await user.selectOptions(screen.getByDisplayValue(/Select category/i), 'textbooks');
 
     const fileInput = document.querySelector('input[type="file"]');
-    const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.change(fileInput, { target: { files: [new File(['test'], 'test.jpg', { type: 'image/jpeg' })] } });
 
-    const submitButton = screen.getByRole('button', { name: /Post Listing/i });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole('button', { name: /Post Listing/i }));
 
     await waitFor(() => {
       expect(mockSupabase.storage.from).toHaveBeenCalledWith('Listings');
     });
+  });
+
+  test('Description input accepts text', async () => {
+    const user = userEvent.setup();
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    const descriptionInput = screen.getByPlaceholderText(/Describe your item/i);
+    const testDescription = 'Slightly used, missing page 23, otherwise perfect';
+    await user.type(descriptionInput, testDescription);
+    expect(descriptionInput).toHaveValue(testDescription);
+  });
+
+  test('Form validation fails when only title is filled', async () => {
+    const user = userEvent.setup();
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    await user.type(screen.getByPlaceholderText(/e.g. Minimalist Desk Lamp/i), 'Test Item');
+    fireEvent.click(screen.getByRole('button', { name: /Post Listing/i }));
+    expect(screen.getByText(/List New Item/i)).toBeInTheDocument();
   });
 });

@@ -22,21 +22,41 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
   // Use unread messages hook
   const { unreadCount } = useUnreadMessages(user?.id);
 
-  const categories = [
-    { name: 'All Items', count: '1.2k' },
-    { name: 'Textbooks', count: '432' },
-    { name: 'Furniture', count: '156' },
-    { name: 'Electronics', count: '89' },
-    { name: 'Clothing', count: '210' }
+const categories = useMemo(() => {
+  const counts = {
+    Textbooks: 0,
+    Electronics: 0,
+    Clothing: 0,
+    Furniture: 0,
+    other: 0,
+  };
+
+  products.forEach((p) => {
+    if (p.category === 'TEXTBOOKS') counts.Textbooks++;
+    else if (p.category === 'ELECTRONICS') counts.Electronics++;
+    else if (p.category === 'CLOTHING') counts.Clothing++;
+    else if (p.category === 'FURNITURE') counts.Furniture++;
+    else if (p.category === 'OTHER') counts.other++;
+  });
+
+  return [
+    { name: 'All Items', count: products.length },
+    { name: 'Textbooks', count: counts.Textbooks },
+    { name: 'Electronics', count: counts.Electronics },
+    { name: 'Clothing', count: counts.Clothing },
+    { name: 'Furniture', count: counts.Furniture },
+    { name: 'other', count: counts.other },
   ];
+}, [products])
 
   const normalizeCategory = (categoryName) => {
     const map ={
        'All Items': 'ALL',
-    Textbooks: 'TEXTBOOK',
+    Textbooks: 'TEXTBOOKS',
     Furniture: 'FURNITURE',
     Electronics: 'ELECTRONICS',
     Clothing: 'CLOTHING',
+    other: 'OTHER',
   };
     return map[categoryName] || categoryName.toUpperCase();
 };
@@ -264,7 +284,7 @@ const filteredProducts = useMemo(() => {
       <main className="w-full px-4 sm:px-8">
 
         {showSearch && (
-          <section className="mt -6 mb -4 bg-white border rounded -2xl p-5 shadow-sm " >
+          <section className="mt -6 mb -4 bg-off-white" >
             <input
               type="text"
               placeholder="Search listings..."
@@ -342,7 +362,8 @@ const filteredProducts = useMemo(() => {
                     : 'bg-white text-dark hover:border-dark border-transparent shadow-sm'
                 }`}
               >
-                {cat.name} {cat.count && <span className={`ml-2 text-xs ${activeCategory === cat.name ? 'opacity-80' : 'text-gray-400'}`}>{cat.count}</span>}
+                {cat.name} {cat.count !== undefined && ( <span className={`ml-2 text-xs ${activeCategory === cat.name ? 'opacity-80' : 'text-gray-400'}`}>{cat.count} </span>
+)}
               </button>
             ))}
           </section>
