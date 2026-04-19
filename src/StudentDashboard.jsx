@@ -18,9 +18,15 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [wishlistIds, setWishlistIds] = useState(new Set());
   
   // Use unread messages hook
   const { unreadCount } = useUnreadMessages(user?.id);
+
+  const wishlistStorageKey = useMemo(
+    () => (user?.id ? `wishlist:${user.id}` : null),
+    [user?.id]
+  );
 
 const categories = useMemo(() => {
   const counts = {
@@ -90,6 +96,29 @@ const filteredProducts = useMemo(() => {
     return matchesCategory && matchesSearch && matchesMin && matchesMax;
   });
     }, [products, activeCategory, searchQuery, minPrice, maxPrice]);
+
+  const wishlistProducts = useMemo(
+    () => products.filter((product) => wishlistIds.has(product.id)),
+    [products, wishlistIds]
+  );
+
+  const isWishlistView = currentView === 'wishlist';
+  const displayedProducts = isWishlistView ? wishlistProducts : filteredProducts;
+
+  const toggleWishlist = (listingId) => {
+    if (!wishlistStorageKey) return;
+
+    setWishlistIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(listingId)) {
+        next.delete(listingId);
+      } else {
+        next.add(listingId);
+      }
+      localStorage.setItem(wishlistStorageKey, JSON.stringify(Array.from(next)));
+      return next;
+    });
+  };
   
   const clearFilters = () => {
     setSearchQuery('');
@@ -122,6 +151,29 @@ const filteredProducts = useMemo(() => {
   };
 
   // Fetch listings from database, excluding the logged-in user's listings
+  useEffect(() => {
+    if (!wishlistStorageKey) {
+      setWishlistIds(new Set());
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(wishlistStorageKey);
+      if (!raw) {
+        setWishlistIds(new Set());
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setWishlistIds(new Set(parsed));
+      } else {
+        setWishlistIds(new Set());
+      }
+    } catch {
+      setWishlistIds(new Set());
+    }
+  }, [wishlistStorageKey]);
+
   useEffect(() => {
     const fetchListings = async () => {
       try {
@@ -188,7 +240,6 @@ const filteredProducts = useMemo(() => {
             sellerName: displayName,
             sellerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
             image: listing.image_path ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${listing.image_path}` : 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80',
-            isFavorite: false,
           };
         });
 
@@ -208,7 +259,9 @@ const filteredProducts = useMemo(() => {
       <>
         <Profile 
           onBack={() => setCurrentView('home')} 
-          onAddNew={() => setShowSellModal(true)} 
+          onAddNew={() => setShowSellModal(true)}
+          onOpenWishlist={() => setCurrentView('wishlist')}
+          wishlistCount={wishlistIds.size}
         />
         {showSellModal && <SellItemModal onClose={() => setShowSellModal(false)} />}
       </>
@@ -227,10 +280,21 @@ const filteredProducts = useMemo(() => {
           </section>
           {/* Nav Links */}
           <section className="hidden md:flex gap-6 font-medium text-sm">
-            <a href="#" className="hover:text-primary transition-colors border-b-2 border-dark pb-1 text-dark font-semibold">Home</a>
-            <a href="#" className="text-gray-500 hover:text-dark transition-colors">My Listings</a>
-            <a href="#" className="text-gray-500 hover:text-dark transition-colors">My Orders</a>
-            <a href="#" className="text-gray-500 hover:text-dark transition-colors">Trade Facility</a>
+            <button
+              onClick={() => setCurrentView('home')}
+              className={`transition-colors pb-1 ${!isWishlistView ? 'border-b-2 border-dark text-dark font-semibold' : 'text-gray-500 hover:text-dark'}`}
+            >
+              Home
+            </button>
+            <button
+              onClick={() => setCurrentView('wishlist')}
+              className={`transition-colors pb-1 flex items-center gap-1 ${isWishlistView ? 'border-b-2 border-dark text-dark font-semibold' : 'text-gray-500 hover:text-dark'}`}
+            >
+              <Heart size={14} />
+              Wishlist ({wishlistIds.size})
+            </button>
+            <span className="text-gray-500">My Orders</span>
+            <span className="text-gray-500">Trade Facility</span>
           </section>
         </section>
 
@@ -317,7 +381,7 @@ const filteredProducts = useMemo(() => {
                 Clear Filters
                 </button>
                 <p className="mt-3 text-sm text-gray-500">
-                  {filteredProducts.length} items found
+                  {displayedProducts.length} items found
                 </p>
           </section>
         )}
@@ -326,8 +390,14 @@ const filteredProducts = useMemo(() => {
         <section className="mt-8 flex flex-col gap-6 mb-8">
           <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <section>
-              <h1 className="text-3xl font-bold text-dark tracking-tight">Recent Listings</h1>
-              <p className="text-gray-500 text-sm mt-1">Showing items in <span className="font-semibold text-primary">Main Campus</span></p>
+              <h1 className="text-3xl font-bold text-dark tracking-tight">
+                {isWishlistView ? 'My Wishlist' : 'Recent Listings'}
+              </h1>
+              <p className="text-gray-500 text-sm mt-1">
+                {isWishlistView
+                  ? `${wishlistIds.size} saved item${wishlistIds.size === 1 ? '' : 's'}`
+                  : <>Showing items in <span className="font-semibold text-primary">Main Campus</span></>}
+              </p>
             </section>
             
             <section className="flex items-center gap-2">
@@ -351,22 +421,24 @@ const filteredProducts = useMemo(() => {
             </section>
           </section>
 
-          <section className="flex items-center gap-3 overflow-x-auto pb-2 w-full scrollbar-hide">
-            {categories.map((cat) => (
-              <button
-                key={cat.name}
-                onClick={() => setActiveCategory(cat.name)}
-                className={`whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-medium transition-colors border ${
-                  activeCategory === cat.name 
-                    ? 'bg-dark text-white border-dark' 
-                    : 'bg-white text-dark hover:border-dark border-transparent shadow-sm'
-                }`}
-              >
-                {cat.name} {cat.count !== undefined && ( <span className={`ml-2 text-xs ${activeCategory === cat.name ? 'opacity-80' : 'text-gray-400'}`}>{cat.count} </span>
-)}
-              </button>
-            ))}
-          </section>
+          {!isWishlistView && (
+            <section className="flex items-center gap-3 overflow-x-auto pb-2 w-full scrollbar-hide">
+              {categories.map((cat) => (
+                <button
+                  key={cat.name}
+                  onClick={() => setActiveCategory(cat.name)}
+                  className={`whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-medium transition-colors border ${
+                    activeCategory === cat.name 
+                      ? 'bg-dark text-white border-dark' 
+                      : 'bg-white text-dark hover:border-dark border-transparent shadow-sm'
+                  }`}
+                >
+                  {cat.name} {cat.count !== undefined && ( <span className={`ml-2 text-xs ${activeCategory === cat.name ? 'opacity-80' : 'text-gray-400'}`}>{cat.count} </span>
+  )}
+                </button>
+              ))}
+            </section>
+          )}
         </section>
 
         {/* Product Grid Layout */}
@@ -392,12 +464,14 @@ const filteredProducts = useMemo(() => {
                 </section>
               </section>
             ))
-          ) : filteredProducts.length === 0 ? (
+          ) : displayedProducts.length === 0 ? (
             <section className="col-span-full flex items-center justify-center py-12">
-              <p className="text-gray-500 text-lg">No matching listings available</p>
+              <p className="text-gray-500 text-lg">
+                {isWishlistView ? 'Your wishlist is empty. Tap the heart icon on listings to save them.' : 'No matching listings available'}
+              </p>
             </section>
           ) : (
-            filteredProducts.map((product) => (
+            displayedProducts.map((product) => (
             <section 
               key={product.id} 
               onClick={() => navigate(`/listing/${product.id}`)}
@@ -442,9 +516,9 @@ const filteredProducts = useMemo(() => {
                   </section>
                   <button className="text-gray-400 hover:text-red-500 transition-colors p-1 relative z-10" onClick={(e) => {
                       e.stopPropagation();
-                      // Toggle favorite logic would go here
+                      toggleWishlist(product.id);
                     }}>
-                    <Heart size={20} fill={product.isFavorite ? "currentColor" : "none"} className={product.isFavorite ? "text-red-500" : ""} />
+                    <Heart size={20} fill={wishlistIds.has(product.id) ? "currentColor" : "none"} className={wishlistIds.has(product.id) ? "text-red-500" : ""} />
                   </button>
                 </section>
               </section>

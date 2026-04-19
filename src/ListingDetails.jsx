@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Heart, ShieldCheck, Clock, MessageCircle, ShoppingBag, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Heart, ShieldCheck, Clock, MessageCircle, ShoppingBag, ChevronRight, UploadCloud, Loader, X, ArrowLeftRight } from 'lucide-react';
 import { supabase } from './utils/supabase';
 import { useAuth } from './AuthContext';
 import { useConversation } from './hooks/useConversation';
@@ -16,6 +16,17 @@ const ListingDetails = ({ user }) => {
   const [buyLoading, setBuyLoading] = useState(false);
   const [showOfferInput, setShowOfferInput] = useState(false);
   const [offerAmount, setOfferAmount] = useState('');
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [tradeSubmitting, setTradeSubmitting] = useState(false);
+  const [tradeUploadError, setTradeUploadError] = useState(null);
+  const [tradeImageFile, setTradeImageFile] = useState(null);
+  const tradeFileInputRef = useRef(null);
+  const [tradeForm, setTradeForm] = useState({
+    title: '',
+    description: '',
+    category: '',
+    condition: '',
+  });
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -132,6 +143,143 @@ const ListingDetails = ({ user }) => {
     }
   };
 
+  const handleTradeFileUpload = (event) => {
+    const file = event.target.files?.[0];
+    setTradeUploadError(null);
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setTradeUploadError('Please select a valid image file');
+      return;
+    }
+
+    if (file.size > 1 * 1024 * 1024) {
+      setTradeUploadError('Image size must be less than 1MB');
+      return;
+    }
+
+    setTradeImageFile(file);
+    if (tradeFileInputRef.current) tradeFileInputRef.current.value = '';
+  };
+
+  const resetTradeForm = () => {
+    setTradeForm({
+      title: '',
+      description: '',
+      category: '',
+      condition: '',
+    });
+    setTradeImageFile(null);
+    setTradeUploadError(null);
+  };
+
+  const openTradeModal = () => {
+    if (!authUser) {
+      navigate('/login');
+      return;
+    }
+    setShowTradeModal(true);
+  };
+
+  const closeTradeModal = () => {
+    setShowTradeModal(false);
+    resetTradeForm();
+  };
+
+  const handleTradeFormChange = (e) => {
+    const { name, value } = e.target;
+    setTradeForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmitTrade = async (e) => {
+    e.preventDefault();
+    if (!authUser) {
+      navigate('/login');
+      return;
+    }
+
+    if (!listing?.id || !listing?.seller_id) {
+      alert('Listing data is unavailable. Please refresh and try again.');
+      return;
+    }
+
+    if (authUser.id === listing.seller_id) {
+      alert('You cannot create a trade for your own listing.');
+      return;
+    }
+
+    if (!tradeForm.title.trim() || !tradeForm.category || !tradeForm.condition) {
+      alert('Please complete all required fields.');
+      return;
+    }
+
+    if (!tradeImageFile) {
+      alert('Please upload a photo of your trade item.');
+      return;
+    }
+
+    setTradeSubmitting(true);
+    let offeredListingId = null;
+    try {
+      const fileName = `${authUser.id}/trade_${Date.now()}_${tradeImageFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('Listings')
+        .upload(fileName, tradeImageFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: offeredListing, error: offeredListingError } = await supabase
+        .from('listings')
+        .insert({
+          seller_id: authUser.id,
+          title: tradeForm.title.trim(),
+          description: tradeForm.description.trim(),
+          price: 0,
+          category: tradeForm.category,
+          condition: tradeForm.condition,
+          image_path: fileName,
+          status: 'active',
+          listing_type: 'trade',
+        })
+        .select('id')
+        .single();
+
+      if (offeredListingError) throw offeredListingError;
+      offeredListingId = offeredListing.id;
+
+      const { error: tradeError } = await supabase
+        .from('trades')
+        .insert({
+          initiator_id: authUser.id,
+          receiver_id: listing.seller_id,
+          offered_listing_id: offeredListing.id,
+          requested_listing_id: listing.id,
+          status: 'pending',
+        });
+
+      if (tradeError) throw tradeError;
+
+      alert('Trade request sent successfully!');
+      closeTradeModal();
+    } catch (err) {
+      console.error('Error creating trade:', err);
+      if (offeredListingId) {
+        await supabase
+          .from('listings')
+          .update({ status: 'removed' })
+          .eq('id', offeredListingId);
+      }
+      const message = err?.message || err?.error_description || 'Unknown error';
+      if (err?.code === '42501' || err?.status === 403) {
+        alert(`Trade failed due to database permissions (RLS). Please add a trades insert policy in Supabase.\n\nDetails: ${message}`);
+      } else {
+        alert(`Failed to send trade request. ${message}`);
+      }
+    } finally {
+      setTradeSubmitting(false);
+    }
+  };
+
   if (!loading && !listing) {
     return (
       <section className="min-h-screen bg-offwhite flex flex-col items-center justify-center">
@@ -233,35 +381,44 @@ const ListingDetails = ({ user }) => {
               </button>
 
                {(!authUser || authUser.id !== listing?.seller_id) && (
-                !showOfferInput ? (
-                  <button 
-                    onClick={() => setShowOfferInput(true)}
+                <>
+                  {!showOfferInput ? (
+                    <button 
+                      onClick={() => setShowOfferInput(true)}
+                      className="w-full bg-white text-dark border border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
+                    >
+                      <ShoppingBag size={22} className="stroke-[2.5]" /> Buy / Offer
+                    </button>
+                  ) : (
+                    <section className="w-full flex flex-col gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Enter amount (R)"
+                        value={offerAmount}
+                        onChange={(e) => setOfferAmount(e.target.value)}
+                        className="w-full border border-gray-300 py-3.5 px-4 rounded-xl font-bold text-center text-lg focus:outline-none focus:ring-2 focus:ring-dark"
+                        autoFocus
+                      />
+                      <button 
+                        onClick={handleBuy}
+                        disabled={buyLoading || !offerAmount}
+                        className="w-full bg-primary text-white hover:bg-primary-dark py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg disabled:opacity-50"
+                      >
+                        {buyLoading ? 'Processing...' : 'Proceed to Payment'}
+                        <ShoppingBag size={20} />
+                      </button>
+                    </section>
+                  )}
+                  <button
+                    onClick={openTradeModal}
                     className="w-full bg-white text-dark border border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
                   >
-                    <ShoppingBag size={22} className="stroke-[2.5]" /> Buy / Offer
+                    <ArrowLeftRight size={20} className="stroke-[2.5]" />
+                    Trade
                   </button>
-                ) : (
-                  <section className="w-full flex flex-col gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Enter amount (R)"
-                      value={offerAmount}
-                      onChange={(e) => setOfferAmount(e.target.value)}
-                      className="w-full border border-gray-300 py-3.5 px-4 rounded-xl font-bold text-center text-lg focus:outline-none focus:ring-2 focus:ring-dark"
-                      autoFocus
-                    />
-                    <button 
-                      onClick={handleBuy}
-                      disabled={buyLoading || !offerAmount}
-                      className="w-full bg-primary text-white hover:bg-primary-dark py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg disabled:opacity-50"
-                    >
-                      {buyLoading ? 'Processing...' : 'Proceed to Payment'}
-                      <ShoppingBag size={20} />
-                    </button>
-                  </section>
-                )
+                </>
               )}
             </section>
 
@@ -297,6 +454,142 @@ const ListingDetails = ({ user }) => {
           </section>
         </section>
       </section>
+      {showTradeModal && (
+        <section className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 sm:p-6 backdrop-blur-sm overflow-y-auto">
+          <section className="bg-white w-full max-w-xl rounded-2xl shadow-xl relative">
+            <section className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-dark">Create Trade Offer</h2>
+              <button
+                onClick={closeTradeModal}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-dark transition-colors"
+                disabled={tradeSubmitting}
+              >
+                <X size={18} />
+              </button>
+            </section>
+
+            <form className="p-6 space-y-5" onSubmit={handleSubmitTrade}>
+              <section>
+                <label className="block text-sm font-semibold text-dark mb-2">Photo of your item</label>
+                <button
+                  type="button"
+                  onClick={() => tradeFileInputRef.current?.click()}
+                  className="w-full h-32 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-100 hover:border-gray-400 transition-colors"
+                >
+                  {tradeImageFile ? (
+                    <>
+                      <span className="text-sm font-medium text-green-600">Image selected</span>
+                      <span className="text-xs text-green-500 mt-1">{tradeImageFile.name}</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud size={28} className="mb-2" />
+                      <span className="text-sm font-medium">Click to upload image</span>
+                      <span className="text-xs mt-1">PNG, JPG up to 5MB</span>
+                    </>
+                  )}
+                </button>
+                <input
+                  ref={tradeFileInputRef}
+                  type="file"
+                  onChange={handleTradeFileUpload}
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="hidden"
+                />
+                {tradeUploadError && <p className="text-red-600 text-xs mt-2">{tradeUploadError}</p>}
+              </section>
+
+              <section className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <section className="sm:col-span-2">
+                  <label className="block text-sm font-semibold text-dark mb-2">Item Title</label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={tradeForm.title}
+                    onChange={handleTradeFormChange}
+                    placeholder="e.g. Nintendo Switch Lite"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                    required
+                  />
+                </section>
+
+                <section>
+                  <label className="block text-sm font-semibold text-dark mb-2">Category</label>
+                  <select
+                    name="category"
+                    value={tradeForm.category}
+                    onChange={handleTradeFormChange}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm bg-white"
+                    required
+                  >
+                    <option value="">Select category...</option>
+                    <option value="textbooks">Textbooks</option>
+                    <option value="electronics">Electronics</option>
+                    <option value="furniture">Furniture</option>
+                    <option value="clothing">Clothing</option>
+                    <option value="other">Other</option>
+                  </select>
+                </section>
+
+                <section>
+                  <label className="block text-sm font-semibold text-dark mb-2">Condition</label>
+                  <select
+                    name="condition"
+                    value={tradeForm.condition}
+                    onChange={handleTradeFormChange}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm bg-white"
+                    required
+                  >
+                    <option value="">Select condition...</option>
+                    <option value="new">New</option>
+                    <option value="like_new">Like New</option>
+                    <option value="good">Good</option>
+                    <option value="fair">Fair</option>
+                    <option value="poor">Poor</option>
+                  </select>
+                </section>
+
+                <section className="sm:col-span-2">
+                  <label className="block text-sm font-semibold text-dark mb-2">Description</label>
+                  <textarea
+                    rows="3"
+                    name="description"
+                    value={tradeForm.description}
+                    onChange={handleTradeFormChange}
+                    placeholder="Describe your item and what makes it a fair trade..."
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm resize-none"
+                  />
+                </section>
+              </section>
+
+              <section className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeTradeModal}
+                  disabled={tradeSubmitting}
+                  className="px-6 py-2.5 rounded-lg font-semibold text-gray-600 hover:bg-gray-200 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={tradeSubmitting}
+                  className="px-6 py-2.5 rounded-lg font-semibold bg-dark text-white hover:bg-primary transition-colors text-sm shadow-sm disabled:opacity-50 flex items-center gap-2"
+                >
+                  {tradeSubmitting ? (
+                    <>
+                      <Loader size={16} className="animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Trade Offer'
+                  )}
+                </button>
+              </section>
+            </form>
+          </section>
+        </section>
+      )}
     </section>
   );
 };
