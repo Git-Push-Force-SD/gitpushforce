@@ -481,6 +481,173 @@ describe('StudentDashboard', () => {
     });
   });
 
+  // ---search toggle ────────────────────────────────────────────────────────────
+  describe('search and filters', () => {
+  const openFilters = () => {
+    const searchBtn = screen.getByTitle('Search and Filters');
+    fireEvent.click(searchBtn);
+  };
+
+  it('opens the search/filter panel when search icon is clicked', () => {
+    renderDashboard();
+    openFilters();
+
+    expect(screen.getByPlaceholderText(/search/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/min price/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/max price/i)).toBeInTheDocument();
+  });
+
+  it('filters listings by search query', async () => {
+    renderDashboard();
+    await waitFor(() => screen.getByText('Introduction to Algorithms'));
+
+    openFilters();
+    fireEvent.change(screen.getByPlaceholderText(/search/i), {
+      target: { value: 'desk' },
+    });
+
+    expect(screen.getByText('Standing Desk')).toBeInTheDocument();
+    expect(screen.queryByText('Introduction to Algorithms')).not.toBeInTheDocument();
+  });
+
+  it('filters listings by category tab', async () => {
+    renderDashboard();
+    await waitFor(() => screen.getByText('Introduction to Algorithms'));
+
+    fireEvent.click(screen.getByText('Furniture').closest('button'));
+
+    expect(screen.getByText('Standing Desk')).toBeInTheDocument();
+    expect(screen.queryByText('Introduction to Algorithms')).not.toBeInTheDocument();
+  });
+
+  it('filters listings by minimum price', async () => {
+    renderDashboard();
+    await waitFor(() => screen.getByText('Introduction to Algorithms'));
+
+    openFilters();
+    fireEvent.change(screen.getByPlaceholderText(/min price/i), {
+      target: { value: '1000' },
+    });
+
+    expect(screen.getByText('Standing Desk')).toBeInTheDocument();
+    expect(screen.queryByText('Introduction to Algorithms')).not.toBeInTheDocument();
+  });
+
+  it('filters listings by maximum price', async () => {
+    renderDashboard();
+    await waitFor(() => screen.getByText('Introduction to Algorithms'));
+
+    openFilters();
+    fireEvent.change(screen.getByPlaceholderText(/max price/i), {
+      target: { value: '300' },
+    });
+
+    expect(screen.getByText('Introduction to Algorithms')).toBeInTheDocument();
+    expect(screen.queryByText('Standing Desk')).not.toBeInTheDocument();
+  });
+
+  it('combines search + category + price filters together', async () => {
+    setupSupabaseMocks({
+      listingsData: [
+        ...mockListings,
+        {
+          id: 'listing-3',
+          seller_id: 'seller-3',
+          title: 'Office Chair',
+          description: 'Comfortable chair',
+          price: '900',
+          image_path: null,
+          category: 'Furniture',
+          condition: 'Good',
+          created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        },
+      ],
+      sellersData: [
+        ...mockSellers,
+        { id: 'seller-3', username: 'charlie', email: 'charlie@uni.ac.za' },
+      ],
+    });
+
+    renderDashboard();
+    await waitFor(() => screen.getByText('Standing Desk'));
+
+    fireEvent.click(screen.getByText('Furniture').closest('button'));
+    openFilters();
+
+    fireEvent.change(screen.getByPlaceholderText(/search/i), {
+      target: { value: 'chair' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/min price/i), {
+      target: { value: '800' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/max price/i), {
+      target: { value: '1000' },
+    });
+
+    expect(screen.getByText('Office Chair')).toBeInTheDocument();
+    expect(screen.queryByText('Standing Desk')).not.toBeInTheDocument();
+    expect(screen.queryByText('Introduction to Algorithms')).not.toBeInTheDocument();
+  });
+
+  it('shows no matching listings message when filters remove all items', async () => {
+    renderDashboard();
+    await waitFor(() => screen.getByText('Introduction to Algorithms'));
+
+    openFilters();
+    fireEvent.change(screen.getByPlaceholderText(/search/i), {
+      target: { value: 'nonexistent item' },
+    });
+
+    expect(screen.getByText('No matching listings found')).toBeInTheDocument();
+  });
+
+  it('clears search and price filters when Clear Filters is clicked', async () => {
+    renderDashboard();
+    await waitFor(() => screen.getByText('Introduction to Algorithms'));
+
+    openFilters();
+
+    fireEvent.change(screen.getByPlaceholderText(/search/i), {
+      target: { value: 'desk' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/min price/i), {
+      target: { value: '1000' },
+    });
+
+    expect(screen.queryByText('Introduction to Algorithms')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Clear Filters'));
+
+    expect(screen.getByText('Introduction to Algorithms')).toBeInTheDocument();
+    expect(screen.getByText('Standing Desk')).toBeInTheDocument();
+  });
+
+  it('resets category to All Items when Clear Filters is clicked', async () => {
+    renderDashboard();
+    await waitFor(() => screen.getByText('Introduction to Algorithms'));
+
+    fireEvent.click(screen.getByText('Furniture').closest('button'));
+    openFilters();
+    fireEvent.click(screen.getByText('Clear Filters'));
+
+    expect(screen.getByText('Introduction to Algorithms')).toBeInTheDocument();
+    expect(screen.getByText('Standing Desk')).toBeInTheDocument();
+    expect(screen.getByText('All Items').closest('button')).toHaveClass('bg-dark');
+  });
+
+  it('updates the result count text in the filter panel', async () => {
+    renderDashboard();
+    await waitFor(() => screen.getByText('Introduction to Algorithms'));
+
+    openFilters();
+    fireEvent.change(screen.getByPlaceholderText(/search/i), {
+      target: { value: 'desk' },
+    });
+
+    expect(screen.getByText(/1 item/)).toBeInTheDocument();
+  });
+});
+
   // ── Logout ────────────────────────────────────────────────────────────────
 
   describe('logout', () => {
