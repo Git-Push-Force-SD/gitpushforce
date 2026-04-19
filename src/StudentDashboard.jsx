@@ -83,7 +83,7 @@ const filteredProducts = useMemo(() => {
         q === '' ||
         product.title?.toLowerCase().includes(q) ||
         product.description?.toLowerCase().includes(q) ||
-        product.sellerName.toLowerCase().includes(q)||
+        product.sellerName?.toLowerCase().includes(q)||
         product.condition?.toLowerCase().includes(q);
 
         const numericPrice = getNumericPrice(product.price);
@@ -348,7 +348,7 @@ const filteredProducts = useMemo(() => {
       <main className="w-full px-4 sm:px-8">
 
         {showSearch && (
-          <section className="mt -6 mb -4 bg-off-white" >
+          <section className="mt -6 -mb -4 bg-offwhite" >
             <input
               type="text"
               placeholder="Search listings..."
