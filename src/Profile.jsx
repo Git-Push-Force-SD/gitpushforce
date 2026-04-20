@@ -3,7 +3,6 @@ import { ArrowLeft, Edit2, Plus, Trash2, Camera, X, Loader, Check, Heart } from 
 import { useAuth } from './AuthContext';
 import { supabase } from './utils/supabase';
 
-
 const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
   const { user } = useAuth();
   const [profileImage, setProfileImage] = useState(null);
@@ -28,7 +27,16 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
   
   const fileInputRef = useRef(null);
 
-  // Fetch listings from database
+  // Load avatar from user metadata on mount and when user changes
+  useEffect(() => {
+    if (user?.user_metadata?.avatar_url) {
+      setProfileImage(user.user_metadata.avatar_url);
+    } else {
+      setProfileImage(null);
+    }
+  }, [user]);
+
+  // Fetch listings from database (unchanged)
   useEffect(() => {
     const fetchListings = async () => {
       if (!user?.id) {
@@ -49,28 +57,20 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
 
         if (error) throw error;
 
-        // Format the data for display
         // Get Supabase URL - supports both Vite and Jest environments
         let supabaseUrl = 'https://keposlpyrewldohbmesq.supabase.co';
-        
-        // Try process.env first (Jest environment)
         if (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) {
           supabaseUrl = process.env.VITE_SUPABASE_URL;
         }
-        
-        // In Vite, try to use import.meta.env which has priority
         if (typeof globalThis !== 'undefined' && globalThis.__VITE_SUPABASE_URL__) {
           supabaseUrl = globalThis.__VITE_SUPABASE_URL__;
         }
         
         const formattedListings = (data || []).map((listing) => {
-          // Generate public URL from storage path (or fallback to image_url for old data)
           let imageUrl = 'https://images.unsplash.com/photo-1557821552-17105176677c?auto=format&fit=crop&w=200&q=80';
-          
           if (listing.image_path) {
             imageUrl = `${supabaseUrl}/storage/v1/object/public/Listings/${listing.image_path}`;
           } else if (listing.image_url) {
-            // Fallback for old data that still has image_url
             imageUrl = listing.image_url;
           }
           
@@ -104,41 +104,52 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
     fetchListings();
   }, [user?.id]);
 
+  // ── Derived user data ─────────────────────────────────────────────────
+  const displayName = user?.user_metadata?.full_name || 
+                      user?.user_metadata?.name || 
+                      user?.email?.split('@')[0] || 
+                      'Student';
+  const displayEmail = user?.email || '';
+  const studentNumber = displayEmail.split('@')[0] || '';
+  const role = user?.user_metadata?.role || 'user';
+  const roleBadge = role === 'admin' ? 'Admin' : 'Premium Curator';
 
-  const handleImageUpload = (event) => {
+  // ── Profile picture handlers (with Supabase persistence) ──────────────
+  const handleImageUpload = async (event) => {
     const file = event.target.files[0];
-    
-    // Reset error state
     setImageError(null);
-    
-    // No file selected
     if (!file) return;
-    
-    // Validate file type
+
     if (!file.type.startsWith('image/')) {
       setImageError('Please select a valid image file (JPEG, PNG, GIF, etc.)');
       return;
     }
-    
-    // Validate file size (max 1MB)
+
     const maxSize = 1 * 1024 * 1024; // 1MB
     if (file.size > maxSize) {
       setImageError('Image size must be less than 1MB');
       return;
     }
-    
-    // Read and set the image
+
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setProfileImage(e.target.result);
+    reader.onload = async (e) => {
+      const dataUrl = e.target.result;
+      setProfileImage(dataUrl);
       setImageError(null);
+
+      // Save to Supabase Auth metadata
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: { avatar_url: dataUrl }
+        });
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to save avatar:', err.message);
+        setImageError('Failed to save profile picture. Please try again.');
+      }
     };
-    reader.onerror = () => {
-      setImageError('Failed to load image. Please try again.');
-    };
+    reader.onerror = () => setImageError('Failed to load image. Please try again.');
     reader.readAsDataURL(file);
-    
-    // Reset input so the same file can be re-selected if needed
     event.target.value = '';
   };
 
@@ -150,16 +161,23 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
     }
   };
 
-  const handleRemoveImage = () => {
+  const handleRemoveImage = async () => {
     setProfileImage(null);
     setImageError(null);
-    // Clear file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    // Remove avatar from Supabase Auth metadata
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { avatar_url: null }
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to remove avatar:', err.message);
     }
   };
 
-  // Edit listing handlers
+  // ── Edit and delete handlers (unchanged) ─────────────────────────────
   const handleEditClick = (listing) => {
     setEditingId(listing.id);
     setEditFormData({
@@ -173,10 +191,7 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
-    setEditFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleEditSubmit = async () => {
@@ -202,7 +217,6 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
 
       if (error) throw error;
 
-      // Update local state
       setActiveListings((prev) =>
         prev.map((listing) =>
           listing.id === editingId
@@ -234,21 +248,16 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
   };
 
   const handleDeleteListing = async (listingId) => {
-    if (!window.confirm('Are you sure you want to delete this listing?')) {
-      return;
-    }
+    if (!window.confirm('Are you sure you want to delete this listing?')) return;
 
     try {
       setIsDeletingId(listingId);
-
       const { error } = await supabase
         .from('listings')
         .update({ status: 'removed' })
         .eq('id', listingId);
-
       if (error) throw error;
 
-      // Remove from local state
       setActiveListings((prev) => prev.filter((listing) => listing.id !== listingId));
     } catch (error) {
       console.error('Error deleting listing:', error);
@@ -258,6 +267,7 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
     }
   };
 
+  // ── Render ─────────────────────────────────────────────────────────────
   return (
     <section className="min-h-screen bg-offwhite font-main text-dark pb-20">
       {/* Header */}
@@ -271,10 +281,11 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
         </button>
       </section>
 
-      {/* Main Content Box */}
+      {/* Main Content */}
       <section className="max-w-3xl mx-auto mt-12 px-6">
         {/* User Info Header */}
         <section className="flex flex-col md:flex-row items-center gap-8 mb-16">
+          {/* Avatar Section */}
           <section className="relative">
             {profileImage ? (
               <div className="relative group">
@@ -285,16 +296,16 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
                 />
                 <button
                   onClick={handleRemoveImage}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600 transition-colors border-2 border-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600 transition-colors border-2 border-white opacity-0 group-hover:opacity-100"
                   aria-label="Remove profile picture"
                 >
                   <X size={12} />
                 </button>
               </div>
             ) : (
-              <section className="w-28 h-28 rounded-2xl bg-gray-200 flex items-center justify-center shadow-sm">
+              <div className="w-28 h-28 rounded-2xl bg-gray-200 flex items-center justify-center shadow-sm">
                 <Camera size={32} className="text-gray-400" />
-              </section>
+              </div>
             )}
             <button
               type="button"
@@ -318,21 +329,24 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
             )}
           </section>
 
+          {/* User Details */}
           <section className="text-center md:text-left">
-            <h1 className="text-3xl font-bold text-dark tracking-tight mb-1">Alex Scholar</h1>
-            <p className="text-gray-500 mb-4 text-sm font-medium">alex.scholar@students.wits.ac.za</p>
+            <h1 className="text-3xl font-bold text-dark tracking-tight mb-1">{displayName}</h1>
+            <p className="text-gray-500 mb-4 text-sm font-medium">{displayEmail}</p>
             <section className="flex flex-wrap justify-center md:justify-start gap-2">
+              {studentNumber && (
+                <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded text-[0.65rem] font-bold tracking-wider uppercase">
+                  {studentNumber}
+                </span>
+              )}
               <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded text-[0.65rem] font-bold tracking-wider uppercase">
-                Class of 2025
-              </span>
-              <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded text-[0.65rem] font-bold tracking-wider uppercase">
-                Premium Curator
+                {roleBadge}
               </span>
             </section>
           </section>
         </section>
 
-        {/* Listings Section */}
+        {/* Listings Section (unchanged) */}
         <section>
           <section className="mb-6">
             <button
@@ -451,7 +465,6 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
               </div>
 
               <div className="space-y-4">
-                {/* Title */}
                 <div>
                   <label className="block text-sm font-semibold text-dark mb-2">Title *</label>
                   <input
@@ -463,8 +476,6 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
                     placeholder="Item title"
                   />
                 </div>
-
-                {/* Description */}
                 <div>
                   <label className="block text-sm font-semibold text-dark mb-2">Description</label>
                   <textarea
@@ -476,8 +487,6 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
                     rows="3"
                   />
                 </div>
-
-                {/* Price */}
                 <div>
                   <label className="block text-sm font-semibold text-dark mb-2">Price (R) *</label>
                   <input
@@ -491,8 +500,6 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
                     step="0.01"
                   />
                 </div>
-
-                {/* Category */}
                 <div>
                   <label className="block text-sm font-semibold text-dark mb-2">Category</label>
                   <select
@@ -508,8 +515,6 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
                     <option value="other">Other</option>
                   </select>
                 </div>
-
-                {/* Condition */}
                 <div>
                   <label className="block text-sm font-semibold text-dark mb-2">Condition</label>
                   <select
