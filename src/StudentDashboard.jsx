@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, LogOut } from 'lucide-react';
 import Profile from './Profile';
 import SellItemModal from './SellItemModal';
 import { supabase } from './utils/supabase';
 import { useUnreadMessages } from './hooks/useUnreadMessages';
+import StudentBookingDashboard from './components/booking/StudentBookingDashboard';
+import { useSellerPendingOrders } from './hooks/useBookings';
 
 const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const navigate = useNavigate();
+  const location = useLocation(); 
   const [activeCategory, setActiveCategory] = useState('All Items');
   const [viewMode, setViewMode] = useState('grid');
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'profile'
   const [showSellModal, setShowSellModal] = useState(false);
+  const [showBookingDashboard, setShowBookingDashboard] = useState(false); 
   const [products, setProducts] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
@@ -22,6 +26,14 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
   
   // Use unread messages hook
   const { unreadCount } = useUnreadMessages(user?.id);
+  const { pendingOrders } = useSellerPendingOrders(user?.id);
+
+  useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  if (params.get('openBooking') === 'true') {
+    setShowBookingDashboard(true);
+  }
+}, [location.search]);
 
   const wishlistStorageKey = useMemo(
     () => (user?.id ? `wishlist:${user.id}` : null),
@@ -294,7 +306,19 @@ const filteredProducts = useMemo(() => {
               Wishlist ({wishlistIds.size})
             </button>
             <span className="text-gray-500">My Orders</span>
-            <span className="text-gray-500">Trade Facility</span>
+            <button
+            onClick={() => setShowBookingDashboard(true)}
+            className="text-gray-500 hover:text-dark transition-colors relative flex items-center gap-1"
+            >
+          Bookings
+            {pendingOrders.length > 0 && (
+            <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+              {pendingOrders.length}
+          </span>
+            )}
+        </button>
+
+
           </section>
         </section>
 
@@ -531,6 +555,9 @@ const filteredProducts = useMemo(() => {
 
       {/* Render the Sell Modal overlay if true */}
       {showSellModal && <SellItemModal onClose={() => setShowSellModal(false)} />}
+      {showBookingDashboard && (
+        <StudentBookingDashboard onClose={() => setShowBookingDashboard(false)} />
+)} 
     </section>
   );
 };

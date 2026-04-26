@@ -1,11 +1,16 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import Stripe from 'stripe'
 import cors from 'cors'
-import dotenv from 'dotenv'
-
-dotenv.config() 
+import { createClient } from '@supabase/supabase-js'
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY  
+)
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -21,7 +26,7 @@ app.use(express.static(path.join(__dirname, 'dist'), {
   etag: false
 }))
 
-
+//stripe checkout session endpoint
 app.post('/create-checkout-session', async (req, res) => {
   try {
     const { totalPrice, price, name, customAmount } = req.body;
@@ -58,12 +63,14 @@ app.post('/create-checkout-session', async (req, res) => {
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `${FRONTEND_URL}/success`,
+      //success_url: `${FRONTEND_URL}/success`,
+      success_url: `${FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${FRONTEND_URL}/cancel`,
       metadata: {
         full_price: total.toFixed(2),
         amount_paid: charged.toFixed(2),
         remaining_balance: remaining.toFixed(2),
+        order_id:          req.body.order_id || '',
       }
     });
 
@@ -73,6 +80,20 @@ app.post('/create-checkout-session', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+
+app.get('/checkout-session', cors(), async (req, res) => {
+  try {
+    const { session_id } = req.query;
+    if (!session_id) return res.status(400).json({ error: 'Missing session_id' });
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    res.json({ metadata: session.metadata });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 app.get('*', (req, res) => {
