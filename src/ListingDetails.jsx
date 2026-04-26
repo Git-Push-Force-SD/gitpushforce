@@ -98,15 +98,43 @@ const ListingDetails = ({ user }) => {
 
     setBuyLoading(true);
     try {
+      // 1. Create order in Supabase first
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        buyer_id:   authUser.id,
+        listing_id: listing.id,
+        status:     'pending',
+        amount_due: amount,
+      })
+      .select()
+      .single();
+
+      if (orderError) throw orderError;
+
+      // //2.Send order_id to Stripe as metadata
+      // const res = await fetch('/create-checkout-session', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ 
+      //     price: parseFloat(offerAmount), 
+      //     name: listing.title,
+      //     paymentType: 'custom'
+
+      // 2. Send order_id to Stripe as metadata
       const res = await fetch('/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          price: parseFloat(offerAmount), 
-          name: listing.title,
-          paymentType: 'custom'
-        }),
-      });
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        price:     amount,
+        name:      listing.title,
+        order_id:  order.id,  // ← pass order id
+      }),
+          
+        });
+      
+
+
       const data = await res.json();
       if (!data.url) throw new Error(data.error || 'No checkout URL');
       window.location.href = data.url;

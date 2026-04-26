@@ -6,9 +6,20 @@ import { supabase } from './utils/supabase';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
-jest.mock('./utils/supabase', () => ({
-  supabase: { from: jest.fn() },
-}));
+jest.mock('./utils/supabase', () => {
+  const mockChannel = {
+    on:          jest.fn().mockReturnThis(),
+    subscribe:   jest.fn().mockReturnValue({ unsubscribe: jest.fn() }),
+    unsubscribe: jest.fn(),
+  };
+  return {
+    supabase: {
+      from:          jest.fn(),
+      channel:       jest.fn().mockReturnValue(mockChannel),
+      removeChannel: jest.fn().mockResolvedValue(null),
+    },
+  };
+});
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),

@@ -1,84 +1,101 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, Home, ShoppingBag } from 'lucide-react';
+import { supabase } from './utils/supabase';
+import { CheckCircle } from 'lucide-react';
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Optionally auto-redirect after 5 seconds
-    // const timer = setTimeout(() => navigate('/studentdashboard'), 5000);
-    // return () => clearTimeout(timer);
-  }, [navigate]);
+  const markOrderPaid = async () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get('session_id');
+      if (!sessionId) return;
+
+      // Get session metadata from Express
+      const res = await fetch(
+        `http://localhost:3000/checkout-session?session_id=${sessionId}`
+      );
+
+      if (!res.ok) {
+        console.error('checkout-session failed:', res.status);
+        return;
+      }
+
+      const data = await res.json();
+      console.log('session data:', data);
+      const orderId = data?.metadata?.order_id;
+      if (!orderId) {
+        console.error('no order_id in metadata');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'paid' })
+        .eq('id', orderId);
+
+      if (error) console.error('supabase update error:', error);
+      else console.log('order marked paid successfully');
+
+    } catch (err) {
+      console.error('markOrderPaid error:', err);
+    }
+  };
+
+  markOrderPaid();
+}, []);
 
   return (
-    <section className="w-full min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center px-5">
-      <section className="text-center max-w-[500px] bg-white rounded-3xl p-12 shadow-lg">
+    <section className="min-h-screen bg-offwhite flex items-center justify-center px-5">
+      <div className="text-center max-w-md bg-white rounded-3xl p-10 shadow-sm border border-gray-100">
         
-        {/* Success Icon */}
-        <section className="flex justify-center mb-8">
-          <section className="relative">
-            <CheckCircle size={80} className="text-green-500 animate-bounce" />
-            <section className="absolute inset-0 rounded-full animate-pulse bg-green-500/20"></section>
-          </section>
-        </section>
+        {/* Icon */}
+        <div className="flex justify-center mb-6">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center"
+            style={{ background: '#EAF3DE' }}>
+            <CheckCircle size={36} style={{ color: '#3B6D11' }} />
+          </div>
+        </div>
 
         {/* Title */}
-        <h1 className="text-4xl font-bold text-dark mb-4 font-display uppercase">
+        <h1 className="text-2xl font-bold text-dark mb-2 font-display uppercase">
           Payment Successful!
         </h1>
 
-        {/* Description */}
-        <p className="text-lg text-text-muted mb-8 leading-relaxed">
-          Thank you for your purchase! Your order has been confirmed and will be processed shortly. You'll receive a confirmation email with your order details.
+        {/* Message */}
+        <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+          Your payment has been confirmed. The seller will be notified to drop off your item at the Trade Facility. You'll be able to collect it once staff confirm receipt.
         </p>
 
-        {/* Order Details Section */}
-        <section className="bg-gray-50 rounded-2xl p-6 mb-8 text-left border border-gray-200">
-          <h3 className="font-semibold text-dark mb-4 uppercase text-sm">Order Details</h3>
-          <section className="space-y-3 text-sm text-text-muted">
-            <section className="flex justify-between">
-              <span>Order Status:</span>
-              <span className="font-semibold text-green-600">Confirmed</span>
-            </section>
-            <section className="flex justify-between">
-              <span>Currency:</span>
-              <span className="font-semibold text-green-600">ZAR (South African Rand)</span>
-            </section>
-            <section className="flex justify-between">
-              <span>Payment Status:</span>
-              <span className="font-semibold text-green-600">Completed</span>
-            </section>
-            <section className="flex justify-between">
-              <span>Transaction ID:</span>
-              <span className="font-mono text-xs">{new Date().getTime()}</span>
-            </section>
-          </section>
-        </section>
+        {/* What happens next */}
+        <div className="bg-gray-50 rounded-2xl p-4 mb-6 text-left">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+            What happens next
+          </p>
+          {[
+            'Seller drops off your item at the Trade Facility',
+            'Staff confirm the item has been received',
+            'You collect your item from the facility',
+          ].map((step, i) => (
+            <div key={i} className="flex items-start gap-3 mb-2 last:mb-0">
+              <div className="w-5 h-5 rounded-full bg-dark text-white text-xs flex items-center justify-center shrink-0 mt-0.5">
+                {i + 1}
+              </div>
+              <p className="text-sm text-gray-600">{step}</p>
+            </div>
+          ))}
+        </div>
 
-        {/* Buttons */}
-        <section className="flex flex-col sm:flex-row gap-4">
-          <button
-            onClick={() => navigate('/studentdashboard')}
-            className="flex-1 flex items-center justify-center gap-2 bg-primary text-white font-semibold py-3 px-6 rounded-xl hover:bg-primary-dark transition-colors uppercase text-sm"
-          >
-            <Home size={18} />
-            Back to Dashboard
-          </button>
-          <button
-            onClick={() => navigate('/')}
-            className="flex-1 flex items-center justify-center gap-2 bg-dark text-white font-semibold py-3 px-6 rounded-xl hover:bg-gray-800 transition-colors uppercase text-sm"
-          >
-            <ShoppingBag size={18} />
-            Continue Shopping
-          </button>
-        </section>
-
-        {/* Support Text */}
-        <p className="mt-8 text-xs text-text-muted">
-          Questions? Contact us at <span className="font-semibold">support@unimart.com</span>
-        </p>
-      </section>
+        {/* Button */}
+        <button
+          onClick={() => navigate('/studentdashboard')}
+          className="w-full py-3 rounded-xl bg-dark text-white font-semibold text-sm hover:bg-gray-800 transition-colors"
+        >
+          Back to Dashboard
+        </button>
+      </div>
     </section>
   );
 };

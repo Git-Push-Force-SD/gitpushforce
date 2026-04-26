@@ -2,19 +2,19 @@
 
 exports[`Snapshot matches snapshot on initial render 1`] = `
 <DocumentFragment>
-  <div
+  <section
     style="display: flex; height: 100vh; font-family: 'Inter', sans-serif; background: rgb(240, 240, 248); color: rgb(26, 26, 46); overflow: hidden;"
   >
     <aside
       style="width: 280px; min-width: 280px; background: rgb(255, 255, 255); border-right: 1px solid #e8e8f0; display: flex; flex-direction: column; padding: 28px 0px;"
     >
-      <div
+      <section
         style="padding: 0px 24px 32px; border-bottom: 1px solid #e8e8f0;"
       >
-        <div
+        <section
           style="display: flex; align-items: center; gap: 12px;"
         >
-          <div
+          <section
             style="width: 40px; height: 40px; border-radius: 10px; background: rgb(79, 70, 229); display: flex; align-items: center; justify-content: center;"
           >
             <svg
@@ -27,25 +27,25 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
                 d="M19 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm-9 8H7v-2h3v2zm5 0h-3v-2h3v2zm3-4H6V8h12v2z"
               />
             </svg>
-          </div>
-          <div>
-            <div
+          </section>
+          <section>
+            <section
               style="font-weight: 800; font-size: 18px; color: rgb(26, 26, 46); line-height: 1.2;"
             >
               Uni-Mart
-            </div>
-            <div
+            </section>
+            <section
               style="font-size: 10px; color: rgb(139, 143, 168); letter-spacing: 0.08em; text-transform: uppercase;"
             >
               Admin Portal
-            </div>
-          </div>
-        </div>
-      </div>
+            </section>
+          </section>
+        </section>
+      </section>
       <nav
         style="flex: 1; padding: 24px 16px; display: flex; flex-direction: column; gap: 4px;"
       >
-        <div
+        <section
           style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: transparent; color: rgb(107, 114, 128); font-weight: 400; font-size: 15px;"
         >
           <span
@@ -55,8 +55,8 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             grid_view
           </span>
           Dashboard
-        </div>
-        <div
+        </section>
+        <section
           style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: rgb(238, 236, 253); color: rgb(79, 70, 229); font-weight: 600; font-size: 15px;"
         >
           <span
@@ -66,8 +66,8 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             person
           </span>
           Users
-        </div>
-        <div
+        </section>
+        <section
           style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: transparent; color: rgb(107, 114, 128); font-weight: 400; font-size: 15px;"
         >
           <span
@@ -77,8 +77,8 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             list_alt
           </span>
           Listings
-        </div>
-        <div
+        </section>
+        <section
           style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: transparent; color: rgb(107, 114, 128); font-weight: 400; font-size: 15px;"
         >
           <span
@@ -88,8 +88,8 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             bar_chart
           </span>
           Reports
-        </div>
-        <div
+        </section>
+        <section
           style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: transparent; color: rgb(107, 114, 128); font-weight: 400; font-size: 15px;"
         >
           <span
@@ -99,8 +99,8 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             analytics
           </span>
           Analytics
-        </div>
-        <div
+        </section>
+        <section
           style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: transparent; color: rgb(107, 114, 128); font-weight: 400; font-size: 15px;"
         >
           <span
@@ -110,12 +110,12 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             settings
           </span>
           Settings
-        </div>
+        </section>
       </nav>
-      <div
+      <section
         style="padding: 16px; border-top: 1px solid #e8e8f0; display: flex; flex-direction: column; gap: 4px;"
       >
-        <div
+        <section
           style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; color: rgb(107, 114, 128); font-size: 15px;"
         >
           <span
@@ -125,8 +125,8 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             help_outline
           </span>
           Support
-        </div>
-        <div
+        </section>
+        <section
           style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; color: rgb(107, 114, 128); font-size: 15px;"
         >
           <span
@@ -136,16 +136,16 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             logout
           </span>
           Logout
-        </div>
-      </div>
+        </section>
+      </section>
     </aside>
-    <div
+    <section
       style="flex: 1; display: flex; flex-direction: column; overflow: hidden;"
     >
       <header
         style="height: 64px; background: rgb(255, 255, 255); border-bottom: 1px solid #e8e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0px 32px;"
       >
-        <div
+        <section
           style="display: flex; align-items: center; gap: 10px;"
         >
           <span
@@ -173,11 +173,11 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
           >
             Add Staff
           </span>
-        </div>
-        <div
+        </section>
+        <section
           style="display: flex; align-items: center; gap: 20px;"
         >
-          <div
+          <section
             style="display: flex; align-items: center; gap: 10px; background: rgb(245, 245, 251); border: 1px solid #e8e8f0; border-radius: 24px; padding: 8px 18px; width: 240px;"
           >
             <span
@@ -191,8 +191,8 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             >
               Search resources...
             </span>
-          </div>
-          <div
+          </section>
+          <section
             style="display: flex; align-items: center; gap: 16px;"
           >
             <span
@@ -207,21 +207,21 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             >
               help_outline
             </span>
-            <div
+            <section
               style="width: 36px; height: 36px; border-radius: 50%; background: rgb(79, 70, 229); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: 600; cursor: pointer;"
             >
               A
-            </div>
-          </div>
-        </div>
+            </section>
+          </section>
+        </section>
       </header>
       <main
         style="flex: 1; overflow: auto; padding: 32px; display: flex; align-items: flex-start; justify-content: center;"
       >
-        <div
+        <section
           style="background: rgb(255, 255, 255); border-radius: 16px; border: 1px solid #e8e8f0; padding: 40px 48px; width: 100%; max-width: 760px;"
         >
-          <div
+          <section
             style="margin-bottom: 36px;"
           >
             <h1
@@ -234,11 +234,11 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
             >
               Onboard a new facilitator to manage campus marketplace transactions and safety protocols.
             </p>
-          </div>
-          <div
+          </section>
+          <section
             style="display: flex; flex-direction: column; gap: 28px;"
           >
-            <div>
+            <section>
               <label
                 style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
               >
@@ -250,11 +250,11 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
                 type="text"
                 value=""
               />
-            </div>
-            <div
+            </section>
+            <section
               style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"
             >
-              <div>
+              <section>
                 <label
                   style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
                 >
@@ -300,14 +300,14 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
                     Engineering Quarter
                   </option>
                 </select>
-              </div>
-              <div>
+              </section>
+              <section>
                 <label
                   style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
                 >
                   Role
                 </label>
-                <div
+                <section
                   style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; font-size: 15px; border: 1px solid #c7c3fb; border-radius: 10px; background: rgb(245, 243, 255); color: rgb(79, 70, 229); font-weight: 500;"
                 >
                   <span>
@@ -319,10 +319,10 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
                   >
                     settings
                   </span>
-                </div>
-              </div>
-            </div>
-            <div
+                </section>
+              </section>
+            </section>
+            <section
               style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 12px;"
             >
               <button
@@ -335,9 +335,9 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
               >
                 Create Staff Profile
               </button>
-            </div>
-          </div>
-        </div>
+            </section>
+          </section>
+        </section>
       </main>
       <footer
         style="height: 52px; background: rgb(255, 255, 255); border-top: 1px solid #e8e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0px 32px; font-size: 13px; color: rgb(156, 163, 175);"
@@ -345,7 +345,7 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
         <span>
           © 2024 Uni-Mart Campus Marketplace. All Rights Reserved.
         </span>
-        <div
+        <section
           style="display: flex; gap: 24px;"
         >
           <span
@@ -363,9 +363,9 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
           >
             System Status
           </span>
-        </div>
+        </section>
       </footer>
-    </div>
-  </div>
+    </section>
+  </section>
 </DocumentFragment>
 `;
