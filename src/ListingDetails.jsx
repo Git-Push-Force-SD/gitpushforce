@@ -266,7 +266,8 @@ const ListingDetails = ({ user }) => {
           category: tradeForm.category,
           condition: tradeForm.condition,
           image_path: fileName,
-          status: 'active',
+          // Keep trade-offer listings hidden from public feeds.
+          status: 'removed',
           listing_type: 'trade',
         })
         .select('id')
@@ -324,6 +325,7 @@ const ListingDetails = ({ user }) => {
   const formattedPrice = listing?.price 
     ? `R${parseFloat(listing.price).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : 'R---.--';
+  const canTradeThisListing = ['trade', 'both'].includes((listing?.listing_type || '').toLowerCase());
   return (
     <section className="min-h-screen bg-offwhite font-main text-dark pb-20">
       <section className="w-full px-5 md:px-10 pt-8">
@@ -439,13 +441,15 @@ const ListingDetails = ({ user }) => {
                       </button>
                     </section>
                   )}
-                  <button
-                    onClick={openTradeModal}
-                    className="w-full bg-white text-dark border border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
-                  >
-                    <ArrowLeftRight size={20} className="stroke-[2.5]" />
-                    Trade
-                  </button>
+                  {canTradeThisListing && (
+                    <button
+                      onClick={openTradeModal}
+                      className="w-full bg-white text-dark border border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
+                    >
+                      <ArrowLeftRight size={20} className="stroke-[2.5]" />
+                      Trade
+                    </button>
+                  )}
                 </>
               )}
             </section>
