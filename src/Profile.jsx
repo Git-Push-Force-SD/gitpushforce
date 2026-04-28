@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Edit2, Plus, Trash2, Camera, X, Loader, Check, Heart } from 'lucide-react';
+import { ArrowLeft, Edit2, Plus, Trash2, Camera, X, Loader, Check, Heart, ArrowLeftRight, CheckCircle, XCircle, CircleDot } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { supabase } from './utils/supabase';
 
@@ -12,6 +12,10 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
   const [activeListings, setActiveListings] = useState([]);
   const [isLoadingListings, setIsLoadingListings] = useState(true);
   const [listingsError, setListingsError] = useState(null);
+  const [myTrades, setMyTrades] = useState([]);
+  const [isLoadingTrades, setIsLoadingTrades] = useState(true);
+  const [tradesError, setTradesError] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null); // tracks trade ID being acted on
   
   // Edit modal state
   const [editingId, setEditingId] = useState(null);
@@ -103,6 +107,148 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
 
     fetchListings();
   }, [user?.id]);
+
+  useEffect(() => {
+    const fetchTrades = async () => {
+      if (!user?.id) {
+        setIsLoadingTrades(false);
+        return;
+      }
+
+      try {
+        setIsLoadingTrades(true);
+        setTradesError(null);
+
+        const { data, error } = await supabase
+          .from('trades')
+          .select(`
+            id,
+            status,
+            created_at,
+            initiator_id,
+            receiver_id,
+            offered_listing:listings!trades_offered_listing_id_fkey(id, title, image_path),
+            requested_listing:listings!trades_requested_listing_id_fkey(id, title, image_path)
+          `)
+          .or(`initiator_id.eq.${user.id},receiver_id.eq.${user.id}`)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const supabaseUrl =
+          (typeof globalThis !== 'undefined' && globalThis.__VITE_SUPABASE_URL__) ||
+          (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) ||
+          'https://keposlpyrewldohbmesq.supabase.co';
+
+        const trades = (data || []).map((trade) => ({
+          id: trade.id,
+          status: trade.status,
+          createdAt: trade.created_at,
+          role: trade.initiator_id === user.id ? 'sent' : 'received',
+          offeredTitle: trade.offered_listing?.title || 'Offered item',
+          requestedTitle: trade.requested_listing?.title || 'Requested item',
+          offeredImage: trade.offered_listing?.image_path
+            ? `${supabaseUrl}/storage/v1/object/public/Listings/${trade.offered_listing.image_path}`
+            : 'https://images.unsplash.com/photo-1557821552-17105176677c?auto=format&fit=crop&w=200&q=80',
+        }));
+
+        setMyTrades(trades);
+      } catch (err) {
+        console.error('Error fetching trades:', err);
+        setTradesError('Failed to load trades. Please try again.');
+        setMyTrades([]);
+      } finally {
+        setIsLoadingTrades(false);
+      }
+    };
+
+    fetchTrades();
+  }, [user?.id]);
+
+  const formatTradeStatus = (status) => {
+    const s = String(status || '').toLowerCase();
+    const statusStyles = {
+      pending: 'bg-yellow-100 text-yellow-700',
+      negotiating: 'bg-blue-100 text-blue-700',
+      accepted: 'bg-green-100 text-green-700',
+      confirmed: 'bg-indigo-100 text-indigo-700',
+      completed: 'bg-emerald-100 text-emerald-700',
+      declined: 'bg-red-100 text-red-700',
+    };
+    const label = s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Unknown';
+    return {
+      className: statusStyles[s] || 'bg-gray-100 text-gray-700',
+      label,
+    };
+  };
+
+  // ── Trade action handlers ───────────────────────────────────────────────
+  const handleTradeAction = async (tradeId, newStatus) => {
+    if (!window.confirm(`Are you sure you want to ${newStatus} this trade?`)) return;
+
+    try {
+      setActionLoading(tradeId);
+
+      // If completing the trade, also mark both listings as removed
+      if (newStatus === 'completed') {
+        // Fetch the trade to get listing IDs
+        const { data: tradeData, error: fetchError } = await supabase
+          .from('trades')
+          .select('offered_listing_id, requested_listing_id')
+          .eq('id', tradeId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        // Update both listings to removed status
+        const listingIds = [tradeData.offered_listing_id, tradeData.requested_listing_id];
+        for (const listingId of listingIds) {
+          const { error: listingError } = await supabase
+            .from('listings')
+            .update({ status: 'removed', updated_at: new Date().toISOString() })
+            .eq('id', listingId);
+
+          if (listingError) {
+            console.error('Error removing listing:', listingError);
+          }
+        }
+      }
+
+      // Update the trade status (normalize to lowercase and trim)
+      const normalizedStatus = String(newStatus).toLowerCase().trim();
+      console.log('Updating trade:', { tradeId, normalizedStatus });
+      
+      const { error, data } = await supabase
+        .from('trades')
+        .update({ status: normalizedStatus, updated_at: new Date().toISOString() })
+        .eq('id', tradeId);
+
+      if (error) {
+        console.error('Supabase error response:', error);
+        throw error;
+      }
+      console.log('Trade updated successfully:', data);
+
+      // Update local state with normalized status
+      setMyTrades((prev) =>
+        prev.map((trade) =>
+          trade.id === tradeId ? { ...trade, status: normalizedStatus } : trade
+        )
+      );
+    } catch (err) {
+      console.error('Error updating trade:', err);
+      // Extract detailed error info from Supabase response
+      let errorDetails = 'Unknown error';
+      if (err && typeof err === 'object') {
+        errorDetails = err.message || err.code || err.details || JSON.stringify(err);
+      } else if (err) {
+        errorDetails = String(err);
+      }
+      alert(`Failed to update trade: ${errorDetails}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   // ── Derived user data ─────────────────────────────────────────────────
   const displayName = user?.user_metadata?.full_name || 
@@ -361,6 +507,157 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
                 {wishlistCount} item{wishlistCount === 1 ? '' : 's'}
               </span>
             </button>
+          </section>
+
+          <section className="mb-10">
+            <section className="flex justify-between items-end mb-4">
+              <h2 className="text-xl font-bold text-dark">My Trades</h2>
+              <span className="text-primary text-sm font-semibold">
+                {isLoadingTrades ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Loader size={14} className="animate-spin" />
+                  </span>
+                ) : (
+                  `${myTrades.length} total`
+                )}
+              </span>
+            </section>
+
+            {isLoadingTrades ? (
+              <section className="flex items-center justify-center py-8">
+                <Loader size={28} className="animate-spin text-primary" />
+              </section>
+            ) : tradesError ? (
+              <section className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                <p className="text-red-600 text-sm">{tradesError}</p>
+              </section>
+            ) : myTrades.length === 0 ? (
+              <section className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+                <p className="text-gray-500 text-sm">No trades yet.</p>
+              </section>
+            ) : (
+              <section className="space-y-3">
+                {myTrades.map((trade) => {
+                  const status = formatTradeStatus(trade.status);
+                  const isPending = trade.status === 'pending';
+                  const isNegotiating = trade.status === 'negotiating';
+                  const isActionable = isPending || isNegotiating;
+                  const isSender = trade.role === 'sent';
+
+                  return (
+                    <section
+                      key={trade.id}
+                      className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)]"
+                    >
+                      <section className="flex items-start justify-between gap-3 mb-3">
+                        <section className="flex items-center gap-2 text-sm text-gray-600">
+                          <ArrowLeftRight size={15} />
+                          <span>{trade.role === 'sent' ? 'Sent offer' : 'Received offer'}</span>
+                        </section>
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${status.className}`}>
+                          {status.label}
+                        </span>
+                      </section>
+                      <section className="flex items-center gap-3 mb-3">
+                        <img
+                          src={trade.offeredImage}
+                          alt={trade.offeredTitle}
+                          className="w-12 h-12 rounded-lg object-cover border border-gray-100"
+                        />
+                        <section className="text-sm">
+                          <p className="text-gray-500">
+                            <span className="font-medium text-dark">{trade.offeredTitle}</span> for{' '}
+                            <span className="font-medium text-dark">{trade.requestedTitle}</span>
+                          </p>
+                        </section>
+                      </section>
+                      {/* Action Buttons */}
+                      {isActionable && (
+                        <section className="flex gap-2 pt-2 border-t border-gray-100">
+                          {isSender ? (
+                            // Sender can cancel their trade
+                            <button
+                              onClick={() => handleTradeAction(trade.id, 'declined')}
+                              disabled={actionLoading === trade.id}
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                            >
+                              {actionLoading === trade.id ? (
+                                <Loader size={14} className="animate-spin" />
+                              ) : (
+                                <XCircle size={14} />
+                              )}
+                              Cancel
+                            </button>
+                          ) : (
+                            // Receiver can accept or decline
+                            <>
+                              <button
+                                onClick={() => handleTradeAction(trade.id, 'accepted')}
+                                disabled={actionLoading === trade.id}
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                              >
+                                {actionLoading === trade.id ? (
+                                  <Loader size={14} className="animate-spin" />
+                                ) : (
+                                  <CheckCircle size={14} />
+                                )}
+                                Accept
+                              </button>
+                              <button
+                                onClick={() => handleTradeAction(trade.id, 'declined')}
+                                disabled={actionLoading === trade.id}
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                              >
+                                {actionLoading === trade.id ? (
+                                  <Loader size={14} className="animate-spin" />
+                                ) : (
+                                  <XCircle size={14} />
+                                )}
+                                Decline
+                              </button>
+                            </>
+                          )}
+                        </section>
+                      )}
+                      {/* Accepted status - show Confirm/Complete buttons for receiver */}
+                      {trade.status === 'accepted' && !isSender && (
+                        <section className="flex gap-2 pt-2 border-t border-gray-100">
+                          <button
+                            onClick={() => handleTradeAction(trade.id, 'confirmed')}
+                            disabled={actionLoading === trade.id}
+                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                          >
+                            {actionLoading === trade.id ? (
+                              <Loader size={14} className="animate-spin" />
+                            ) : (
+                              <CheckCircle size={14} />
+                            )}
+                            Confirm
+                          </button>
+                        </section>
+                      )}
+                      {/* Confirmed status - show Complete button for both parties */}
+                      {trade.status === 'confirmed' && (
+                        <section className="flex gap-2 pt-2 border-t border-gray-100">
+                          <button
+                            onClick={() => handleTradeAction(trade.id, 'completed')}
+                            disabled={actionLoading === trade.id}
+                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                          >
+                            {actionLoading === trade.id ? (
+                              <Loader size={14} className="animate-spin" />
+                            ) : (
+                              <CircleDot size={14} />
+                            )}
+                            Mark Complete
+                          </button>
+                        </section>
+                      )}
+                    </section>
+                  );
+                })}
+              </section>
+            )}
           </section>
 
           <section className="flex justify-between items-end mb-4">
