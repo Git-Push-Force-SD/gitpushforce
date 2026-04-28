@@ -189,28 +189,35 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
     try {
       setActionLoading(tradeId);
 
-      // If completing the trade, also mark both listings as removed
+      // If completing the trade, update listing statuses
       if (newStatus === 'completed') {
-        // Fetch the trade to get listing IDs
+        // Fetch the trade to get listing IDs and parties
         const { data: tradeData, error: fetchError } = await supabase
           .from('trades')
-          .select('offered_listing_id, requested_listing_id')
+          .select('offered_listing_id, requested_listing_id, receiver_id')
           .eq('id', tradeId)
           .single();
 
         if (fetchError) throw fetchError;
 
-        // Update both listings to removed status
-        const listingIds = [tradeData.offered_listing_id, tradeData.requested_listing_id];
-        for (const listingId of listingIds) {
-          const { error: listingError } = await supabase
-            .from('listings')
-            .update({ status: 'removed', updated_at: new Date().toISOString() })
-            .eq('id', listingId);
+        // Receiver's offered listing -> mark as 'sold' (they received money/item)
+        const { error: receiverListingError } = await supabase
+          .from('listings')
+          .update({ status: 'sold', updated_at: new Date().toISOString() })
+          .eq('id', tradeData.offered_listing_id);
 
-          if (listingError) {
-            console.error('Error removing listing:', listingError);
-          }
+        if (receiverListingError) {
+          console.error('Error marking receiver listing as sold:', receiverListingError);
+        }
+
+        // Initiator's requested listing -> mark as 'removed' (no longer available)
+        const { error: initiatorListingError } = await supabase
+          .from('listings')
+          .update({ status: 'removed', updated_at: new Date().toISOString() })
+          .eq('id', tradeData.requested_listing_id);
+
+        if (initiatorListingError) {
+          console.error('Error removing initiator listing:', initiatorListingError);
         }
       }
 
