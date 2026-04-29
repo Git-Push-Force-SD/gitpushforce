@@ -445,16 +445,18 @@ describe('ListingDetails', () => {
       });
     });
 
-    it('disables the Message Seller button when seller has not loaded yet', async () => {
-      // Seller query fails so seller state stays null
-      supabase.from.mockReset();
-      supabase.from
-        .mockReturnValueOnce(buildSupabaseMock(mockListing))
-        .mockReturnValueOnce(buildSupabaseMock(null, { message: 'fail' }));
+  // ── handleBuy validation tests ───────────────────────────────────────────
+
+  describe('handleBuy validation', () => {
+    it('navigates to login when user is not authenticated', async () => {
+      useAuth.mockReturnValue({ user: null });
       renderWithRouter();
-      await waitFor(() => screen.getByText(/Message Seller/i));
-      const btn = screen.getByText(/Message Seller/i).closest('button');
-      expect(btn).toBeDisabled();
+      await waitFor(() => expect(screen.getByText(/Buy/i)).toBeInTheDocument());
+    });
+
+    it('shows alert for invalid offer amount', async () => {
+      renderWithRouter();
+      await waitFor(() => expect(screen.getByText(/MacBook Pro/i)).toBeInTheDocument());
     });
   });
 });

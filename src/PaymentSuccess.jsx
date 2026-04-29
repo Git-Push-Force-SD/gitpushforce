@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from './utils/supabase';
 import { CheckCircle } from 'lucide-react';
+import { supabase } from './utils/supabase';
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
@@ -31,13 +31,46 @@ const PaymentSuccess = () => {
         return;
       }
 
-      const { error } = await supabase
+      // 1. Fetch listing_id from orders table
+      const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .update({ status: 'paid' })
+        .select('listing_id')
+        .eq('id', orderId)
+        .single();
+
+      if (fetchError || !order) {
+        console.error('Failed to fetch order:', fetchError);
+        return;
+      }
+
+      const listingId = order.listing_id;
+
+      // 2. Update order: status='paid', buyer_status and seller_status
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          status: 'paid',
+          buyer_status: 'awaiting_confirmation',
+          seller_status: 'awaiting_booking'
+        })
         .eq('id', orderId);
 
-      if (error) console.error('supabase update error:', error);
-      else console.log('order marked paid successfully');
+      if (updateError) {
+        console.error('Failed to update order:', updateError);
+        return;
+      }
+
+      console.log('Order updated successfully');
+
+      // 3. Call RPC to mark listing as sold
+      const { error: rpcError } = await supabase.rpc('mark_listing_sold', { p_listing_id: listingId });
+
+      if (rpcError) {
+        console.error('Failed to mark listing as sold:', rpcError);
+        return;
+      }
+
+      console.log('Payment completed and listing marked as sold');
 
     } catch (err) {
       console.error('markOrderPaid error:', err);

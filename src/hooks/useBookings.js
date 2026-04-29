@@ -112,24 +112,25 @@ export function useEligibleOrders(userId) {
       setError(null);
 
       try {
-        // 1. Get all paid orders for this buyer
+        // 1. Get paid orders where the listing belongs to this seller
         const { data: paidOrders, error: ordersError } = await supabase
-  .from('orders')
-  .select(`
-    id,
-    listing_id,
-    status,
-    amount_due,
-    placed_at,
-    listings (
-      id,
-      title,
-      image_path,
-      seller_id,
-      price
-    )
-  `)
-   .eq('status', 'paid');
+          .from('orders')
+          .select(`
+            id,
+            listing_id,
+            status,
+            amount_due,
+            placed_at,
+            listings (
+              id,
+              title,
+              image_path,
+              seller_id,
+              price
+            )
+          `)
+          .eq('status', 'paid')
+          .eq('listings.seller_id', userId);
 
   //       if (ordersError) throw ordersError;
   //       if (!paidOrders || paidOrders.length === 0) {
@@ -149,10 +150,7 @@ export function useEligibleOrders(userId) {
         const bookedOrderIds = new Set((existingBookings || []).map(b => b.order_id));
 
         // 3. Filter out already-booked orders
-        // const eligible = paidOrders.filter(o => !bookedOrderIds.has(o.id));
-        const eligible = paidOrders
-        .filter(o => o.listings?.seller_id === userId)
-        .filter(o => !bookedOrderIds.has(o.id));
+        const eligible = paidOrders.filter(o => !bookedOrderIds.has(o.id));
 
         // 4. Fetch seller names
         const sellerIds = [...new Set(eligible.map(o => o.listings?.seller_id).filter(Boolean))];
@@ -280,11 +278,14 @@ export async function createBooking({ orderId, buyerId, sellerId, listingId, dat
 
   if (error) throw error;
 
-  // Mark order as booked so it no longer appears in eligible orders
-  await supabase
-    .from('orders')
-    .update({ status: 'booked' })
-    .eq('id', orderId);
+  // Mark order as booked and update buyer/seller statuses via RPC
+  // Uses SECURITY DEFINER to bypass RLS (seller cannot normally update buyer's orders)
+  const { error: rpcError } = await supabase.rpc('update_order_after_booking', { p_order_id: orderId });
+
+  if (rpcError) {
+    console.error('Failed to update order status after booking:', rpcError);
+    throw rpcError;
+  }
 
   return data;
 }
