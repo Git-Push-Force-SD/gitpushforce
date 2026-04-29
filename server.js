@@ -94,7 +94,70 @@ app.get('/checkout-session', cors(), async (req, res) => {
   }
 });
 
+// Mark order as paid and listing as sold
+app.post('/mark-payment-complete', cors(), async (req, res) => {
+  try {
+    const { order_id } = req.body;
+    if (!order_id) return res.status(400).json({ error: 'Missing order_id' });
 
+    console.log(`Processing payment completion for order: ${order_id}`);
+
+    // 1. Fetch the order to get listing_id
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('id, listing_id, status')
+      .eq('id', order_id)
+      .single();
+
+    if (fetchError || !order) {
+      console.error('Failed to fetch order:', fetchError);
+      return res.status(400).json({ error: 'Order not found' });
+    }
+
+    const listingId = order.listing_id;
+    console.log(`Order ${order_id} has listing_id: ${listingId}, current status: ${order.status}`);
+
+    // 2. Update order status to 'paid'
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({ status: 'paid' })
+      .eq('id', order_id);
+
+    if (orderError) {
+      console.error('Failed to update order status:', orderError);
+      return res.status(500).json({ error: 'Failed to update order status', details: orderError.message });
+    }
+
+    console.log(`Order ${order_id} status updated to 'paid'`);
+
+    // 3. Update listing status to 'sold' via RPC
+    if (!listingId) {
+      console.error('No listing_id found for order:', order_id);
+      return res.status(400).json({ error: 'Listing ID not found in order' });
+    }
+
+    const { error: listingError } = await supabase.rpc('mark_listing_sold', { p_listing_id: listingId });
+
+    if (listingError) {
+      console.error('Failed to update listing status:', listingError);
+      return res.status(500).json({ error: 'Failed to update listing status', details: listingError.message });
+    }
+
+    console.log(`Listing ${listingId} status updated to 'sold' via RPC`);
+
+    res.json({ 
+      success: true, 
+      message: 'Order marked as paid and listing marked as sold',
+      order_id,
+      listing_id: listingId,
+      order_updated: true,
+      listing_updated: true
+    });
+  } catch (err) {
+    console.error('mark-payment-complete error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'))

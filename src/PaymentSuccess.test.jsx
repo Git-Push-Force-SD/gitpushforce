@@ -207,6 +207,285 @@ describe('PaymentSuccess', () => {
     });
   });
 
+  // ─── API Integration (markOrderPaid) ──────────────────────────────────────
+
+  describe('Order marking flow (markOrderPaid)', () => {
+    beforeEach(() => {
+      global.fetch = jest.fn();
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('calls markOrderPaid on component mount', async () => {
+      // Mock fetch to simulate API endpoint
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          metadata: {
+            order_id: 'test-order-123',
+          },
+        }),
+      });
+
+      // Mock supabase calls
+      const { supabase } = require('./utils/supabase');
+      supabase.from = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { listing_id: 'listing-456' },
+          error: null,
+        }),
+        update: jest.fn().mockReturnThis(),
+        rpc: jest.fn().mockResolvedValue({ error: null }),
+      });
+
+      // Set query parameter for session_id
+      delete window.location;
+      window.location = new URL('http://localhost/payment-success?session_id=sess_123');
+
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      render(<PaymentSuccess />);
+
+      // Wait for API calls
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      // Verify fetch was called
+      expect(global.fetch).toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+    });
+
+    it('handles missing session_id gracefully', async () => {
+      delete window.location;
+      window.location = new URL('http://localhost/payment-success');
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      render(<PaymentSuccess />);
+
+      // Component should render without errors
+      expect(screen.getByText(/payment successful/i)).toBeInTheDocument();
+
+      consoleSpy.mockRestore();
+    });
+
+    it('handles checkout-session API error', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      });
+
+      delete window.location;
+      window.location = new URL('http://localhost/payment-success?session_id=sess_123');
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      render(<PaymentSuccess />);
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      // Component should still render
+      expect(screen.getByText(/payment successful/i)).toBeInTheDocument();
+
+      consoleSpy.mockRestore();
+    });
+
+    it('handles missing order_id in metadata', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          metadata: {}, // No order_id
+        }),
+      });
+
+      delete window.location;
+      window.location = new URL('http://localhost/payment-success?session_id=sess_123');
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      render(<PaymentSuccess />);
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      // Should log error about missing order_id
+      expect(consoleSpy).toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+    });
+
+    it('handles supabase fetch order error', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          metadata: {
+            order_id: 'test-order-123',
+          },
+        }),
+      });
+
+      const { supabase } = require('./utils/supabase');
+      supabase.from = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: null,
+          error: new Error('Supabase error'),
+        }),
+      });
+
+      delete window.location;
+      window.location = new URL('http://localhost/payment-success?session_id=sess_123');
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      render(<PaymentSuccess />);
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      expect(consoleSpy).toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+    });
+
+    it('handles order update error from supabase', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          metadata: {
+            order_id: 'test-order-123',
+          },
+        }),
+      });
+
+      const { supabase } = require('./utils/supabase');
+      supabase.from = jest.fn()
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          single: jest.fn().mockResolvedValue({
+            data: { listing_id: 'listing-456' },
+            error: null,
+          }),
+        })
+        .mockReturnValueOnce({
+          update: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          mockResolvedValue: jest.fn().mockResolvedValue({
+            error: new Error('Update failed'),
+          }),
+        });
+
+      delete window.location;
+      window.location = new URL('http://localhost/payment-success?session_id=sess_123');
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      render(<PaymentSuccess />);
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  // ─── Step List ─────────────────────────────────────────────────────────────
+
+  describe('What happens next steps', () => {
+    it('displays all three steps in order', () => {
+      render(<PaymentSuccess />);
+
+      expect(
+        screen.getByText(/Seller drops off your item/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Staff confirm the item has been received/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/You collect your item/i)
+      ).toBeInTheDocument();
+    });
+
+    it('displays step numbers 1, 2, 3', () => {
+      const { container } = render(<PaymentSuccess />);
+
+      // Each step should have a numbered circle
+      const stepNumbers = container.querySelectorAll(
+        '.rounded-full.bg-dark.text-white'
+      );
+      expect(stepNumbers.length).toBeGreaterThanOrEqual(3);
+    });
+  });
+
+  // ─── Styling and Layout ───────────────────────────────────────────────────
+
+  describe('Styling and Layout', () => {
+    it('renders with proper container styling', () => {
+      const { container } = render(<PaymentSuccess />);
+
+      const section = container.querySelector('section');
+      expect(section).toHaveClass('min-h-screen');
+      expect(section).toHaveClass('bg-offwhite');
+      expect(section).toHaveClass('flex');
+      expect(section).toHaveClass('items-center');
+      expect(section).toHaveClass('justify-center');
+    });
+
+    it('renders with proper card styling', () => {
+      const { container } = render(<PaymentSuccess />);
+
+      const card = container.querySelector('.max-w-md');
+      expect(card).toHaveClass('bg-white');
+      expect(card).toHaveClass('rounded-3xl');
+      expect(card).toHaveClass('p-10');
+    });
+
+    it('renders icon with correct styling', () => {
+      const { container } = render(<PaymentSuccess />);
+
+      const iconContainer = container.querySelector('.bg-offwhite');
+      expect(iconContainer).toBeInTheDocument();
+    });
+  });
+
+  // ─── Button Styling ──────────────────────────────────────────────────────
+
+  describe('Button styling', () => {
+    it('Back to Dashboard button has correct classes', () => {
+      render(<PaymentSuccess />);
+
+      const button = screen.getByRole('button', { name: /back to dashboard/i });
+      expect(button).toHaveClass('w-full');
+      expect(button).toHaveClass('py-3');
+      expect(button).toHaveClass('rounded-xl');
+      expect(button).toHaveClass('bg-dark');
+      expect(button).toHaveClass('text-white');
+    });
+
+    it('Continue Shopping button has correct classes', () => {
+      render(<PaymentSuccess />);
+
+      const button = screen.getByRole('button', { name: /continue shopping/i });
+      expect(button).toHaveClass('w-full');
+      expect(button).toHaveClass('py-3');
+      expect(button).toHaveClass('rounded-xl');
+      expect(button).toHaveClass('bg-primary');
+    });
+  });
+
   // ─── Snapshot ────────────────────────────────────────────────────────────────
 
   describe('Snapshot', () => {
@@ -222,6 +501,20 @@ describe('PaymentSuccess', () => {
       expect(container).toMatchSnapshot();
 
       jest.restoreAllMocks();
+    });
+  });
+
+  // ─── Multiple renders ─────────────────────────────────────────────────────
+
+  describe('Multiple renders', () => {
+    it('renders correctly on re-render', () => {
+      const { rerender } = render(<PaymentSuccess />);
+
+      expect(screen.getByText(/payment successful/i)).toBeInTheDocument();
+
+      rerender(<PaymentSuccess />);
+
+      expect(screen.getByText(/payment successful/i)).toBeInTheDocument();
     });
   });
 });
