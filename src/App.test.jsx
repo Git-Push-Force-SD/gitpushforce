@@ -81,6 +81,7 @@ const mockUsersTable = ({ roleData = { role: 'student' }, selectError = null } =
 describe('App routing + auth integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear(); // prevent stale cached roles bleeding between tests
     global.__TEST_ROUTE__ = '/';
     mockSupabase.auth.onAuthStateChange.mockReturnValue({
       data: { subscription: { unsubscribe: jest.fn() } },

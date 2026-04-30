@@ -456,6 +456,15 @@ function LoginRoute() {
       </main>
     );
   }
+  if (user && !role) {
+    return (
+      <main className="w-full min-h-screen bg-offwhite flex items-center justify-center">
+        <section className="text-center">
+          <p className="text-dark text-lg">Loading...</p>
+        </section>
+      </main>
+    );
+  }
 
   if (user && role === 'student') return <Navigate to="/studentdashboard" replace />;
   if (user && role === 'staff') return <Navigate to="/staffdashboard" replace />;

@@ -1,152 +1,158 @@
-import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import FacilDashboard from './facilDashboard'
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import FacilDashboard from './facilDashboard';
 
-describe('FacilDashboard Component', () => {
+// Mock all child view components so we only test the shell
+jest.mock('./components/facidashboard/QueueView', () => () => <div>Mock QueueView</div>);
+jest.mock('./components/facidashboard/Dropoffsview', () => () => <div>Mock DropOffsView</div>);
+jest.mock('./components/facidashboard/Collectionsview', () => () => <div>Mock CollectionsView</div>);
+jest.mock('./components/facidashboard/History', () => () => <div>Mock HistoryView</div>);
 
-  test('renders without crashing', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByRole('main')).toBeInTheDocument()
-  })
+describe('FacilDashboard', () => {
 
-  test('renders dashboard title', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText(/Trade Facilitator/i)).toBeInTheDocument()
-  })
+  describe('rendering', () => {
+    test('renders without crashing', () => {
+      render(<FacilDashboard />);
+      expect(screen.getByRole('main')).toBeInTheDocument();
+    });
 
-  test('displays sidebar navigation', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText('Overview')).toBeInTheDocument()
-    expect(screen.getByText('Trade Queue')).toBeInTheDocument()
-    expect(screen.getByText('Safe Zones')).toBeInTheDocument()
-    expect(screen.getByText('Messages')).toBeInTheDocument()
-    expect(screen.getByText('Verification')).toBeInTheDocument()
-    expect(screen.getByText('Disputes')).toBeInTheDocument()
-    expect(screen.getByText('Reports')).toBeInTheDocument()
-  })
+    test('renders the UniMart branding', () => {
+      render(<FacilDashboard />);
+      expect(screen.getByText('UniMart')).toBeInTheDocument();
+    });
 
-  test('displays trust score section', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText(/Trust score/i)).toBeInTheDocument()
-    expect(screen.getByText('94%')).toBeInTheDocument()
-  })
+    test('renders the Trade Staff heading', () => {
+      render(<FacilDashboard />);
+      expect(screen.getAllByText(/Trade Staff/i).length).toBeGreaterThan(0);
+    });
+  });
 
-  test('displays hero heading', () => {
-    render(<FacilDashboard />)
-    expect(
-      screen.getByText(/Keep every campus trade secure/i)
-    ).toBeInTheDocument()
-  })
+  describe('sidebar navigation', () => {
+    test('renders all four nav items', () => {
+      render(<FacilDashboard />);
+      expect(screen.getByRole('button', { name: /Queue/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Drop-offs/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Collections/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /History/i })).toBeInTheDocument();
+    });
 
-  test('displays hero buttons', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText(/Open live queue/i)).toBeInTheDocument()
-    expect(screen.getByText(/Assign facilitator/i)).toBeInTheDocument()
-  })
+    test('Queue is the active nav item on initial render', () => {
+      render(<FacilDashboard />);
+      // The active item gets bg-dark text-white classes
+      const queueBtn = screen.getByRole('button', { name: /Queue/i });
+      expect(queueBtn.className).toMatch(/bg-dark/);
+    });
+  });
 
-  test('displays stats cards', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText('Pending handovers')).toBeInTheDocument()
-    expect(screen.getByText('Verified traders')).toBeInTheDocument()
-    expect(screen.getByText('Secure zones live')).toBeInTheDocument()
-    expect(screen.getByText('Resolved disputes')).toBeInTheDocument()
+  describe('page header', () => {
+    test('shows Queue heading and description by default', () => {
+      render(<FacilDashboard />);
+      expect(screen.getByRole('heading', { name: 'Queue', level: 2 })).toBeInTheDocument();
+      expect(screen.getByText(/Review all pending and confirmed bookings/i)).toBeInTheDocument();
+    });
+  });
 
-    expect(screen.getByText('18')).toBeInTheDocument()
-    expect(screen.getByText('1,284')).toBeInTheDocument()
-    expect(screen.getByText('6')).toBeInTheDocument()
-    expect(screen.getByText('42')).toBeInTheDocument()
-  })
+  describe('view switching', () => {
+    test('clicking Drop-offs shows DropOffsView and updates header', () => {
+      render(<FacilDashboard />);
+      fireEvent.click(screen.getByRole('button', { name: /Drop-offs/i }));
+      expect(screen.getByText('Mock DropOffsView')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Drop-offs', level: 2 })).toBeInTheDocument();
+      expect(screen.getByText(/Confirm items ready for drop-off/i)).toBeInTheDocument();
+    });
 
- test('displays trade queue section', () => {
-  render(<FacilDashboard />)
-  expect(screen.getAllByText(/Trade Queue/i).length).toBeGreaterThan(0)
-  expect(screen.getByText(/Today’s facilitated exchanges/i)).toBeInTheDocument()
-})
+    test('clicking Collections shows CollectionsView and updates header', () => {
+      render(<FacilDashboard />);
+      fireEvent.click(screen.getByRole('button', { name: /Collections/i }));
+      expect(screen.getByText('Mock CollectionsView')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Collections', level: 2 })).toBeInTheDocument();
+      expect(screen.getByText(/Release items to buyers/i)).toBeInTheDocument();
+    });
 
-  test('displays trade items', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText('MacBook Air M2')).toBeInTheDocument()
-    expect(screen.getByText('Calculus Textbook')).toBeInTheDocument()
-    expect(screen.getByText('Nike Dunks Low')).toBeInTheDocument()
-  })
+    test('clicking History shows HistoryView and updates header', () => {
+      render(<FacilDashboard />);
+      fireEvent.click(screen.getByRole('button', { name: /History/i }));
+      expect(screen.getByText('Mock HistoryView')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'History', level: 2 })).toBeInTheDocument();
+      expect(screen.getByText(/View completed and cancelled bookings/i)).toBeInTheDocument();
+    });
 
-  test('filters trades using search', () => {
-    render(<FacilDashboard />)
+    test('clicking Queue shows QueueView', () => {
+      render(<FacilDashboard />);
+      // Navigate away first
+      fireEvent.click(screen.getByRole('button', { name: /History/i }));
+      // Then back to Queue
+      fireEvent.click(screen.getByRole('button', { name: /Queue/i }));
+      expect(screen.getByText('Mock QueueView')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Queue', level: 2 })).toBeInTheDocument();
+    });
 
-    const input = screen.getByPlaceholderText(/Search trade, item, buyer/i)
-    fireEvent.change(input, { target: { value: 'MacBook' } })
+    test('active nav button gets highlighted style after click', () => {
+      render(<FacilDashboard />);
+      const dropoffsBtn = screen.getByRole('button', { name: /Drop-offs/i });
+      fireEvent.click(dropoffsBtn);
+      expect(dropoffsBtn.className).toMatch(/bg-dark/);
+    });
 
-    expect(screen.getByText('MacBook Air M2')).toBeInTheDocument()
-    expect(screen.queryByText('Calculus Textbook')).not.toBeInTheDocument()
-  })
+    test('previous active nav loses highlight after switching', () => {
+      render(<FacilDashboard />);
+      const queueBtn = screen.getByRole('button', { name: /Queue/i });
+      fireEvent.click(screen.getByRole('button', { name: /Drop-offs/i }));
+      expect(queueBtn.className).not.toMatch(/bg-dark/);
+    });
+  });
 
-  test('filters trades by buyer name', () => {
-    render(<FacilDashboard />)
+  describe('logout button', () => {
+    test('renders logout button when handleLogout is provided', () => {
+      const handleLogout = jest.fn();
+      render(<FacilDashboard handleLogout={handleLogout} />);
+      expect(screen.getByRole('button', { name: /Logout/i })).toBeInTheDocument();
+    });
 
-    const input = screen.getByPlaceholderText(/Search trade, item, buyer/i)
-    fireEvent.change(input, { target: { value: 'Neo' } })
+    test('does not render logout button when handleLogout is not provided', () => {
+      render(<FacilDashboard />);
+      expect(screen.queryByRole('button', { name: /Logout/i })).not.toBeInTheDocument();
+    });
 
-    expect(screen.getByText('Calculus Textbook')).toBeInTheDocument()
-    expect(screen.queryByText('MacBook Air M2')).not.toBeInTheDocument()
-  })
+    test('calls handleLogout when logout button is clicked', () => {
+      const handleLogout = jest.fn();
+      render(<FacilDashboard handleLogout={handleLogout} />);
+      fireEvent.click(screen.getByRole('button', { name: /Logout/i }));
+      expect(handleLogout).toHaveBeenCalledTimes(1);
+    });
+  });
 
-  test('filters trades by status', () => {
-    render(<FacilDashboard />)
+  describe('mobile menu', () => {
+    test('renders the mobile menu toggle button', () => {
+      render(<FacilDashboard />);
+      expect(screen.getByRole('button', { name: '' })).toBeInTheDocument();
+    });
 
-    const select = screen.getByDisplayValue('All')
-    fireEvent.change(select, { target: { value: 'Scheduled' } })
+    test('toggles sidebar open and closed on mobile menu button click', () => {
+      render(<FacilDashboard />);
+      // Find the mobile toggle (the Menu/X button in the top bar)
+      const toggleBtn = screen.getAllByRole('button').find(
+        (btn) => !btn.textContent.trim() || btn.closest('.lg\\:hidden')
+      );
+      // Sidebar starts closed (translate-x-full on mobile)
+      const aside = document.querySelector('aside');
+      expect(aside.className).toMatch(/-translate-x-full/);
+      fireEvent.click(toggleBtn);
+      expect(aside.className).toMatch(/translate-x-0/);
+    });
 
-    expect(screen.getByText('Desk Lamp')).toBeInTheDocument()
-  })
+    test('closes sidebar after selecting a nav item', () => {
+      render(<FacilDashboard />);
+      // Open sidebar
+      const toggleBtn = screen.getAllByRole('button').find(
+        (btn) => btn.closest('.lg\\:hidden')
+      );
+      fireEvent.click(toggleBtn);
+      // Click a nav item
+      fireEvent.click(screen.getByRole('button', { name: /Collections/i }));
+      const aside = document.querySelector('aside');
+      expect(aside.className).toMatch(/-translate-x-full/);
+    });
+  });
 
- test('shows no matching trade items when search has no results', () => {
-  render(<FacilDashboard />)
-
-  const input = screen.getByPlaceholderText(/Search trade, item, buyer/i)
-  fireEvent.change(input, { target: { value: 'xyz123' } })
-
-  // Expect NO trades to be shown
-  expect(screen.queryByText('MacBook Air M2')).not.toBeInTheDocument()
-  expect(screen.queryByText('Calculus Textbook')).not.toBeInTheDocument()
-  expect(screen.queryByText('Nike Dunks Low')).not.toBeInTheDocument()
-})
-
-  test('displays safe zones section', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText(/Safe exchange points/i)).toBeInTheDocument()
-  })
-
-  test('displays communication feed', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText(/Live coordination feed/i)).toBeInTheDocument()
-    expect(screen.getByText('Trust & Safety Bot')).toBeInTheDocument()
-  })
-
-  test('displays incident monitor', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText(/Incident monitor/i)).toBeInTheDocument()
-    expect(screen.getByText('Condition mismatch flagged')).toBeInTheDocument()
-  })
-
-  test('displays incident action buttons', () => {
-    render(<FacilDashboard />)
-    const reviewButtons = screen.getAllByText(/Review case/i)
-    expect(reviewButtons.length).toBeGreaterThan(0)
-  })
-
-  test('displays checklist section', () => {
-    render(<FacilDashboard />)
-    expect(screen.getByText(/Facilitator checklist/i)).toBeInTheDocument()
-  })
-
-  test('displays checklist items', () => {
-    render(<FacilDashboard />)
-    expect(
-      screen.getByText(/Confirm both student IDs match verified accounts/i)
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/Inspect item condition against listing photos/i)
-    ).toBeInTheDocument()
-  })
-
-})
+});
