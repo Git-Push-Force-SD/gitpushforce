@@ -1,8 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from './utils/supabase';
 
 const AuthContext = createContext(null);
-const ROLE_FETCH_TIMEOUT_MS = 5000;
+const ROLE_STORAGE_KEY = 'unimart_user_role';
+const USER_STORAGE_KEY = 'unimart_user_id';
+const USER_EMAIL_KEY = 'unimart_user_email';
 
 function normalizeRole(rawRole) {
   if (rawRole === 'user') return 'student';
@@ -10,16 +12,14 @@ function normalizeRole(rawRole) {
   return 'student';
 }
 
-async function ensureUserRole(user) {
+async function fetchRoleFromDB(user) {
   const { data, error } = await supabase
     .from('users')
     .select('role')
     .eq('id', user.id)
     .single();
 
-  if (error && error.code !== 'PGRST116') {
-    throw error;
-  }
+  if (error && error.code !== 'PGRST116') throw error;
 
   if (!data) {
     const { error: insertError } = await supabase.from('users').insert({
@@ -27,7 +27,6 @@ async function ensureUserRole(user) {
       email: user.email,
       role: 'student',
     });
-
     if (insertError) throw insertError;
     return 'student';
   }
@@ -35,72 +34,107 @@ async function ensureUserRole(user) {
   const nextRole = normalizeRole(data.role);
 
   if (data.role !== nextRole) {
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ role: nextRole })
-      .eq('id', user.id);
-
-    if (updateError) throw updateError;
+    await supabase.from('users').update({ role: nextRole }).eq('id', user.id);
   }
 
   return nextRole;
 }
 
-async function resolveRoleWithFallback(user) {
-  try {
-    const rolePromise = ensureUserRole(user);
-    const timeoutPromise = new Promise((resolve) =>
-      setTimeout(() => resolve('student'), ROLE_FETCH_TIMEOUT_MS),
-    );
-    const resolvedRole = await Promise.race([rolePromise, timeoutPromise]);
-    return normalizeRole(resolvedRole);
-  } catch (error) {
-    console.error('Error resolving user role:', error);
-    return 'student';
-  }
-}
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    const storedId = localStorage.getItem(USER_STORAGE_KEY);
+    const storedEmail = localStorage.getItem(USER_EMAIL_KEY);
+    return storedId ? { id: storedId, email: storedEmail } : null;
+  });
+
+  const [role, setRole] = useState(() => {
+    return localStorage.getItem(ROLE_STORAGE_KEY) ?? null;
+  });
+
+  // If we have both user and role cached, skip the loading spinner entirely
+  const [loading, setLoading] = useState(() => {
+    const hasCache =
+      localStorage.getItem(USER_STORAGE_KEY) &&
+      localStorage.getItem(ROLE_STORAGE_KEY);
+    return !hasCache;
+  });
+
+  const initialSessionHandled = useRef(false);
+
+  // Sync role to localStorage
+  useEffect(() => {
+    if (role) {
+      localStorage.setItem(ROLE_STORAGE_KEY, role);
+    } else {
+      localStorage.removeItem(ROLE_STORAGE_KEY);
+    }
+  }, [role]);
+
+  // Sync user to localStorage
+  useEffect(() => {
+    if (user?.id) {
+      localStorage.setItem(USER_STORAGE_KEY, user.id);
+      if (user.email) localStorage.setItem(USER_EMAIL_KEY, user.email);
+    } else {
+      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem(USER_EMAIL_KEY);
+    }
+  }, [user]);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadSession = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
+        const { data: { session } } = await supabase.auth.getSession();
         const sessionUser = session?.user ?? null;
         if (!isMounted) return;
 
-        setUser(sessionUser);
-
         if (sessionUser) {
-          const userRole = await resolveRoleWithFallback(sessionUser);
-          if (isMounted) setRole(userRole);
+          setUser(sessionUser);
+
+          const cachedRole = localStorage.getItem(ROLE_STORAGE_KEY);
+
+          if (cachedRole) {
+            // We already have a role — use it immediately, verify in background
+            if (isMounted) setRole(cachedRole);
+            // Background verify — silently update if role changed in DB
+            fetchRoleFromDB(sessionUser)
+              .then((freshRole) => {
+                if (isMounted && freshRole !== cachedRole) {
+                  console.log('[loadSession] role updated in background:', cachedRole, '→', freshRole);
+                  setRole(freshRole);
+                }
+              })
+              .catch((err) => console.warn('[loadSession] background role check failed:', err));
+          } else {
+            // No cache — must wait for DB
+            const userRole = await fetchRoleFromDB(sessionUser);
+            if (isMounted) setRole(normalizeRole(userRole));
+          }
         } else {
+          setUser(null);
           setRole(null);
         }
       } catch (error) {
-        console.error('Error loading session:', error);
+        console.error('[loadSession] error:', error);
         if (isMounted) {
           setUser(null);
           setRole(null);
         }
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          initialSessionHandled.current = true;
+          setLoading(false);
+        }
       }
     };
 
     loadSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!initialSessionHandled.current) return;
+
       const sessionUser = session?.user ?? null;
       setUser(sessionUser);
 
@@ -110,10 +144,30 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      setLoading(true);
-      const userRole = await resolveRoleWithFallback(sessionUser);
-      setRole(userRole);
-      setLoading(false);
+      // Always use cached role immediately — never block on DB here
+      const cachedRole = localStorage.getItem(ROLE_STORAGE_KEY);
+      if (cachedRole) {
+        setRole(cachedRole);
+        setLoading(false);
+        // Background verify
+        fetchRoleFromDB(sessionUser)
+          .then((freshRole) => {
+            if (isMounted && freshRole !== cachedRole) {
+              setRole(freshRole);
+            }
+          })
+          .catch((err) => console.warn('[onAuthStateChange] background role check failed:', err));
+      } else {
+        setLoading(true);
+        try {
+          const userRole = await fetchRoleFromDB(sessionUser);
+          if (isMounted) setRole(normalizeRole(userRole));
+        } catch (err) {
+          console.error('[onAuthStateChange] role fetch failed:', err);
+        } finally {
+          if (isMounted) setLoading(false);
+        }
+      }
     });
 
     return () => {
@@ -126,15 +180,13 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);
+    localStorage.removeItem(USER_STORAGE_KEY);
+    localStorage.removeItem(USER_EMAIL_KEY);
+    localStorage.removeItem(ROLE_STORAGE_KEY);
   };
 
   const value = useMemo(
-    () => ({
-      user,
-      role,
-      loading,
-      signOut,
-    }),
+    () => ({ user, role, loading, signOut }),
     [loading, role, user],
   );
 

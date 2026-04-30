@@ -12,7 +12,8 @@ function roleToPath(role) {
 export default function ProtectedRoute({ children, allowedRole }) {
   const { user, role, loading } = useAuth();
 
-  if (loading) {
+  // Wait while auth OR role is still resolving
+  if (loading || (user && role === null)) {
     return (
       <main className="w-full min-h-screen bg-offwhite flex items-center justify-center">
         <section className="text-center">
@@ -27,6 +28,8 @@ export default function ProtectedRoute({ children, allowedRole }) {
   }
 
   if (allowedRole && role !== allowedRole) {
+    // Admin can access staff dashboard too
+    if (allowedRole === 'staff' && role === 'admin') return children;
     return <Navigate to={roleToPath(role)} replace />;
   }
 

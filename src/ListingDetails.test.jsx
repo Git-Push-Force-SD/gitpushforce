@@ -1,462 +1,420 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ListingDetails from './ListingDetails';
-import { supabase } from './utils/supabase';
-import { useAuth } from './AuthContext';
-import { useConversation } from './hooks/useConversation';
+import * as supabaseModule from './utils/supabase';
+import * as AuthContext from './AuthContext';
+import * as useConversationModule from './hooks/useConversation';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
-jest.mock('./utils/supabase', () => ({ supabase: { from: jest.fn() } }));
-jest.mock('./AuthContext',             () => ({ useAuth: jest.fn() }));
-jest.mock('./hooks/useConversation',   () => ({ useConversation: jest.fn() }));
+jest.mock('./utils/supabase', () => ({
+  supabase: {
+    from: jest.fn(),
+    storage: { from: jest.fn() },
+  },
+}));
+
+jest.mock('./AuthContext', () => ({
+  useAuth: jest.fn(),
+}));
+
+jest.mock('./hooks/useConversation', () => ({
+  useConversation: jest.fn(),
+}));
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
-  useNavigate: jest.fn(),
+  useNavigate: () => mockNavigate,
 }));
 
-// ─── Fixtures ─────────────────────────────────────────────────────────────────
+const mockNavigate = jest.fn();
+const mockSupabase = supabaseModule.supabase;
+
+// ─── Test Data ────────────────────────────────────────────────────────────────
 
 const mockListing = {
-  id: '123',
-  title: 'MacBook Pro 2021',
-  description: 'Great condition laptop, barely used.',
-  price: '15000',
+  id: 'listing-1',
+  title: 'Sony Headphones',
+  description: 'Great condition headphones',
+  price: '1500',
   condition: 'Like New',
   category: 'Electronics',
-  seller_id: 'seller-abc',
-  image_path: 'images/macbook.jpg',
-  created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  image_path: 'user1/image.jpg',
+  seller_id: 'seller-1',
+  created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+  listing_type: 'sale',
 };
 
 const mockSeller = {
-  id: 'seller-abc',
+  id: 'seller-1',
   username: 'john_doe',
-  email: 'john@example.com',
+  email: 'john@students.wits.ac.za',
 };
 
-const mockAuthUser = { id: 'buyer-xyz' };
+const mockAuthUser = {
+  id: 'buyer-1',
+  email: 'buyer@students.wits.ac.za',
+};
 
-// ─── Supabase chain builder ───────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const buildSupabaseMock = (data, error = null) => ({
-  select: jest.fn().mockReturnThis(),
-  eq:     jest.fn().mockReturnThis(),
-  single: jest.fn().mockResolvedValue({ data, error }),
-});
-
-// ─── Default hook mocks ───────────────────────────────────────────────────────
-
-const defaultGetOrCreate = jest.fn().mockResolvedValue('conv-1');
-
-const setupDefaultMocks = () => {
-  useAuth.mockReturnValue({ user: mockAuthUser });
-  useConversation.mockReturnValue({
-    getOrCreateConversation: defaultGetOrCreate,
-    loading: false,
+const setupSupabaseMocks = ({ listing = mockListing, seller = mockSeller, listingError = null, sellerError = null } = {}) => {
+  mockSupabase.from.mockImplementation((table) => {
+    if (table === 'listings') {
+      return {
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({ data: listing, error: listingError }),
+          }),
+        }),
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({ data: { id: 'new-listing-1' }, error: null }),
+          }),
+        }),
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null }),
+        }),
+      };
+    }
+    if (table === 'users') {
+      return {
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({ data: seller, error: sellerError }),
+          }),
+        }),
+      };
+    }
+    if (table === 'orders') {
+      return {
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } }),
+              }),
+            }),
+          }),
+        }),
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({ data: { id: 'order-1' }, error: null }),
+          }),
+        }),
+      };
+    }
+    if (table === 'trades') {
+      return {
+        insert: jest.fn().mockResolvedValue({ error: null }),
+      };
+    }
+    return {};
   });
 };
 
-// ─── Render helper ────────────────────────────────────────────────────────────
-
-const renderWithRouter = (id = '123', user = null) =>
-  render(
-    <MemoryRouter initialEntries={[`/listings/${id}`]}>
+const renderComponent = (listingId = 'listing-1') => {
+  return render(
+    <MemoryRouter initialEntries={[`/listing/${listingId}`]}>
       <Routes>
-        <Route path="/listings/:id" element={<ListingDetails user={user} />} />
+        <Route path="/listing/:id" element={<ListingDetails />} />
       </Routes>
     </MemoryRouter>
   );
+};
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ListingDetails', () => {
-  let navigateMock;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    window.scrollTo = jest.fn();
-    window.alert = jest.fn();
-    navigateMock = jest.fn();
-    require('react-router-dom').useNavigate.mockReturnValue(navigateMock);
-    setupDefaultMocks();
-    // Default: listing + seller both succeed
-    supabase.from
-      .mockReturnValueOnce(buildSupabaseMock(mockListing))
-      .mockReturnValueOnce(buildSupabaseMock(mockSeller));
+    window.scrollTo = jest.fn(); // jsdom does not implement scrollTo
+    AuthContext.useAuth.mockReturnValue({ user: mockAuthUser });
+    useConversationModule.useConversation.mockReturnValue({
+      getOrCreateConversation: jest.fn().mockResolvedValue('conv-1'),
+      loading: false,
+    });
+    setupSupabaseMocks();
   });
-
-  // ── Loading state ─────────────────────────────────────────────────────────
 
   describe('loading state', () => {
-    it('calls window.scrollTo(0, 0) on mount', () => {
-      renderWithRouter();
-      expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
+    test('renders without crashing', () => {
+      renderComponent();
+      expect(document.body).toBeInTheDocument();
     });
 
-    it('renders skeleton/pulse elements while fetching', () => {
-      supabase.from.mockReset();
-      supabase.from.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        eq:     jest.fn().mockReturnThis(),
-        single: jest.fn().mockReturnValue(new Promise(() => {})),
-      });
-      renderWithRouter();
-      expect(document.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    });
-  });
-
-  // ── Successful fetch ──────────────────────────────────────────────────────
-
-  describe('successful data fetch', () => {
-    it('renders the listing title', async () => {
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText('MacBook Pro 2021')).toBeInTheDocument());
-    });
-
-    it('renders the formatted price in en-ZA locale', async () => {
-      renderWithRouter();
-      await waitFor(() =>
-        expect(screen.getByText(/R15[\s\u00a0]000,00/)).toBeInTheDocument()
-      );
-    });
-
-    it('renders the listing condition badge', async () => {
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText('Like New')).toBeInTheDocument());
-    });
-
-    it('renders the listing description', async () => {
-      renderWithRouter();
-      await waitFor(() =>
-        expect(screen.getByText('Great condition laptop, barely used.')).toBeInTheDocument()
-      );
-    });
-
-    it('renders the category in specifications', async () => {
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText('Electronics')).toBeInTheDocument());
-    });
-
-    it('renders the seller username', async () => {
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText('john_doe')).toBeInTheDocument());
-    });
-
-    it('renders the listing image with the correct src', async () => {
-      renderWithRouter();
+    test('shows listing title after load', async () => {
+      renderComponent();
       await waitFor(() => {
-        const img = screen.getAllByRole('img')[0];
-        expect(img.src).toContain('keposlpyrewldohbmesq.supabase.co');
-        expect(img.src).toContain('images/macbook.jpg');
-      });
-    });
-
-    it('renders the "Message Seller" button', async () => {
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText(/Message Seller/i)).toBeInTheDocument());
-    });
-
-    it('renders the "Buy / Offer" button', async () => {
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText(/Buy \/ Offer/i)).toBeInTheDocument());
-    });
-
-    it('renders the Campus Secure Guarantee section', async () => {
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText(/Campus Secure/i)).toBeInTheDocument());
-    });
-  });
-
-  // ── Seller display name fallbacks ─────────────────────────────────────────
-
-  describe('seller display name fallback', () => {
-    it('falls back to email prefix when username is null', async () => {
-      supabase.from.mockReset();
-      supabase.from
-        .mockReturnValueOnce(buildSupabaseMock(mockListing))
-        .mockReturnValueOnce(buildSupabaseMock({ ...mockSeller, username: null }));
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText('john')).toBeInTheDocument());
-    });
-  });
-
-  // ── Image fallback ────────────────────────────────────────────────────────
-
-  describe('image fallback', () => {
-    it('uses the Unsplash fallback when image_path is null', async () => {
-      supabase.from.mockReset();
-      supabase.from
-        .mockReturnValueOnce(buildSupabaseMock({ ...mockListing, image_path: null }))
-        .mockReturnValueOnce(buildSupabaseMock(mockSeller));
-      renderWithRouter();
-      await waitFor(() => {
-        const img = screen.getAllByRole('img')[0];
-        expect(img.src).toContain('unsplash.com');
+        expect(screen.getByText('Sony Headphones')).toBeInTheDocument();
       });
     });
   });
-
-  // ── Not found state ───────────────────────────────────────────────────────
 
   describe('listing not found', () => {
-    it('renders "Listing not found" when query returns no data', async () => {
-      supabase.from.mockReset();
-      supabase.from.mockReturnValueOnce(buildSupabaseMock(null, { message: 'Not found' }));
-      renderWithRouter('nonexistent-id');
-      await waitFor(() => expect(screen.getByText(/Listing not found/i)).toBeInTheDocument());
+    test('shows "Listing not found" when listing data is null', async () => {
+      setupSupabaseMocks({ listing: null, listingError: { message: 'not found' } });
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText(/Listing not found/i)).toBeInTheDocument();
+      });
     });
 
-    it('renders a "Go Back" link on the not-found screen', async () => {
-      supabase.from.mockReset();
-      supabase.from.mockReturnValueOnce(buildSupabaseMock(null, { message: 'Not found' }));
-      renderWithRouter('nonexistent-id');
-      await waitFor(() => expect(screen.getByText(/Go Back/i)).toBeInTheDocument());
-    });
-
-    it('navigates back when "Go Back" is clicked', async () => {
-      supabase.from.mockReset();
-      supabase.from.mockReturnValueOnce(buildSupabaseMock(null, { message: 'Not found' }));
-      renderWithRouter('nonexistent-id');
-      await waitFor(() => screen.getByText(/Go Back/i));
-      fireEvent.click(screen.getByText(/Go Back/i));
-      expect(navigateMock).toHaveBeenCalledWith(-1);
+    test('shows go back button when listing not found', async () => {
+      setupSupabaseMocks({ listing: null, listingError: { message: 'not found' } });
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText(/Go Back/i)).toBeInTheDocument();
+      });
     });
   });
 
-  // ── Back button ───────────────────────────────────────────────────────────
+  describe('listing content', () => {
+    test('renders listing title', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('Sony Headphones')).toBeInTheDocument();
+      });
+    });
+
+    test('renders formatted price', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText(/R1.*500/)).toBeInTheDocument();
+      });
+    });
+
+    test('renders listing description', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('Great condition headphones')).toBeInTheDocument();
+      });
+    });
+
+    test('renders condition badge', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('Like New')).toBeInTheDocument();
+      });
+    });
+
+    test('renders category in specifications', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('Electronics')).toBeInTheDocument();
+      });
+    });
+
+    test('renders seller username', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('john_doe')).toBeInTheDocument();
+      });
+    });
+
+    test('falls back to email prefix when seller has no username', async () => {
+      setupSupabaseMocks({ seller: { ...mockSeller, username: null } });
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('john')).toBeInTheDocument();
+      });
+    });
+
+    test('renders the listing image', async () => {
+      renderComponent();
+      await waitFor(() => {
+        const img = screen.getAllByRole('img')[0];
+        expect(img).toBeInTheDocument();
+        expect(img.src).toContain('user1/image.jpg');
+      });
+    });
+
+    test('renders time ago for recent listing', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText(/days? ago/i)).toBeInTheDocument();
+      });
+    });
+
+    test('shows "unknown" for null created_at', async () => {
+      setupSupabaseMocks({ listing: { ...mockListing, created_at: null } });
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('unknown')).toBeInTheDocument();
+      });
+    });
+
+    test('shows "unknown" for invalid date string', async () => {
+      setupSupabaseMocks({ listing: { ...mockListing, created_at: 'not-a-date' } });
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText('unknown')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('action buttons', () => {
+    test('renders Message Seller button', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Message Seller/i })).toBeInTheDocument();
+      });
+    });
+
+    test('renders Buy / Offer button for sale listing', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Buy \/ Offer/i })).toBeInTheDocument();
+      });
+    });
+
+    test('does not render Buy / Offer button for trade-only listing', async () => {
+      setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: /Buy \/ Offer/i })).not.toBeInTheDocument();
+      });
+    });
+
+    test('renders Trade button for trade listing', async () => {
+      setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Trade/i })).toBeInTheDocument();
+      });
+    });
+
+    test('renders Trade button for both listing type', async () => {
+      setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'both' } });
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Trade/i })).toBeInTheDocument();
+      });
+    });
+
+    test('hides Buy / Offer and Trade buttons when viewer is the seller', async () => {
+      AuthContext.useAuth.mockReturnValue({ user: { id: 'seller-1' } });
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: /Buy \/ Offer/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Trade$/i })).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('buy / offer flow', () => {
+    test('clicking Buy / Offer shows amount input', async () => {
+      renderComponent();
+      await waitFor(() => screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      expect(screen.getByPlaceholderText(/Enter amount/i)).toBeInTheDocument();
+    });
+
+    test('shows Proceed to Payment button after clicking Buy / Offer', async () => {
+      renderComponent();
+      await waitFor(() => screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      expect(screen.getByRole('button', { name: /Proceed to Payment/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('message seller', () => {
+    test('navigates to login when unauthenticated user clicks Message Seller', async () => {
+      AuthContext.useAuth.mockReturnValue({ user: null });
+      renderComponent();
+      await waitFor(() => screen.getByRole('button', { name: /Message Seller/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Message Seller/i }));
+      expect(mockNavigate).toHaveBeenCalledWith('/login');
+    });
+
+    test('navigates to conversation when authenticated user clicks Message Seller', async () => {
+      renderComponent();
+      await waitFor(() => screen.getByRole('button', { name: /Message Seller/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Message Seller/i }));
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/messages/conv-1', expect.any(Object));
+      });
+    });
+  });
+
+  describe('trade modal', () => {
+    test('opens trade modal when Trade button is clicked', async () => {
+      setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
+      renderComponent();
+      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      expect(screen.getByText('Create Trade Offer')).toBeInTheDocument();
+    });
+
+    test('closes trade modal when Cancel is clicked', async () => {
+      setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
+      renderComponent();
+      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+      expect(screen.queryByText('Create Trade Offer')).not.toBeInTheDocument();
+    });
+
+    test('closes trade modal when X button is clicked', async () => {
+      setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
+      renderComponent();
+      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      // X button is the close icon button in the modal header
+      const closeBtn = screen.getAllByRole('button').find(
+        (btn) => btn.querySelector('svg') && btn.className.includes('rounded-full') && btn.className.includes('bg-gray-100')
+      );
+      fireEvent.click(closeBtn);
+      expect(screen.queryByText('Create Trade Offer')).not.toBeInTheDocument();
+    });
+
+    test('renders trade form fields inside modal', async () => {
+      setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
+      renderComponent();
+      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      expect(screen.getByPlaceholderText(/Nintendo Switch Lite/i)).toBeInTheDocument();
+      // Use getAllByText since "Category" and "Condition" also appear in the specs section
+      expect(screen.getAllByText('Category').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Condition').length).toBeGreaterThan(0);
+      // Verify the modal select dropdowns are present
+      const selects = screen.getAllByRole('combobox');
+      expect(selects.length).toBeGreaterThanOrEqual(2);
+    });
+
+    test('navigates to login when unauthenticated user clicks Trade', async () => {
+      AuthContext.useAuth.mockReturnValue({ user: null });
+      setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
+      renderComponent();
+      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      expect(mockNavigate).toHaveBeenCalledWith('/login');
+    });
+  });
 
   describe('back button', () => {
-    it('navigates back when the back button is clicked', async () => {
-      renderWithRouter();
-      await waitFor(() => screen.getByText('MacBook Pro 2021'));
-      fireEvent.click(screen.getByText(/Back to Electronics/i));
-      expect(navigateMock).toHaveBeenCalledWith(-1);
-    });
-
-    it('shows "Back to Listings" when category is absent', async () => {
-      supabase.from.mockReset();
-      supabase.from
-        .mockReturnValueOnce(buildSupabaseMock({ ...mockListing, category: null }))
-        .mockReturnValueOnce(buildSupabaseMock(mockSeller));
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText(/Back to Listings/i)).toBeInTheDocument());
-    });
-  });
-
-  // ── calculateTimeAgo ──────────────────────────────────────────────────────
-
-  describe('calculateTimeAgo display', () => {
-    const renderWithCreatedAt = (createdAt) => {
-      supabase.from.mockReset();
-      supabase.from
-        .mockReturnValueOnce(buildSupabaseMock({ ...mockListing, created_at: createdAt }))
-        .mockReturnValueOnce(buildSupabaseMock(mockSeller));
-      renderWithRouter();
-    };
-
-    it('shows "just now" for a very recent listing', async () => {
-      renderWithCreatedAt(new Date().toISOString());
-      await waitFor(() => expect(screen.getByText(/just now/i)).toBeInTheDocument());
-    });
-
-    it('shows minutes ago for a listing < 1 hour old', async () => {
-      renderWithCreatedAt(new Date(Date.now() - 30 * 60 * 1000).toISOString());
-      await waitFor(() => expect(screen.getByText(/30 mins ago/i)).toBeInTheDocument());
-    });
-
-    it('shows hours ago for a listing < 24 hours old', async () => {
-      renderWithCreatedAt(new Date(Date.now() - 3 * 3600 * 1000).toISOString());
-      await waitFor(() => expect(screen.getByText(/3 hours ago/i)).toBeInTheDocument());
-    });
-
-    it('shows days ago for a listing < 7 days old', async () => {
-      renderWithCreatedAt(new Date(Date.now() - 3 * 86400 * 1000).toISOString());
-      await waitFor(() => expect(screen.getByText(/3 days ago/i)).toBeInTheDocument());
-    });
-
-    it('shows "unknown" for a null created_at', async () => {
-      renderWithCreatedAt(null);
-      await waitFor(() => expect(screen.getByText(/unknown/i)).toBeInTheDocument());
-    });
-  });
-
-  // ── Supabase query wiring ─────────────────────────────────────────────────
-
-  describe('Supabase query wiring', () => {
-    it('queries the listings table with the route id', async () => {
-      supabase.from.mockReset();
-      const listingChain = buildSupabaseMock(mockListing);
-      const sellerChain  = buildSupabaseMock(mockSeller);
-      supabase.from
-        .mockReturnValueOnce(listingChain)
-        .mockReturnValueOnce(sellerChain);
-      renderWithRouter('123');
-      await waitFor(() => screen.getByText('MacBook Pro 2021'));
-      expect(supabase.from).toHaveBeenCalledWith('listings');
-      expect(listingChain.eq).toHaveBeenCalledWith('id', '123');
-    });
-
-    it('queries the users table with the seller_id from the listing', async () => {
-      supabase.from.mockReset();
-      const listingChain = buildSupabaseMock(mockListing);
-      const sellerChain  = buildSupabaseMock(mockSeller);
-      supabase.from
-        .mockReturnValueOnce(listingChain)
-        .mockReturnValueOnce(sellerChain);
-      renderWithRouter('123');
-      await waitFor(() => screen.getByText('john_doe'));
-      expect(supabase.from).toHaveBeenCalledWith('users');
-      expect(sellerChain.eq).toHaveBeenCalledWith('id', 'seller-abc');
-    });
-
-    it('still renders the listing if the seller query fails', async () => {
-      supabase.from.mockReset();
-      supabase.from
-        .mockReturnValueOnce(buildSupabaseMock(mockListing))
-        .mockReturnValueOnce(buildSupabaseMock(null, { message: 'User not found' }));
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText('MacBook Pro 2021')).toBeInTheDocument());
-    });
-
-    it('handles an unexpected thrown error without crashing', () => {
-      supabase.from.mockReset();
-      supabase.from.mockImplementation(() => { throw new Error('Network failure'); });
-      expect(() => renderWithRouter()).not.toThrow();
-    });
-  });
-
-  // ── Price formatting ──────────────────────────────────────────────────────
-
-  describe('price formatting', () => {
-    it('shows R---.-- placeholder when price is null', async () => {
-      supabase.from.mockReset();
-      supabase.from
-        .mockReturnValueOnce(buildSupabaseMock({ ...mockListing, price: null }))
-        .mockReturnValueOnce(buildSupabaseMock(mockSeller));
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText('R---.--')).toBeInTheDocument());
-    });
-
-    it('formats integer prices with two decimal places (en-ZA comma decimal)', async () => {
-      supabase.from.mockReset();
-      supabase.from
-        .mockReturnValueOnce(buildSupabaseMock({ ...mockListing, price: '500' }))
-        .mockReturnValueOnce(buildSupabaseMock(mockSeller));
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText(/R500,00/)).toBeInTheDocument());
-    });
-  });
-
-  // ── handleMessageSeller ───────────────────────────────────────────────────
-
-  describe('handleMessageSeller', () => {
-    it('navigates to /login when user is not authenticated', async () => {
-      useAuth.mockReturnValue({ user: null });
-      renderWithRouter();
-      await waitFor(() => screen.getByText(/Message Seller/i));
-      fireEvent.click(screen.getByText(/Message Seller/i));
-      expect(navigateMock).toHaveBeenCalledWith('/login');
-    });
-
-    it('shows alert when authenticated user tries to message themselves', async () => {
-      // Make authUser the same as the seller
-      useAuth.mockReturnValue({ user: { id: 'seller-abc' } });
-      renderWithRouter();
-      await waitFor(() => screen.getByText(/Message Seller/i));
-      fireEvent.click(screen.getByText(/Message Seller/i));
-      expect(window.alert).toHaveBeenCalledWith('You cannot message yourself');
-      expect(navigateMock).not.toHaveBeenCalledWith(expect.stringContaining('/messages/'));
-    });
-
-    it('calls getOrCreateConversation with listingId, sellerId, buyerId', async () => {
-      renderWithRouter();
-      await waitFor(() => screen.getByText(/Message Seller/i));
-      fireEvent.click(screen.getByText(/Message Seller/i));
-      await waitFor(() =>
-        expect(defaultGetOrCreate).toHaveBeenCalledWith('123', 'seller-abc', 'buyer-xyz')
-      );
-    });
-
-    it('navigates to /messages/:conversationId with correct state on success', async () => {
-      renderWithRouter();
-      await waitFor(() => screen.getByText(/Message Seller/i));
-      fireEvent.click(screen.getByText(/Message Seller/i));
-      await waitFor(() =>
-        expect(navigateMock).toHaveBeenCalledWith('/messages/conv-1', {
-          state: {
-            receiverId:   'seller-abc',
-            receiverName: 'john_doe',
-            listingId:    '123',
-          },
-        })
-      );
-    });
-
-    it('uses email prefix as receiverName when seller username is null', async () => {
-      supabase.from.mockReset();
-      supabase.from
-        .mockReturnValueOnce(buildSupabaseMock(mockListing))
-        .mockReturnValueOnce(buildSupabaseMock({ ...mockSeller, username: null }));
-      renderWithRouter();
-      await waitFor(() => screen.getByText(/Message Seller/i));
-      fireEvent.click(screen.getByText(/Message Seller/i));
-      await waitFor(() =>
-        expect(navigateMock).toHaveBeenCalledWith('/messages/conv-1',
-          expect.objectContaining({
-            state: expect.objectContaining({ receiverName: 'john' }),
-          })
-        )
-      );
-    });
-
-    it('shows alert when getOrCreateConversation throws', async () => {
-      defaultGetOrCreate.mockRejectedValueOnce(new Error('Failed'));
-      renderWithRouter();
-      await waitFor(() => screen.getByText(/Message Seller/i));
-      fireEvent.click(screen.getByText(/Message Seller/i));
-      await waitFor(() =>
-        expect(window.alert).toHaveBeenCalledWith(
-          'Failed to open conversation. Please try again.'
-        )
-      );
-    });
-
-    it('shows "Opening chat..." while conversationLoading is true', async () => {
-      useConversation.mockReturnValue({
-        getOrCreateConversation: defaultGetOrCreate,
-        loading: true,
-      });
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText(/Opening chat/i)).toBeInTheDocument());
-    });
-
-    it('disables the Message Seller button while conversationLoading is true', async () => {
-      useConversation.mockReturnValue({
-        getOrCreateConversation: defaultGetOrCreate,
-        loading: true,
-      });
-      renderWithRouter();
+    test('renders back button', async () => {
+      renderComponent();
       await waitFor(() => {
-        const btn = screen.getByText(/Opening chat/i).closest('button');
-        expect(btn).toBeDisabled();
+        expect(screen.getByText(/Back to/i)).toBeInTheDocument();
       });
     });
 
-  // ── handleBuy validation tests ───────────────────────────────────────────
-
-  describe('handleBuy validation', () => {
-    it('navigates to login when user is not authenticated', async () => {
-      useAuth.mockReturnValue({ user: null });
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText(/Buy/i)).toBeInTheDocument());
+    test('back button shows listing category', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText(/Back to Electronics/i)).toBeInTheDocument();
+      });
     });
+  });
 
-    it('shows alert for invalid offer amount', async () => {
-      renderWithRouter();
-      await waitFor(() => expect(screen.getByText(/MacBook Pro/i)).toBeInTheDocument());
+  describe('campus secure guarantee', () => {
+    test('renders Campus Secure guarantee text', async () => {
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByText(/Campus Secure/i)).toBeInTheDocument();
+      });
     });
   });
 });

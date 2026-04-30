@@ -298,7 +298,7 @@ describe('ConversationsList', () => {
       renderList();
       await waitFor(() => screen.getByText('jane_doe'));
       // The unread dot is a div with bg-primary and rounded-full
-      const dot = document.querySelector('div.rounded-full.bg-primary');
+      const dot = document.querySelector('section.rounded-full.bg-primary');
       expect(dot).not.toBeNull();
     });
 
