@@ -21,9 +21,11 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const [products, setProducts] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const[filterCondition, setFilterCondition] = useState('');
   const [wishlistIds, setWishlistIds] = useState(new Set());
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -83,7 +85,10 @@ const categories = useMemo(() => {
 };
 const getNumericPrice = (price) => {
   if(typeof price == 'number') return price;
-  return Number(String(price).replace(/[^\d.]/g, '')) || 0;
+  const cleaned = String(price).replace(/[R\s,]/g,'');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+  //return Number(String(price).replace(/[^\d.]/g, '')) || 0;
 };
 
 const filteredProducts = useMemo(() => {
@@ -108,9 +113,13 @@ const filteredProducts = useMemo(() => {
         const matchesMin = min === null || numericPrice >= min;
         const matchesMax = max === null || numericPrice <= max;
 
-    return matchesCategory && matchesSearch && matchesMin && matchesMax;
+        const matchesCondition= 
+        filterCondition === '' || 
+        product.condition === filterCondition.toUpperCase();
+
+    return matchesCategory && matchesSearch && matchesMin && matchesMax && matchesCondition;
   });
-    }, [products, activeCategory, searchQuery, minPrice, maxPrice]);
+    }, [products, activeCategory, searchQuery, minPrice, maxPrice,filterCondition]);
 
   const wishlistProducts = useMemo(
     () => products.filter((product) => wishlistIds.has(product.id)),
@@ -139,7 +148,8 @@ const filteredProducts = useMemo(() => {
     setSearchQuery('');
     setMinPrice('');
     setMaxPrice('');
-    setActiveCategory('All Items');
+    setActiveCategory('All Items')
+    setFilterCondition('');
   };
 
   // Mobile menu navigation handler
@@ -348,6 +358,13 @@ const filteredProducts = useMemo(() => {
           
           {/* Hamburger Menu Button - Mobile Only */}
           <button
+           className="text-dark hover:text-primary transition-colors"
+           onClick={() =>{
+             setShowSearch(!showSearch);
+            if (showFilters) setShowFilters(false);
+          }}
+        
+           >
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Open mobile menu"
             className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
@@ -362,6 +379,7 @@ const filteredProducts = useMemo(() => {
           >
             <Search size={22} className="stroke-[1.5]" />
           </button>
+
           <button 
             onClick={() => navigate('/messages')}
             className="hidden md:block text-dark hover:text-primary transition-colors relative"
@@ -404,6 +422,8 @@ const filteredProducts = useMemo(() => {
       {/* Main Content Area */}
       <main className="w-full px-4 sm:px-8">
 
+        {/*Search Section */}
+
         {showSearch && (
           <section className="mt -6 -mb -4 bg-offwhite" >
             <input
@@ -413,34 +433,54 @@ const filteredProducts = useMemo(() => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full border rounded-xl px-4 py-3 mb-4"
               />
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  placeholder="Min Price"
-                  value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
-                  className="border rounded-xl px-4 py-3"
-                  />
-
-                <input
-                  type="number"
-                  placeholder="Max Price"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                  className="border rounded-xl px-4 py-3"
-                  />
-
-              </div>
-              <button
-                onClick={clearFilters}
-                className="mt-4 px-4 py-2 bg-dark text-white rounded-full"
-                >
-                Clear Filters
-                </button>
-                <p className="mt-3 text-sm text-gray-500">
-                  {displayedProducts.length} items found
+              <p className ="text-sm text-gray-500">
+                {displayedProducts.length} items found
                 </p>
-          </section>
+                </section>
+        )}
+
+        {/*Filter Section */}
+        {showFilters && (
+          <section className="mt-6 mb-4">
+            <div className="grid grid-cols-2 gap-4">
+              <input
+              type="number"
+              placeholder="Min Price"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              className ="border rounded-xl px-4 py-3"
+              />
+              <input
+              type="number"
+              placeholder="Max Price"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              className="border rounded-xl px-4 py-3"
+              />
+            </div>
+
+            <select
+            value={filterCondition}
+            onChange={(e) => setFilterCondition(e.target.value)}
+            className="w-full border rounded-xl px-4 py-3 bg-white"
+            >
+              <option value = ""> All Conditions</option>
+              <option value = "NEW"> New</option>
+              <option value = "LIKE NEW">Like New</option>
+              <option value = "GOOD">Good</option>
+
+              </select>
+
+            <button
+              onClick={clearFilters}
+              className="mt-4 px-4 py-2 bg-dark text-white rounded-full"
+              >
+                Clear Filters
+              </button>
+              <p className="mt-3 text-sm text-gray-500">
+                {displayedProducts.length} items found
+              </p>
+            </section>
         )}
         
         {/* Categories & Filter Bar */}
@@ -470,11 +510,16 @@ const filteredProducts = useMemo(() => {
               >
                 <List size={16} />
               </button>
+
               <button 
-              onClick={() => setShowSearch(!showSearch)}
+              onClick={() =>{
+                 setShowFilters(!showFilters);
+                 if(showSearch) setShowSearch(false);
+                }}
               className="ml-2 flex items-center justify-center bg-white border border-gray-200 text-dark w-10 h-10 rounded-full shadow-sm hover:bg-gray-50 transition-colors">
                 <SlidersHorizontal size={16} />
               </button>
+
             </section>
           </section>
 
