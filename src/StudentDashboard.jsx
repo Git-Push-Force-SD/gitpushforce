@@ -356,15 +356,19 @@ const filteredProducts = useMemo(() => {
         {/* Right Section - Desktop Actions (Desktop Only) + Hamburger (Mobile Only) */}
         <section className="flex items-center gap-2 sm:gap-4 md:gap-6">
           
+          {/* Search Button - Desktop Only */}
+          <button
+            className="hidden md:block text-dark hover:text-primary transition-colors"
+            onClick={() => {
+              setShowSearch(!showSearch);
+              if (showFilters) setShowFilters(false);
+            }}
+          >
+            <Search size={22} className="stroke-[1.5]" />
+          </button>
+
           {/* Hamburger Menu Button - Mobile Only */}
           <button
-           className="text-dark hover:text-primary transition-colors"
-           onClick={() =>{
-             setShowSearch(!showSearch);
-            if (showFilters) setShowFilters(false);
-          }}
-        
-           >
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Open mobile menu"
             className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
