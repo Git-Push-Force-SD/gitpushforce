@@ -36,8 +36,9 @@ jobs:
       - name: npm install, build, and test
         run: |
           npm install
-          npm run build --if-present
-          npm run test:coverage --if-present
+          npm run build
+      - name: Run tests
+        run: npm run test:coverage --if-present
         continue-on-error: true
 
       - name: Upload coverage to Codecov
