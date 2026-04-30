@@ -3,131 +3,91 @@
 exports[`PaymentSuccess Snapshot matches snapshot 1`] = `
 <div>
   <section
-    class="w-full min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center px-5"
+    class="min-h-screen bg-offwhite flex items-center justify-center px-5"
   >
-    <section
-      class="text-center max-w-[500px] bg-white rounded-3xl p-12 shadow-lg"
+    <div
+      class="text-center max-w-md bg-white rounded-3xl p-10 shadow-sm border border-gray-100"
     >
-      <section
-        class="flex justify-center mb-8"
+      <div
+        class="flex justify-center mb-6"
       >
-        <section
-          class="relative"
+        <div
+          class="w-16 h-16 rounded-full flex items-center justify-center"
+          style="background: rgb(234, 243, 222);"
         >
           <svg
-            class="text-green-500 animate-bounce"
             data-testid="check-circle-icon"
-            width="80"
+            width="36"
           />
-          <section
-            class="absolute inset-0 rounded-full animate-pulse bg-green-500/20"
-          />
-        </section>
-      </section>
+        </div>
+      </div>
       <h1
-        class="text-4xl font-bold text-dark mb-4 font-display uppercase"
+        class="text-2xl font-bold text-dark mb-2 font-display uppercase"
       >
         Payment Successful!
       </h1>
       <p
-        class="text-lg text-text-muted mb-8 leading-relaxed"
+        class="text-gray-500 text-sm mb-6 leading-relaxed"
       >
-        Thank you for your purchase! Your order has been confirmed and will be processed shortly. You'll receive a confirmation email with your order details.
+        Your payment has been confirmed. The seller will be notified to drop off your item at the Trade Facility. You'll be able to collect it once staff confirm receipt.
       </p>
-      <section
-        class="bg-gray-50 rounded-2xl p-6 mb-8 text-left border border-gray-200"
+      <div
+        class="bg-gray-50 rounded-2xl p-4 mb-6 text-left"
       >
-        <h3
-          class="font-semibold text-dark mb-4 uppercase text-sm"
+        <p
+          class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3"
         >
-          Order Details
-        </h3>
-        <section
-          class="space-y-3 text-sm text-text-muted"
+          What happens next
+        </p>
+        <div
+          class="flex items-start gap-3 mb-2 last:mb-0"
         >
-          <section
-            class="flex justify-between"
+          <div
+            class="w-5 h-5 rounded-full bg-dark text-white text-xs flex items-center justify-center shrink-0 mt-0.5"
           >
-            <span>
-              Order Status:
-            </span>
-            <span
-              class="font-semibold text-green-600"
-            >
-              Confirmed
-            </span>
-          </section>
-          <section
-            class="flex justify-between"
+            1
+          </div>
+          <p
+            class="text-sm text-gray-600"
           >
-            <span>
-              Currency:
-            </span>
-            <span
-              class="font-semibold text-green-600"
-            >
-              ZAR (South African Rand)
-            </span>
-          </section>
-          <section
-            class="flex justify-between"
+            Seller drops off your item at the Trade Facility
+          </p>
+        </div>
+        <div
+          class="flex items-start gap-3 mb-2 last:mb-0"
+        >
+          <div
+            class="w-5 h-5 rounded-full bg-dark text-white text-xs flex items-center justify-center shrink-0 mt-0.5"
           >
-            <span>
-              Payment Status:
-            </span>
-            <span
-              class="font-semibold text-green-600"
-            >
-              Completed
-            </span>
-          </section>
-          <section
-            class="flex justify-between"
+            2
+          </div>
+          <p
+            class="text-sm text-gray-600"
           >
-            <span>
-              Transaction ID:
-            </span>
-            <span
-              class="font-mono text-xs"
-            >
-              1700000000000
-            </span>
-          </section>
-        </section>
-      </section>
-      <section
-        class="flex flex-col sm:flex-row gap-4"
+            Staff confirm the item has been received
+          </p>
+        </div>
+        <div
+          class="flex items-start gap-3 mb-2 last:mb-0"
+        >
+          <div
+            class="w-5 h-5 rounded-full bg-dark text-white text-xs flex items-center justify-center shrink-0 mt-0.5"
+          >
+            3
+          </div>
+          <p
+            class="text-sm text-gray-600"
+          >
+            You collect your item from the facility
+          </p>
+        </div>
+      </div>
+      <button
+        class="w-full py-3 rounded-xl bg-dark text-white font-semibold text-sm hover:bg-gray-800 transition-colors"
       >
-        <button
-          class="flex-1 flex items-center justify-center gap-2 bg-primary text-white font-semibold py-3 px-6 rounded-xl hover:bg-primary-dark transition-colors uppercase text-sm"
-        >
-          <svg
-            data-testid="home-icon"
-            width="18"
-          />
-          Back to Dashboard
-        </button>
-        <button
-          class="flex-1 flex items-center justify-center gap-2 bg-dark text-white font-semibold py-3 px-6 rounded-xl hover:bg-gray-800 transition-colors uppercase text-sm"
-        >
-          <svg
-            data-testid="shopping-bag-icon"
-            width="18"
-          />
-          Continue Shopping
-        </button>
-      </section>
-      <p
-        class="mt-8 text-xs text-text-muted"
-      >
-        Questions? Contact us at 
-        <span
-          class="font-semibold"
-        >
-          support@unimart.com
-        </span>
-      </p>
-    </section>
+        Back to Dashboard
+      </button>
+    </div>
   </section>
 </div>
 `;

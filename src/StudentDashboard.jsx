@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, LogOut } from 'lucide-react';
+import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, LogOut, Menu } from 'lucide-react';
 import Profile from './Profile';
 import SellItemModal from './SellItemModal';
+import MyOrders from './MyOrders';
+import MobileMenu from './components/MobileMenu';
 import { supabase } from './utils/supabase';
 import { useUnreadMessages } from './hooks/useUnreadMessages';
 import StudentBookingDashboard from './components/booking/StudentBookingDashboard';
@@ -25,6 +27,7 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const [maxPrice, setMaxPrice] = useState('');
   const[filterCondition, setFilterCondition] = useState('');
   const [wishlistIds, setWishlistIds] = useState(new Set());
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Use unread messages hook
   const { unreadCount } = useUnreadMessages(user?.id);
@@ -147,6 +150,17 @@ const filteredProducts = useMemo(() => {
     setMaxPrice('');
     setActiveCategory('All Items')
     setFilterCondition('');
+  };
+
+  // Mobile menu navigation handler
+  const handleMobileNavigation = (view) => {
+    if (view === 'messages') {
+      navigate('/messages');
+    } else if (view === 'bookings') {
+      setShowBookingDashboard(true);
+    } else {
+      setCurrentView(view);
+    }
   };
 
   // Helper function to calculate time ago
@@ -290,49 +304,59 @@ const filteredProducts = useMemo(() => {
     );
   }
 
+  if (currentView === 'orders') {
+    return <MyOrders user={user} onBack={() => setCurrentView('home')} />;
+  }
+
   return (
     <section className="min-h-screen bg-offwhite font-main text-dark pb-20">
       
       {/* Top Navigation */}
-      <nav className="flex items-center justify-between px-8 py-6 w-full">
-        <section className="flex items-center gap-10">
-          {/* Logo */}
-          <section className="text-2xl font-display uppercase tracking-wider font-bold text-dark">
-            UniMart
-          </section>
-          {/* Nav Links */}
-          <section className="hidden md:flex gap-6 font-medium text-sm">
-            <button
-              onClick={() => setCurrentView('home')}
-              className={`transition-colors pb-1 ${!isWishlistView ? 'border-b-2 border-dark text-dark font-semibold' : 'text-gray-500 hover:text-dark'}`}
-            >
-              Home
-            </button>
-            <button
-              onClick={() => setCurrentView('wishlist')}
-              className={`transition-colors pb-1 flex items-center gap-1 ${isWishlistView ? 'border-b-2 border-dark text-dark font-semibold' : 'text-gray-500 hover:text-dark'}`}
-            >
-              <Heart size={14} />
-              Wishlist ({wishlistIds.size})
-            </button>
-            <span className="text-gray-500">My Orders</span>
-            <button
-            onClick={() => setShowBookingDashboard(true)}
-            className="text-gray-500 hover:text-dark transition-colors relative flex items-center gap-1"
-            >
-          Bookings
-            {pendingOrders.length > 0 && (
-            <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-              {pendingOrders.length}
-          </span>
-            )}
-        </button>
-
-
-          </section>
+      <nav className="flex items-center justify-between px-4 sm:px-6 md:px-8 py-4 sm:py-6 w-full">
+        
+        {/* Left Section - Logo */}
+        <section className="text-lg sm:text-2xl font-display uppercase tracking-wider font-bold text-dark">
+          UniMart
         </section>
 
-        <section className="flex items-center gap-6">
+        {/* Center Section - Desktop Nav Links Only */}
+        <section className="hidden md:flex gap-6 font-medium text-sm">
+          <button
+            onClick={() => setCurrentView('home')}
+            className={`transition-colors pb-1 ${currentView === 'home' ? 'border-b-2 border-dark text-dark font-semibold' : 'text-gray-500 hover:text-dark'}`}
+          >
+            Home
+          </button>
+          <button
+            onClick={() => setCurrentView('wishlist')}
+            className={`transition-colors pb-1 flex items-center gap-1 ${currentView === 'wishlist' ? 'border-b-2 border-dark text-dark font-semibold' : 'text-gray-500 hover:text-dark'}`}
+          >
+            <Heart size={14} />
+            Wishlist ({wishlistIds.size})
+          </button>
+          <button
+            onClick={() => setCurrentView('orders')}
+            className={`transition-colors pb-1 flex items-center gap-1 ${currentView === 'orders' ? 'border-b-2 border-dark text-dark font-semibold' : 'text-gray-500 hover:text-dark'}`}
+          >
+            My Orders
+          </button>
+          <button
+            onClick={() => setShowBookingDashboard(true)}
+            className="text-gray-500 hover:text-dark transition-colors relative flex items-center gap-1"
+          >
+            Bookings
+            {pendingOrders.length > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {pendingOrders.length}
+              </span>
+            )}
+          </button>
+        </section>
+
+        {/* Right Section - Desktop Actions (Desktop Only) + Hamburger (Mobile Only) */}
+        <section className="flex items-center gap-2 sm:gap-4 md:gap-6">
+          
+          {/* Hamburger Menu Button - Mobile Only */}
           <button
            className="text-dark hover:text-primary transition-colors"
            onClick={() =>{
@@ -341,12 +365,24 @@ const filteredProducts = useMemo(() => {
           }}
         
            >
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Open mobile menu"
+            className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+          >
+            <Menu size={24} className="text-dark" />
+          </button>
+
+          {/* Desktop Actions Only */}
+          <button
+            className="hidden md:block text-dark hover:text-primary transition-colors"
+            onClick={() => setShowSearch(!showSearch)}
+          >
             <Search size={22} className="stroke-[1.5]" />
           </button>
 
           <button 
             onClick={() => navigate('/messages')}
-            className="text-dark hover:text-primary transition-colors relative"
+            className="hidden md:block text-dark hover:text-primary transition-colors relative"
           >
             <MessageCircle size={22} className="stroke-[1.5]" />
             {unreadCount > 0 && (
@@ -357,7 +393,7 @@ const filteredProducts = useMemo(() => {
           </button>
           <button 
             aria-label="Open profile"
-            className="text-dark hover:text-primary transition-colors relative"
+            className="hidden md:block text-dark hover:text-primary transition-colors relative"
             onClick={() => setCurrentView('profile')}
           >
             <User size={22} className="stroke-[1.5]" />
@@ -365,7 +401,7 @@ const filteredProducts = useMemo(() => {
           {handleLogout && (
             <button
               aria-label="Logout"
-              className="text-dark hover:text-red-500 transition-colors relative"
+              className="hidden md:block text-dark hover:text-red-500 transition-colors relative"
               onClick={handleLogout}
               title="Sign Out"
             >
@@ -599,7 +635,22 @@ const filteredProducts = useMemo(() => {
       {showSellModal && <SellItemModal onClose={() => setShowSellModal(false)} />}
       {showBookingDashboard && (
         <StudentBookingDashboard onClose={() => setShowBookingDashboard(false)} />
-)} 
+      )}
+
+      {/* Mobile Menu */}
+      <MobileMenu
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        currentView={currentView}
+        onNavigate={handleMobileNavigation}
+        wishlistCount={wishlistIds.size}
+        pendingOrdersCount={pendingOrders.length}
+        unreadMessagesCount={unreadCount}
+        onOpenSearch={() => setShowSearch(true)}
+        onSellItem={() => setShowSellModal(true)}
+        onLogout={handleLogout}
+        user={user}
+      />
     </section>
   );
 };

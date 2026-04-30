@@ -98,19 +98,37 @@ const ListingDetails = ({ user }) => {
 
     setBuyLoading(true);
     try {
-      // 1. Create order in Supabase first
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        buyer_id:   authUser.id,
-        listing_id: listing.id,
-        status:     'pending',
-        amount_due: amount,
-      })
-      .select()
-      .single();
+      // 1. Check if a pending order already exists for this buyer and listing
+      const { data: existingOrder, error: existingOrderError } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('buyer_id', authUser.id)
+        .eq('listing_id', listing.id)
+        .eq('status', 'pending')
+        .single();
 
-      if (orderError) throw orderError;
+      let order;
+      if (existingOrder) {
+        // Reuse existing pending order
+        order = existingOrder;
+      } else {
+        // Create new order only if no pending one exists
+        const { data: newOrder, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            buyer_id:      authUser.id,
+            listing_id:    listing.id,
+            status:        'pending',
+            amount_due:    amount,
+            buyer_status:  'awaiting_confirmation',
+            seller_status: 'awaiting_booking',
+          })
+          .select()
+          .single();
+
+        if (orderError) throw orderError;
+        order = newOrder;
+      }
 
       // //2.Send order_id to Stripe as metadata
       // const res = await fetch('/create-checkout-session', {
