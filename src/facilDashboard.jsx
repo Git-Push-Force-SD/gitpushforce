@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { LogOut, ArrowUpRight, Menu, X } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import QueueView from './components/facidashboard/QueueView';
 import DropOffsView from './components/facidashboard/Dropoffsview';
 import CollectionsView from './components/facidashboard/Collectionsview';
@@ -24,12 +25,28 @@ const NAV_DESCRIPTIONS = {
   'History':     'View completed and cancelled bookings history.',
 };
 
+const NAV_SLUGS = {
+  'Queue':       'queue',
+  'Drop-offs':   'drop-offs',
+  'Collections': 'collections',
+  'History':     'history',
+};
+
+const SLUG_TO_NAV = Object.fromEntries(
+  Object.entries(NAV_SLUGS).map(([k, v]) => [v, k])
+);
+
 export default function FacilDashboard({ user, handleLogout }) {
-  const [activeNav, setActiveNav] = useState('Queue');
+  const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Derive activeNav from current URL
+  const slug = location.pathname.split('/').pop();
+  const activeNav = SLUG_TO_NAV[slug] || 'Queue';
+
   const handleNavClick = (item) => {
-    setActiveNav(item);
+    navigate(`/staff/${NAV_SLUGS[item]}`);
     setSidebarOpen(false); // Close sidebar on mobile after selection
   };
 

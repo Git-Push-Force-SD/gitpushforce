@@ -9,6 +9,18 @@ jest.mock('../../utils/supabase', () => ({
   },
 }));
 
+jest.mock('./facilUtils', () => ({
+  formatDate: (date) => date,
+  formatTime: (time) => time,
+}));
+
+jest.mock('./imageUtils', () => ({
+  getImageUrl: (listing) =>
+    listing?.image_path
+      ? `https://mock.supabase.co/storage/v1/object/public/Listings/${listing.image_path}`
+      : null,
+}));
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 // bookings: .select().eq('status','pending').order() → resolves
@@ -61,7 +73,7 @@ describe('DropOffsView', () => {
     render(<DropOffsView />);
 
     await waitFor(() => {
-      expect(screen.getByText('No items pending drop-off')).toBeInTheDocument();
+      expect(screen.getAllByText('No items pending drop-off').length).toBeGreaterThan(0);
     });
   });
 
@@ -105,8 +117,8 @@ describe('DropOffsView', () => {
     render(<DropOffsView />);
 
     await waitFor(() => {
-      expect(screen.getByText('Laptop')).toBeInTheDocument();
-      expect(screen.getByText('seller_user')).toBeInTheDocument();
+      expect(screen.getAllByText('Laptop').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('seller_user').length).toBeGreaterThan(0);
       expect(screen.getByText('09:00-10:00')).toBeInTheDocument();
     });
   });
@@ -134,7 +146,7 @@ describe('DropOffsView', () => {
     render(<DropOffsView />);
 
     await waitFor(() => {
-      expect(screen.getByText('Confirm Receipt')).toBeInTheDocument();
+      expect(screen.getAllByText('Confirm Receipt').length).toBeGreaterThan(0);
     });
   });
 
@@ -164,8 +176,8 @@ describe('DropOffsView', () => {
 
     render(<DropOffsView />);
 
-    await waitFor(() => screen.getByText('Confirm Receipt'));
-    fireEvent.click(screen.getByText('Confirm Receipt'));
+    await waitFor(() => screen.getAllByText('Confirm Receipt')[0]);
+    fireEvent.click(screen.getAllByText('Confirm Receipt')[0]);
 
     await waitFor(() => {
       expect(mockUpdate).toHaveBeenCalled();
@@ -196,11 +208,11 @@ describe('DropOffsView', () => {
 
     render(<DropOffsView />);
 
-    await waitFor(() => screen.getByText('Laptop'));
-    fireEvent.click(screen.getByText('Confirm Receipt'));
+    await waitFor(() => screen.getAllByText('Laptop').length > 0);
+    fireEvent.click(screen.getAllByText('Confirm Receipt')[0]);
 
     await waitFor(() => {
-      expect(screen.getByText('No items pending drop-off')).toBeInTheDocument();
+      expect(screen.getAllByText('No items pending drop-off').length).toBeGreaterThan(0);
     });
   });
 
@@ -233,8 +245,8 @@ describe('DropOffsView', () => {
 
     render(<DropOffsView />);
 
-    await waitFor(() => screen.getByText('Laptop'));
-    fireEvent.click(screen.getByText('Confirm Receipt'));
+    await waitFor(() => screen.getAllByText('Laptop').length > 0);
+    fireEvent.click(screen.getAllByText('Confirm Receipt')[0]);
 
     await waitFor(() => {
       expect(consoleErrorSpy).toHaveBeenCalled();

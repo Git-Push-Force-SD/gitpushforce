@@ -509,10 +509,50 @@ export default function App() {
             }
           />
           <Route
-            path="/staffdashboard"
+            path="/staff"
+            element={
+              <ProtectedRoute allowedRole="staff">
+                <Navigate to="/staff/queue" replace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff/queue"
             element={
               <ProtectedRoute allowedRole="staff">
                 <StaffDashboardRoute />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff/drop-offs"
+            element={
+              <ProtectedRoute allowedRole="staff">
+                <StaffDashboardRoute />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff/collections"
+            element={
+              <ProtectedRoute allowedRole="staff">
+                <StaffDashboardRoute />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff/history"
+            element={
+              <ProtectedRoute allowedRole="staff">
+                <StaffDashboardRoute />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staffdashboard"
+            element={
+              <ProtectedRoute allowedRole="staff">
+                <Navigate to="/staff/queue" replace />
               </ProtectedRoute>
             }
           />
