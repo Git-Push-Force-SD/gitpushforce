@@ -9,11 +9,20 @@ jest.mock('../../utils/supabase', () => ({
   },
 }));
 
+jest.mock('./facilUtils', () => ({
+  badgeClasses: (status) => '',
+  formatDate: (date) => date,
+  formatTime: (time) => time,
+}));
+
+jest.mock('./imageUtils', () => ({
+  getImageUrl: (listing) =>
+    listing?.image_path
+      ? `https://mock.supabase.co/storage/v1/object/public/Listings/${listing.image_path}`
+      : null,
+}));
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// The orders query chains TWO .eq() calls:
-//   .eq('seller_status', 'dropped_off').eq('buyer_status', 'ready_for_collection')
-// So the first .eq() must return an object with a second .eq() that resolves.
 const makeOrdersMock = (resolvedValue) => ({
   select: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnValue({
@@ -82,7 +91,7 @@ describe('CollectionsView', () => {
     render(<CollectionsView user={mockUser} />);
 
     await waitFor(() => {
-      expect(screen.getByText('No items ready for collection')).toBeInTheDocument();
+      expect(screen.getAllByText('No items ready for collection').length).toBeGreaterThan(0);
     });
   });
 
@@ -115,7 +124,7 @@ describe('CollectionsView', () => {
         buyer_id: 'buyer-1',
         date: '2026-04-30',
         time_slot: '09:00-10:00',
-        listings: { id: 'list-1', title: 'Camera' },
+        listings: { id: 'list-1', title: 'Camera', image_path: null },
       },
     ];
     const mockBuyers = [{ id: 'buyer-1', username: 'buyer_user', email: 'buyer@test.com' }];
@@ -132,8 +141,8 @@ describe('CollectionsView', () => {
     render(<CollectionsView user={mockUser} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Camera')).toBeInTheDocument();
-      expect(screen.getByText('buyer_user')).toBeInTheDocument();
+      expect(screen.getAllByText('Camera').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('buyer_user').length).toBeGreaterThan(0);
       expect(screen.getByText('Clear')).toBeInTheDocument();
     });
   });
@@ -148,7 +157,7 @@ describe('CollectionsView', () => {
         buyer_id: 'buyer-1',
         date: '2026-04-30',
         time_slot: '09:00-10:00',
-        listings: { id: 'list-1', title: 'Phone' },
+        listings: { id: 'list-1', title: 'Phone', image_path: null },
       },
     ];
     const mockBuyers = [{ id: 'buyer-1', username: 'buyer_user', email: 'buyer@test.com' }];
@@ -179,7 +188,7 @@ describe('CollectionsView', () => {
         buyer_id: 'buyer-1',
         date: '2026-04-30',
         time_slot: '09:00-10:00',
-        listings: { id: 'list-1', title: 'Tablet' },
+        listings: { id: 'list-1', title: 'Tablet', image_path: null },
       },
     ];
     const mockBuyers = [{ id: 'buyer-1', username: 'buyer_user', email: 'buyer@test.com' }];
@@ -196,9 +205,9 @@ describe('CollectionsView', () => {
     render(<CollectionsView user={mockUser} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Tablet')).toBeInTheDocument();
-      expect(screen.getByText('Release')).toBeInTheDocument();
-      expect(screen.getByText('Mark Settled')).toBeInTheDocument();
+      expect(screen.getAllByText('Tablet').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Release').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Mark Settled').length).toBeGreaterThan(0);
     });
   });
 
@@ -212,7 +221,7 @@ describe('CollectionsView', () => {
         buyer_id: 'buyer-1',
         date: '2026-04-30',
         time_slot: '09:00-10:00',
-        listings: { id: 'list-1', title: 'Headphones' },
+        listings: { id: 'list-1', title: 'Headphones', image_path: null },
       },
     ];
     const mockBuyers = [{ id: 'buyer-1', username: 'buyer_user', email: 'buyer@test.com' }];
@@ -229,7 +238,7 @@ describe('CollectionsView', () => {
     render(<CollectionsView user={mockUser} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Headphones')).toBeInTheDocument();
+      expect(screen.getAllByText('Headphones').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Release').length).toBeGreaterThan(0);
       expect(screen.queryByText('Mark Settled')).not.toBeInTheDocument();
     });
@@ -245,7 +254,7 @@ describe('CollectionsView', () => {
         buyer_id: 'buyer-1',
         date: '2026-04-30',
         time_slot: '09:00-10:00',
-        listings: { id: 'list-1', title: 'Monitor' },
+        listings: { id: 'list-1', title: 'Monitor', image_path: null },
       },
     ];
     const mockBuyers = [{ id: 'buyer-1', username: 'buyer_user', email: 'buyer@test.com' }];
@@ -281,10 +290,10 @@ describe('CollectionsView', () => {
     render(<CollectionsView user={mockUser} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Monitor')).toBeInTheDocument();
+      expect(screen.getAllByText('Monitor').length).toBeGreaterThan(0);
     });
 
-    fireEvent.click(screen.getByText('Release'));
+    fireEvent.click(screen.getAllByText('Release')[0]);
 
     await waitFor(() => {
       expect(mockUpdate).toHaveBeenCalled();
@@ -311,9 +320,93 @@ describe('CollectionsView', () => {
 
     await waitFor(() => {
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(screen.getByText('No items ready for collection')).toBeInTheDocument();
+      expect(screen.getAllByText('No items ready for collection').length).toBeGreaterThan(0);
     });
 
     consoleErrorSpy.mockRestore();
+  });
+
+  // ─── New: mobile bottom sheet ─────────────────────────────────────────────
+
+  it('should open bottom sheet when mobile row is tapped', async () => {
+    const mockOrders = [{ id: 'order-1' }];
+    const mockBookings = [
+      {
+        id: 'booking-1',
+        listing_id: 'list-1',
+        order_id: 'order-1',
+        buyer_id: 'buyer-1',
+        date: '2026-04-30',
+        time_slot: '09:00-10:00',
+        listings: { id: 'list-1', title: 'Laptop', image_path: null },
+      },
+    ];
+    const mockBuyers = [{ id: 'buyer-1', username: 'buyer_user', email: 'buyer@test.com' }];
+    const mockPayments = [{ id: 'payment-1', order_id: 'order-1', cash_shortfall: 0, cash_settled: true }];
+
+    supabaseModule.supabase.from.mockImplementation((table) => {
+      if (table === 'orders') return makeOrdersMock({ data: mockOrders, error: null });
+      if (table === 'bookings') return makeBookingsMock({ data: mockBookings, error: null });
+      if (table === 'users') return makeUsersMock({ data: mockBuyers, error: null });
+      if (table === 'payments') return makePaymentsMock({ data: mockPayments, error: null });
+      return { select: jest.fn().mockResolvedValue({ data: [], error: null }) };
+    });
+
+    render(<CollectionsView user={mockUser} />);
+
+    await waitFor(() => expect(screen.getAllByText('Laptop').length).toBeGreaterThan(0));
+
+    const rowButton = screen.getAllByRole('button').find(
+      b => b.textContent.includes('Laptop') && b.textContent.includes('buyer_user')
+    );
+    expect(rowButton).toBeTruthy();
+    fireEvent.click(rowButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Close')).toBeInTheDocument();
+    });
+  });
+
+  it('should close bottom sheet when Close is clicked', async () => {
+    const mockOrders = [{ id: 'order-1' }];
+    const mockBookings = [
+      {
+        id: 'booking-1',
+        listing_id: 'list-1',
+        order_id: 'order-1',
+        buyer_id: 'buyer-1',
+        date: '2026-04-30',
+        time_slot: '09:00-10:00',
+        listings: { id: 'list-1', title: 'Keyboard', image_path: null },
+      },
+    ];
+    const mockBuyers = [{ id: 'buyer-1', username: 'buyer_user', email: 'buyer@test.com' }];
+    const mockPayments = [{ id: 'payment-1', order_id: 'order-1', cash_shortfall: 0, cash_settled: true }];
+
+    supabaseModule.supabase.from.mockImplementation((table) => {
+      if (table === 'orders') return makeOrdersMock({ data: mockOrders, error: null });
+      if (table === 'bookings') return makeBookingsMock({ data: mockBookings, error: null });
+      if (table === 'users') return makeUsersMock({ data: mockBuyers, error: null });
+      if (table === 'payments') return makePaymentsMock({ data: mockPayments, error: null });
+      return { select: jest.fn().mockResolvedValue({ data: [], error: null }) };
+    });
+
+    render(<CollectionsView user={mockUser} />);
+
+    await waitFor(() => expect(screen.getAllByText('Keyboard').length).toBeGreaterThan(0));
+
+    const rowButton = screen.getAllByRole('button').find(
+      b => b.textContent.includes('Keyboard') && b.textContent.includes('buyer_user')
+    );
+    expect(rowButton).toBeTruthy();
+    fireEvent.click(rowButton);
+
+    await waitFor(() => expect(screen.getByText('Close')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Close'));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Close')).not.toBeInTheDocument();
+    });
   });
 });

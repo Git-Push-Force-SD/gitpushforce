@@ -196,3 +196,31 @@ describe('App routing + auth integration', () => {
     });
   });
 });
+
+test('redirects /staffdashboard to /staff/queue', async () => {
+  global.__TEST_ROUTE__ = '/staffdashboard';
+  mockSupabase.auth.getSession.mockResolvedValue({
+    data: { session: { user: { id: 'u5', email: '5@students.wits.ac.za' } } },
+  });
+  mockUsersTable({ roleData: { role: 'staff' } });
+
+  render(<App />);
+
+  await waitFor(() => {
+    expect(screen.getByText('Mock Staff Dashboard')).toBeInTheDocument();
+  });
+});
+
+test('staff can refresh directly on /staff/collections', async () => {
+  global.__TEST_ROUTE__ = '/staff/collections';
+  mockSupabase.auth.getSession.mockResolvedValue({
+    data: { session: { user: { id: 'u6', email: '6@students.wits.ac.za' } } },
+  });
+  mockUsersTable({ roleData: { role: 'staff' } });
+
+  render(<App />);
+
+  await waitFor(() => {
+    expect(screen.getByText('Mock Staff Dashboard')).toBeInTheDocument();
+  });
+});

@@ -9,6 +9,19 @@ jest.mock('../../utils/supabase', () => ({
   },
 }));
 
+jest.mock('./facilUtils', () => ({
+  badgeClasses: (status) => '',
+  formatDate: (date) => date,
+  formatTime: (time) => time,
+}));
+
+jest.mock('./imageUtils', () => ({
+  getImageUrl: (listing) =>
+    listing?.image_path
+      ? `https://mock.supabase.co/storage/v1/object/public/Listings/${listing.image_path}`
+      : null,
+}));
+
 describe('QueueView', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -60,8 +73,8 @@ describe('QueueView', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('No pending or confirmed bookings')
-      ).toBeInTheDocument();
+        screen.getAllByText('No pending or confirmed bookings').length
+      ).toBeGreaterThan(0);
     });
   });
 
@@ -160,9 +173,9 @@ describe('QueueView', () => {
     render(<QueueView />);
 
     await waitFor(() => {
-      expect(screen.getByText('Physics Textbook')).toBeInTheDocument();
-      expect(screen.getByText('john_doe')).toBeInTheDocument();
-      expect(screen.getByText('jane_smith')).toBeInTheDocument();
+      expect(screen.getAllByText('Physics Textbook').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('john_doe').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('jane_smith').length).toBeGreaterThan(0);
       expect(screen.getByText('09:00-10:00')).toBeInTheDocument();
     });
   });
@@ -235,8 +248,8 @@ describe('QueueView', () => {
     render(<QueueView />);
 
     await waitFor(() => {
-      expect(screen.getByText('Book A')).toBeInTheDocument();
-      expect(screen.getByText('Book B')).toBeInTheDocument();
+      expect(screen.getAllByText('Book A').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Book B').length).toBeGreaterThan(0);
     });
   });
 
@@ -274,8 +287,8 @@ describe('QueueView', () => {
     await waitFor(() => {
       expect(consoleErrorSpy).toHaveBeenCalled();
       expect(
-        screen.getByText('No pending or confirmed bookings')
-      ).toBeInTheDocument();
+        screen.getAllByText('No pending or confirmed bookings').length
+      ).toBeGreaterThan(0);
     });
 
     consoleErrorSpy.mockRestore();
@@ -333,7 +346,7 @@ describe('QueueView', () => {
     render(<QueueView />);
 
     await waitFor(() => {
-      expect(screen.getByText('Physics Textbook')).toBeInTheDocument();
+      expect(screen.getAllByText('Physics Textbook').length).toBeGreaterThan(0);
       expect(screen.getAllByText('N/A').length).toBeGreaterThan(0);
     });
   });

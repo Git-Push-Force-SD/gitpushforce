@@ -9,6 +9,19 @@ jest.mock('../../utils/supabase', () => ({
   },
 }));
 
+jest.mock('./facilUtils', () => ({
+  badgeClasses: (status) => '',
+  formatDate: (date) => date,
+  formatTime: (time) => time,
+}));
+
+jest.mock('./imageUtils', () => ({
+  getImageUrl: (listing) =>
+    listing?.image_path
+      ? `https://mock.supabase.co/storage/v1/object/public/Listings/${listing.image_path}`
+      : null,
+}));
+
 describe('HistoryView', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -61,7 +74,7 @@ describe('HistoryView', () => {
     render(<HistoryView />);
 
     await waitFor(() => {
-      expect(screen.getByText('No history records')).toBeInTheDocument();
+      expect(screen.getAllByText('No history records').length).toBeGreaterThan(0);
     });
   });
 
@@ -118,9 +131,9 @@ describe('HistoryView', () => {
     render(<HistoryView />);
 
     await waitFor(() => {
-      expect(screen.getByText('Book')).toBeInTheDocument();
-      expect(screen.getByText('buyer_user')).toBeInTheDocument();
-      expect(screen.getByText('seller_user')).toBeInTheDocument();
+      expect(screen.getAllByText('Book').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('buyer_user').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('seller_user').length).toBeGreaterThan(0);
       expect(screen.getByText('Completed')).toBeInTheDocument();
     });
   });
@@ -157,8 +170,8 @@ describe('HistoryView', () => {
     render(<HistoryView />);
 
     await waitFor(() => {
-      expect(screen.getByText('Pen')).toBeInTheDocument();
-      expect(screen.getByText('cancelled')).toBeInTheDocument();
+      expect(screen.getAllByText('Pen').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('cancelled').length).toBeGreaterThan(0);
     });
   });
 
@@ -204,8 +217,8 @@ describe('HistoryView', () => {
     render(<HistoryView />);
 
     await waitFor(() => {
-      expect(screen.getByText('Book A')).toBeInTheDocument();
-      expect(screen.getByText('Book B')).toBeInTheDocument();
+      expect(screen.getAllByText('Book A').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Book B').length).toBeGreaterThan(0);
     });
   });
 
@@ -236,7 +249,7 @@ describe('HistoryView', () => {
     render(<HistoryView />);
 
     await waitFor(() => {
-      expect(screen.getByText('Notebook')).toBeInTheDocument();
+      expect(screen.getAllByText('Notebook').length).toBeGreaterThan(0);
     });
 
     expect(screen.getAllByText('N/A').length).toBeGreaterThan(0);
@@ -257,7 +270,7 @@ describe('HistoryView', () => {
 
     await waitFor(() => {
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(screen.getByText('No history records')).toBeInTheDocument();
+      expect(screen.getAllByText('No history records').length).toBeGreaterThan(0);
     });
 
     consoleErrorSpy.mockRestore();
