@@ -84,18 +84,25 @@ const categories = useMemo(() => {
     return map[categoryName] || categoryName.toUpperCase();
 };
 const getNumericPrice = (price) => {
-  if(typeof price == 'number') return price;
-  const cleaned = String(price).replace(/[R\s,]/g,'');
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
-  //return Number(String(price).replace(/[^\d.]/g, '')) || 0;
+  if (!price) return 0;
+
+  let cleaned = String(price);
+  cleaned = cleaned.replace(/[R\s]/g, '');
+  if(cleaned.includes(',') && !cleaned.includes('.')){
+    cleaned = cleaned.replace(',','.');
+  }
+
+  cleaned = cleaned.replace(/,(?<=\d),[, ](?=\d{3})/g, '');
+
+  return parseFloat(cleaned) || 0;
 };
+  
 
 const filteredProducts = useMemo(() => {
   return products.filter((product) => {
     const matchesCategory =
       activeCategory === 'All Items' ||
-      product.category == normalizeCategory(activeCategory);
+      product.category === normalizeCategory(activeCategory);
 
       const q = searchQuery.trim().toLowerCase();
 
@@ -104,7 +111,8 @@ const filteredProducts = useMemo(() => {
         product.title?.toLowerCase().includes(q) ||
         product.description?.toLowerCase().includes(q) ||
         product.sellerName?.toLowerCase().includes(q)||
-        product.condition?.toLowerCase().includes(q);
+        product.condition?.toLowerCase().includes(q)||
+        product.category?.toLowerCase().includes(q);
 
         const numericPrice = getNumericPrice(product.price);
         const min = minPrice == ''? null : Number(minPrice);
@@ -115,7 +123,7 @@ const filteredProducts = useMemo(() => {
 
         const matchesCondition= 
         filterCondition === '' || 
-        product.condition === filterCondition.toUpperCase();
+         product.condition?.toUpperCase().includes(filterCondition.toUpperCase());
 
     return matchesCategory && matchesSearch && matchesMin && matchesMax && matchesCondition;
   });
@@ -429,7 +437,7 @@ const filteredProducts = useMemo(() => {
         {/*Search Section */}
 
         {showSearch && (
-          <section className="mt -6 -mb -4 bg-offwhite" >
+          <section className="mt -6 mb -4 bg-offwhite" >
             <input
               type="text"
               placeholder="Search listings..."
