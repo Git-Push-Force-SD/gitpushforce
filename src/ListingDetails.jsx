@@ -343,8 +343,8 @@ const ListingDetails = ({ user }) => {
   const formattedPrice = listing?.price 
     ? `R${parseFloat(listing.price).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : 'R---.--';
-  const canTradeThisListing = ['trade', 'both'].includes((listing?.listing_type || '').toLowerCase());
-  const isTradeOnly = listing?.listing_type === 'trade';
+  const canTradeThisListing = ['trade', 'either'].includes((listing?.listing_type || '').toLowerCase());
+  const isTradeOnly = listing?.listing_type === 'trade' || listing?.listing_type === 'either';
   const canBuyThisListing = !isTradeOnly; // Hide buy/offer for trade-only listings
   return (
     <section className="min-h-screen bg-offwhite font-main text-dark pb-20">
