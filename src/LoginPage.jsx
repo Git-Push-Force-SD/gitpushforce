@@ -332,7 +332,7 @@ export default function LoginPage({ onBack }) {
         <section className="login-right">
           <section
             className="right-bg-image"
-            style={{ backgroundImage: `url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80')` }}
+            style={{ backgroundImage: `url('/Images/ncb.jpeg')` }}
           ></section>
           <section className="typing-wrapper">
             <section className="typing-text-container">your campus. your marketplace.</section>
