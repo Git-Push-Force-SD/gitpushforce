@@ -27,6 +27,7 @@ export default function DropOffsView() {
             id,
             listing_id,
             order_id,
+            buyer_id,
             seller_id,
             date,
             time_slot,
@@ -95,9 +96,25 @@ export default function DropOffsView() {
     } catch (err) {
       console.error('Confirm drop-off error:', err);
       alert('Failed to confirm drop-off. Please try again.');
-    } finally {
       setActionLoading(null);
       setSelectedBooking(null);
+      return;
+    }
+
+    setActionLoading(null);
+    setSelectedBooking(null);
+
+    try {
+      await supabase.functions.invoke('notify-buyer-collection', {
+        body: {
+          buyerId: booking.buyer_id,
+          listingTitle: booking.listings?.title,
+          date: booking.date,
+          timeSlot: booking.time_slot,
+        },
+      });
+    } catch (err) {
+      console.error('Email notification failed:', err);
     }
   };
 
