@@ -42,6 +42,7 @@ jest.mock('../../utils/bookingConstants', () => ({
 const mockOrders = [
   {
     orderId:    'order-1',
+    buyerId:    'buyer-1',
     sellerId:   'seller-1',
     listingId:  'listing-1',
     title:      'Calculus Textbook',
@@ -49,6 +50,7 @@ const mockOrders = [
   },
   {
     orderId:    'order-2',
+    buyerId:    'buyer-2',
     sellerId:   'seller-2',
     listingId:  'listing-2',
     title:      'Physics Notes',
@@ -283,6 +285,7 @@ describe('Step 3 — Confirm', () => {
     expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1);
     expect(defaultProps.onConfirm).toHaveBeenCalledWith({
       orderId:   'order-1',
+      buyerId:   'buyer-1',
       sellerId:  'seller-1',
       listingId: 'listing-1',
       date:      '2024-09-15',
