@@ -67,13 +67,13 @@ const StudentBookingDashboard = ({ onClose }) => {
   const { pendingOrders } = useSellerPendingOrders(user?.id);
   
   // ── Create booking ──────────────────────────
-  const handleConfirm = async ({ orderId, sellerId, listingId, date, timeSlot, notes }) => {
+  const handleConfirm = async ({ orderId, buyerId, sellerId, listingId, date, timeSlot, notes }) => {
     setSubmitting(true);
     setSubmitError(null);
     try {
       await createBooking({
         orderId,
-        buyerId:   user.id,
+        buyerId,
         sellerId,
         listingId,
         date,

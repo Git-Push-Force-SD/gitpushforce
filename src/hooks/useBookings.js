@@ -118,6 +118,7 @@ export function useEligibleOrders(userId) {
           .from('orders')
           .select(`
             id,
+            buyer_id,
             listing_id,
             status,
             amount_due,
@@ -171,6 +172,7 @@ export function useEligibleOrders(userId) {
 
         const formatted = eligible.map(o => ({
           orderId:    o.id,
+          buyerId:    o.buyer_id,
           listingId:  o.listing_id,
           title:      o.listings?.title || 'Unknown Item',
           sellerId:   o.listings?.seller_id,

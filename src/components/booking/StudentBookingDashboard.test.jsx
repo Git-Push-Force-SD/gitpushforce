@@ -8,7 +8,7 @@ jest.mock('./BookingFlow', () => ({ onConfirm, submitting }) => (
     <button
       onClick={() =>
         onConfirm({
-          orderId: 'order-1', sellerId: 'seller-1', listingId: 'listing-1',
+          orderId: 'order-1', buyerId: 'user-123', sellerId: 'seller-1', listingId: 'listing-1',
           date: '2024-09-15', timeSlot: '09:00', notes: '',
         })
       }
@@ -63,7 +63,7 @@ import {
 
 // ── Default hook returns ──────────────────────────────────────────────────
 const defaultBookings = { bookings: [], loading: false, error: null, refetch: mockRefetch };
-const defaultOrders   = { orders: [{ orderId: 'order-1', title: 'Textbook', sellerName: 'Alice' }], loading: false, error: null };
+const defaultOrders   = { orders: [{ orderId: 'order-1', buyerId: 'user-123', title: 'Textbook', sellerName: 'Alice' }], loading: false, error: null };
 const defaultPending  = { pendingOrders: [] };
 
 const setup = (props = {}) => {

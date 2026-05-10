@@ -65,6 +65,7 @@ const BookingFlow = ({ eligibleOrders, onConfirm, submitting }) => {
   const handleSubmit = () => {
     onConfirm({
       orderId:    selectedOrder.orderId,
+      buyerId:    selectedOrder.buyerId,
       sellerId:   selectedOrder.sellerId,
       listingId:  selectedOrder.listingId,
       date:       selectedDate,
