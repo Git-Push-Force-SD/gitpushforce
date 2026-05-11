@@ -290,8 +290,7 @@ describe('Step 3 — Confirm', () => {
       notes:     '',
     });
   });
-
-  test('button shows "Confirming…" text while submitting', () => {
+    test('button shows "Confirming…" text while submitting', () => {
     // Render already at step 3 manually by reaching step 3 first, then
     // simulate submitting=true via re-render is complex — test via prop
     setup({ submitting: true });
@@ -330,4 +329,28 @@ describe('Step 3 — Confirm', () => {
       expect.objectContaining({ notes: 'Fragile please' })
     );
   });
+
+test('after confirming, flow resets to step 1 hiding booking summary', () => {
+  goToStep3();
+  fireEvent.click(screen.getByRole('button', { name: /Confirm booking/i }));
+  expect(screen.queryByText(/Booking summary/i)).not.toBeInTheDocument();
+});
+
+test('after confirming, slot picker is hidden', () => {
+  goToStep3();
+  fireEvent.click(screen.getByRole('button', { name: /Confirm booking/i }));
+  expect(screen.queryByTestId('slot-picker')).not.toBeInTheDocument();
+});
+
+test('after confirming, calendar is still visible for new booking', () => {
+  goToStep3();
+  fireEvent.click(screen.getByRole('button', { name: /Confirm booking/i }));
+  expect(screen.getByTestId('calendar')).toBeInTheDocument();
+});
+
+test('after confirming, Next button is no longer visible', () => {
+  goToStep3();
+  fireEvent.click(screen.getByRole('button', { name: /Confirm booking/i }));
+  expect(screen.queryByRole('button', { name: /Next/i })).not.toBeInTheDocument();
+});
 });

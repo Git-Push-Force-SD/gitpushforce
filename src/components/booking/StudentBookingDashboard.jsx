@@ -5,11 +5,16 @@
 import React, { useState } from 'react';
 import { X, CalendarDays, Package } from 'lucide-react';
 import BookingFlow from './BookingFlow';
-import BookingFlowTrades from './BookingFlowTrades';
 import BookingList from './BookingList';
 import CancelModal from './CancelModal';
 import { useAuth } from '../../AuthContext';
-import { useBookings, useEligibleOrders, useEligibleTrades,useSellerPendingOrders, createBooking, createTradeBooking, cancelBooking } from '../../hooks/useBookings';
+import {
+  useBookings,
+  useEligibleOrders,
+  useSellerPendingOrders,
+  createBooking, 
+     cancelBooking 
+    } from '../../hooks/useBookings';
 
 
 
@@ -61,9 +66,14 @@ const StudentBookingDashboard = ({ onClose }) => {
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelling,   setCancelling]   = useState(false);
 
-  const { bookings, loading: bookingsLoading, error: bookingsError, refetch } = useBookings(user?.id);
+  const { 
+    bookings, 
+    loading: bookingsLoading,
+    error: bookingsError,
+    refetch,
+    cancelBooking
+    } = useBookings(user?.id);
   const { orders,   loading: ordersLoading,   error: ordersError }            = useEligibleOrders(user?.id);
-  const { trades,   loading: tradesLoading,   error: tradesError }            = useEligibleTrades(user?.id);
   const { pendingOrders } = useSellerPendingOrders(user?.id);
   
   // ── Create booking ──────────────────────────
@@ -84,30 +94,6 @@ const StudentBookingDashboard = ({ onClose }) => {
       refetch();
     } catch (err) {
       console.error('[StudentBookingDashboard] createBooking error:', err);
-      setSubmitError(err.message || 'Failed to create booking. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // ── Create trade booking ────────────────────
-  const handleConfirmTrade = async ({ tradeId, sellerId, listingId, date, timeSlot, notes }) => {
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      await createTradeBooking({
-        tradeId,
-        buyerId:   user.id,
-        sellerId,
-        listingId,
-        date,
-        timeSlot,
-        notes,
-      });
-      setSuccessInfo({ date, timeSlot });
-      refetch();
-    } catch (err) {
-      console.error('[StudentBookingDashboard] createTradeBooking error:', err);
       setSubmitError(err.message || 'Failed to create booking. Please try again.');
     } finally {
       setSubmitting(false);
@@ -154,7 +140,6 @@ const StudentBookingDashboard = ({ onClose }) => {
         <div className="flex border-b border-gray-200 px-5 shrink-0">
           {[
             { id: 'book',     label: 'Book a slot', icon: CalendarDays },
-            { id: 'trades',   label: 'Trade exchanges', icon: Package },
             { id: 'bookings', label: 'My bookings', icon: Package },
           ].map(({ id, label, icon: Icon }) => (
             <button
@@ -214,37 +199,6 @@ const StudentBookingDashboard = ({ onClose }) => {
                     <BookingFlow
                       eligibleOrders={orders}
                       onConfirm={handleConfirm}
-                      submitting={submitting}
-                    />
-                  )}
-                </>
-              )}
-            </>
-          )}
-
-          {activeTab === 'trades' && (
-            <>
-              {successInfo ? (
-                <SuccessBanner
-                  info={successInfo}
-                  onDismiss={() => setSuccessInfo(null)}
-                  onViewBookings={() => { setSuccessInfo(null); setActiveTab('bookings'); }}
-                />
-              ) : (
-                <>
-                  {submitError && (
-                    <p className="text-sm text-red-500 bg-red-50 rounded-xl px-3 py-2 mb-3">
-                      {submitError}
-                    </p>
-                  )}
-                  {tradesLoading ? (
-                    <div className="h-64 flex items-center justify-center">
-                      <div className="w-6 h-6 border-2 border-dark border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  ) : (
-                    <BookingFlowTrades
-                      eligibleTrades={trades}
-                      onConfirm={handleConfirmTrade}
                       submitting={submitting}
                     />
                   )}

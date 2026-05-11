@@ -4,7 +4,7 @@ import { Loader, ChevronRight } from 'lucide-react';
 import { supabase } from '../../utils/supabase';
 import { badgeClasses, formatDate, formatTime } from './facilUtils';
 import { getImageUrl } from './imageUtils';
-
+import { useNavigate } from 'react-router-dom';
 // ─────────────────────────────────────────────────────────────────────────────
 // COLLECTIONS VIEW
 // Shows confirmed bookings where item is held by staff and buyer is ready
@@ -98,31 +98,35 @@ export default function CollectionsView({ user }) {
   }, []);
 
   const handleReleaseItem = async (booking) => {
-    setActionLoading(booking.id);
-    try {
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({ buyer_status: 'collected', status: 'completed' })
-        .eq('id', booking.order_id);
+  setActionLoading(booking.id);
+  try {
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({ buyer_status: 'collected', status: 'completed' })
+      .eq('id', booking.order_id);
 
-      if (orderError) throw orderError;
+    if (orderError) throw orderError;
 
-      const { error: bookingError } = await supabase
-        .from('bookings')
-        .update({ status: 'collected' })
-        .eq('id', booking.id);
+    const { error: bookingError } = await supabase
+      .from('bookings')
+      .update({ status: 'collected' })
+      .eq('id', booking.id);
 
-      if (bookingError) throw bookingError;
+    if (bookingError) throw bookingError;
 
-      setBookings(prev => prev.filter(b => b.id !== booking.id));
-    } catch (err) {
-      console.error('Release item error:', err);
-      alert('Failed to release item. Please try again.');
-    } finally {
-      setActionLoading(null);
-      setSelectedBooking(null);
-    }
-  };
+    setBookings(prev => prev.filter(b => b.id !== booking.id));
+
+    // ← trigger review flow
+    navigate(`/review/${booking.order_id}`);
+
+  } catch (err) {
+    console.error('Release item error:', err);
+    alert('Failed to release item. Please try again.');
+  } finally {
+    setActionLoading(null);
+    setSelectedBooking(null);
+  }
+};
 
   const handleMarkCashSettled = async (booking) => {
     setActionLoading(`cash-${booking.id}`);

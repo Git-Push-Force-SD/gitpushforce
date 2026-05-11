@@ -118,7 +118,25 @@ describe('Day buttons — disabled states', () => {
     expect(day12).not.toBeDisabled();
   });
 });
+test('today is enabled and selectable', () => {
+  // Today is 11 Sep 2024 (FIXED_DATE) — should be enabled
+  setup();
+  const day11 = screen.getByRole('button', { name: '11' });
+  expect(day11).not.toBeDisabled();
+});
 
+test('today has border styling to distinguish it', () => {
+  setup();
+  const day11 = screen.getByRole('button', { name: '11' });
+  expect(day11.className).toContain('border');
+});
+
+test('clicking today calls onSelect with correct date', () => {
+  const onSelect = jest.fn();
+  setup({ onSelect });
+  fireEvent.click(screen.getByRole('button', { name: '11' }));
+  expect(onSelect).toHaveBeenCalledWith('2024-09-11');
+});
 // ===========================================================================
 // Date selection
 // ===========================================================================

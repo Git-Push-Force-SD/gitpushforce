@@ -67,7 +67,7 @@ const Calendar = ({ selectedDate, onSelect }) => {
 
           const dt         = new Date(viewYear, viewMonth, day);
           const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          const isPast     = dt < todayStart;
+          const isPast     = dt.getTime() < todayStart.getTime();
           const isWeekend  = dt.getDay() === 0 || dt.getDay() === 6;
           const isToday    = dt.toDateString() === today.toDateString();
           const isSelected = selectedDate === toDateStr(day);

@@ -26,7 +26,6 @@ export function useBookings(userId) {
         .select(`
           id,
           order_id,
-          trade_id,
           listing_id,
           date,
           time_slot,
@@ -113,32 +112,26 @@ export function useEligibleOrders(userId) {
       setError(null);
 
       try {
-        // 1. Get paid orders where the listing belongs to this seller
+        // 1. Get all paid orders for this buyer
         const { data: paidOrders, error: ordersError } = await supabase
-          .from('orders')
-          .select(`
-            id,
-            listing_id,
-            status,
-            amount_due,
-            placed_at,
-            listings (
-              id,
-              title,
-              image_path,
-              seller_id,
-              price
-            )
-          `)
-          .eq('status', 'paid')
-          .eq('listings.seller_id', userId);
+  .from('orders')
+  .select(`
+    id,
+    listing_id,
+    status,
+    amount_due,
+    placed_at,
+    listings (
+      id,
+      title,
+      image_path,
+      seller_id,
+      price
+    )
+  `)
+   .eq('status', 'paid');
 
-  //       if (ordersError) throw ordersError;
-  //       if (!paidOrders || paidOrders.length === 0) {
-  //         setOrders([]);
-  //         setLoading(false);
-  //         return;
-  //       }
+  
 
         // 2. Get order IDs that already have an active booking
         const orderIds = paidOrders.map(o => o.id);
@@ -151,7 +144,10 @@ export function useEligibleOrders(userId) {
         const bookedOrderIds = new Set((existingBookings || []).map(b => b.order_id));
 
         // 3. Filter out already-booked orders
-        const eligible = paidOrders.filter(o => !bookedOrderIds.has(o.id));
+        // const eligible = paidOrders.filter(o => !bookedOrderIds.has(o.id));
+        const eligible = paidOrders
+        .filter(o => o.listings?.seller_id === userId)
+        .filter(o => !bookedOrderIds.has(o.id));
 
         // 4. Fetch seller names
         const sellerIds = [...new Set(eligible.map(o => o.listings?.seller_id).filter(Boolean))];
@@ -235,12 +231,40 @@ export function useAvailableSlots(date) {
           return acc;
         }, {});
 
-        const merged = baseSlots.map(s => ({
-          timeSlot: s.time_slot,
-          capacity: s.capacity,
-          taken:    slotCounts[s.time_slot] || 0,
-          available: (s.capacity - (slotCounts[s.time_slot] || 0)) > 0,
-        }));
+        // const merged = baseSlots.map(s => ({
+        //   timeSlot: s.time_slot,
+        //   capacity: s.capacity,
+        //   taken:    slotCounts[s.time_slot] || 0,
+        //   available: (s.capacity - (slotCounts[s.time_slot] || 0)) > 0,
+        // }));
+        const now = new Date();
+const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+//temporarily adding this to debug 
+// console.log('current time:', now.getHours() + ':' + now.getMinutes());
+// console.log('currentMinutes:', currentMinutes);
+// console.log('localDate:', localDate);
+// console.log('selected date:', date);
+// console.log('first slot:', baseSlots[0]);
+
+const merged = baseSlots
+  .filter(s => {
+    // If today, filter out past slots and current slot
+    if (date === localDate) {
+      //const [startHour, startMin] = s.time_slot.split('-')[0].split(':').map(Number);
+      const [startHour, startMin] = s.time_slot.split(/[-–]/)[0].split(':').map(Number);
+      const slotMinutes = startHour * 60 + startMin;
+      return slotMinutes > currentMinutes;
+    }
+    return true;
+  })
+  .map(s => ({
+    timeSlot: s.time_slot,
+    capacity: s.capacity,
+    taken:    slotCounts[s.time_slot] || 0,
+    available: (s.capacity - (slotCounts[s.time_slot] || 0)) > 0,
+  }));
 
         setSlots(merged);
       } catch (err) {
@@ -279,14 +303,11 @@ export async function createBooking({ orderId, buyerId, sellerId, listingId, dat
 
   if (error) throw error;
 
-  // Mark order as booked and update buyer/seller statuses via RPC
-  // Uses SECURITY DEFINER to bypass RLS (seller cannot normally update buyer's orders)
-  const { error: rpcError } = await supabase.rpc('update_order_after_booking', { p_order_id: orderId });
-
-  if (rpcError) {
-    console.error('Failed to update order status after booking:', rpcError);
-    throw rpcError;
-  }
+  // Mark order as booked so it no longer appears in eligible orders
+  await supabase
+    .from('orders')
+    .update({ status: 'booked' })
+    .eq('id', orderId);
 
   return data;
 }
@@ -311,31 +332,6 @@ export async function cancelBooking({ bookingId, orderId, userId }) {
     .from('orders')
     .update({ status: 'paid' })
     .eq('id', orderId);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// createTradeBooking — insert a new booking row for trade exchange
-// ─────────────────────────────────────────────────────────────────────────────
-export async function createTradeBooking({ tradeId, buyerId, sellerId, listingId, date, timeSlot, notes }) {
-  const { data, error } = await supabase
-    .from('bookings')
-    .insert([{
-      trade_id:   tradeId,
-      buyer_id:   buyerId,
-      seller_id:  sellerId,
-      listing_id: listingId,
-      date,
-      time_slot:  timeSlot,
-      location:   FACILITY_LOCATION,
-      status:     'pending',
-      notes:      notes?.trim().slice(0, 500) || null,
-    }])
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  return data;
 }
 // ─── useSellerPendingOrders ───────────────────────────────────────────────────
 export function useSellerPendingOrders(userId) {
@@ -394,103 +390,4 @@ export function useSellerPendingOrders(userId) {
   }, [userId]);
 
   return { pendingOrders, loading };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// useEligibleTrades — fetch completed trades that don't have a booking yet
-// These are the trades the receiver can book for exchange
-// ─────────────────────────────────────────────────────────────────────────────
-export function useEligibleTrades(userId) {
-  const [trades, setTrades] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const fetch = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        // 1. Get all completed trades for this receiver
-        const { data: completedTrades, error: tradesError } = await supabase
-          .from('trades')
-          .select(`
-            id,
-            offered_listing_id,
-            requested_listing_id,
-            initiator_id,
-            receiver_id,
-            listings!trades_offered_listing_id_fkey (
-              id,
-              title,
-              image_path,
-              price
-            )
-          `)
-          .eq('status', 'completed')
-          .eq('receiver_id', userId);
-
-        if (tradesError) throw tradesError;
-        if (!completedTrades || completedTrades.length === 0) {
-          setTrades([]);
-          setLoading(false);
-          return;
-        }
-
-        // 2. Get trade IDs that already have an active booking
-        const tradeIds = completedTrades.map(t => t.id);
-        const { data: existingBookings } = await supabase
-          .from('bookings')
-          .select('trade_id')
-          .in('trade_id', tradeIds)
-          .neq('status', 'cancelled'); // cancelled bookings allow re-booking
-
-        const bookedTradeIds = new Set((existingBookings || []).map(b => b.trade_id));
-
-        // 3. Filter out already-booked trades
-        const eligible = completedTrades.filter(t => !bookedTradeIds.has(t.id));
-
-        // 4. Fetch seller names (initiator)
-        const sellerIds = [...new Set(eligible.map(t => t.initiator_id).filter(Boolean))];
-        let sellerMap = {};
-        if (sellerIds.length > 0) {
-          const { data: sellers } = await supabase
-            .from('users')
-            .select('id, username, email')
-            .in('id', sellerIds);
-          if (sellers) {
-            sellerMap = sellers.reduce((acc, s) => {
-              acc[s.id] = s.username || s.email?.split('@')[0] || 'Initiator';
-              return acc;
-            }, {});
-          }
-        }
-
-        const formatted = eligible.map(t => ({
-          tradeId:    t.id,
-          listingId:  t.offered_listing_id,
-          title:      t.listings?.title || 'Trade Item',
-          sellerId:   t.initiator_id,
-          sellerName: sellerMap[t.initiator_id] || 'Initiator',
-          price:      t.listings?.price || 0,
-          image:      t.listings?.image_path
-            ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${t.listings.image_path}`
-            : null,
-        }));
-
-        setTrades(formatted);
-      } catch (err) {
-        console.error('[useEligibleTrades] error:', err);
-        setError('Failed to load eligible trades.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetch();
-  }, [userId]);
-
-  return { trades, loading, error };
 }

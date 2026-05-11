@@ -418,3 +418,24 @@ describe('ListingDetails', () => {
     });
   });
 });
+// In ListingDetails.test.jsx, find the orders mock in setupSupabaseMocks and replace with:
+
+    if (table === 'orders') {
+      return {
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                // Updated: uses .limit(1) instead of .single()
+                limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          }),
+        }),
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({ data: { id: 'order-1' }, error: null }),
+          }),
+        }),
+      };
+    }
