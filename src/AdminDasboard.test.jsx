@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AdminDashboard from "./AdminDashboard";
 
@@ -394,6 +394,14 @@ describe("Slot Capacity interactions", () => {
     await userEvent.clear(capacityInput);
     await userEvent.type(capacityInput, "10");
     expect(capacityInput).toHaveValue(10);
+  });
+
+  test("renders booked and remaining slot status", async () => {
+    setup();
+    await waitFor(() => {
+      expect(screen.getByText(/Booked:\s*0/i)).toBeInTheDocument();
+      expect(screen.getByText(/Remaining:\s*5/i)).toBeInTheDocument();
+    });
   });
 });
 
