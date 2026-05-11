@@ -31,6 +31,7 @@ export default function AdminDashboard({ handleLogout }) {
   const [slotDate, setSlotDate] = useState(new Date().toISOString().slice(0, 10));
   const [slotTime, setSlotTime] = useState(DEFAULT_TIME_SLOTS[0] || "");
   const [slotCapacity, setSlotCapacity] = useState(5);
+  const [slotTaken, setSlotTaken] = useState(0);
   const [slotMessage, setSlotMessage] = useState("");
   const [slotError, setSlotError] = useState("");
   const [operatingHours, setOperatingHours] = useState([
@@ -60,6 +61,48 @@ export default function AdminDashboard({ handleLogout }) {
     }
   };
 
+  const fetchSlotStatus = async () => {
+    if (!slotDate || !slotTime) return;
+
+    try {
+      const { data: slotRecord, error: slotError } = await supabase
+        .from("facility_slots")
+        .select("capacity")
+        .eq("date", slotDate)
+        .eq("time_slot", slotTime)
+        .single();
+
+      if (slotError && slotError.code !== "PGRST116") {
+        throw slotError;
+      }
+
+      if (slotRecord?.capacity != null) {
+        setSlotCapacity(slotRecord.capacity);
+      } else {
+        setSlotCapacity(5);
+      }
+
+      const { data: bookings = [], error: bookingsError } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("date", slotDate)
+        .eq("time_slot", slotTime)
+        .neq("status", "cancelled");
+
+      if (bookingsError) {
+        throw bookingsError;
+      }
+
+      setSlotTaken(bookings.length);
+    } catch (error) {
+      console.error("[AdminDashboard] fetch slot status error:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSlotStatus();
+  }, [slotDate, slotTime]);
+
   useEffect(() => {
     fetchAnalytics();
   }, []);
@@ -70,6 +113,11 @@ export default function AdminDashboard({ handleLogout }) {
 
     if (!slotDate || !slotTime || slotCapacity < 1) {
       setSlotError("Please choose a date, time slot, and a capacity of at least 1.");
+      return;
+    }
+
+    if (slotCapacity < slotTaken) {
+      setSlotError(`Capacity cannot be lower than ${slotTaken} existing booking(s).`);
       return;
     }
 
@@ -745,6 +793,19 @@ export default function AdminDashboard({ handleLogout }) {
                     boxSizing: "border-box",
                   }}
                 />
+                <section style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 14, color: "#6b7280" }}>
+                    Booked: {slotTaken}
+                  </span>
+                  <span style={{ fontSize: 14, color: "#6b7280" }}>
+                    Remaining: {Math.max(slotCapacity - slotTaken, 0)}
+                  </span>
+                </section>
+                {slotCapacity < slotTaken && (
+                  <section style={{ marginTop: 8, color: "#b91c1c", fontSize: 14 }}>
+                    Capacity cannot be lower than the current bookings for this slot.
+                  </section>
+                )}
               </section>
 
               {slotError && (
