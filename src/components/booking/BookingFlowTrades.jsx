@@ -1,6 +1,7 @@
 // src/components/booking/BookingFlowTrades.jsx
 // 3-step flow: Choose date → Pick slot → Confirm
 // All DB calls happen in the parent via createTradeBooking()
+// Both parties can book independently
 
 import React, { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
@@ -64,11 +65,9 @@ const BookingFlowTrades = ({ eligibleTrades, onConfirm, submitting }) => {
 
   const handleSubmit = () => {
     onConfirm({
-      tradeId:    selectedTrade.tradeId,
-      sellerId:   selectedTrade.sellerId,
-      listingId:  selectedTrade.listingId,
-      date:       selectedDate,
-      timeSlot:   selectedSlot,
+      tradeId:   selectedTrade.tradeId,
+      date:      selectedDate,
+      timeSlot:  selectedSlot,
       notes,
     });
   };
@@ -85,8 +84,8 @@ const BookingFlowTrades = ({ eligibleTrades, onConfirm, submitting }) => {
       <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
         <p className="text-sm font-medium text-dark">No trades to exchange</p>
         <p className="text-xs text-center text-gray-400 max-w-xs">
-          You don't have any completed trades awaiting an exchange booking yet.
-          Once a trade is completed, it will appear here.
+          You don't have any accepted trades awaiting a drop-off booking yet.
+          Once a trade is accepted, it will appear here.
         </p>
       </div>
     );
@@ -99,7 +98,7 @@ const BookingFlowTrades = ({ eligibleTrades, onConfirm, submitting }) => {
       {/* Trade selector */}
       <div className="mb-4">
         <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest block mb-2">
-          Trade to exchange
+          Trade exchange
         </label>
         <select
           value={selectedTrade?.tradeId || ''}
@@ -114,7 +113,7 @@ const BookingFlowTrades = ({ eligibleTrades, onConfirm, submitting }) => {
         >
           {eligibleTrades.map(t => (
             <option key={t.tradeId} value={t.tradeId}>
-              {t.title} — {t.sellerName}
+              Your: {t.myListingTitle} ↔ {t.partnerName}: {t.partnerListingTitle}
             </option>
           ))}
         </select>
@@ -160,16 +159,17 @@ const BookingFlowTrades = ({ eligibleTrades, onConfirm, submitting }) => {
       {step === 3 && selectedSlot && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
-            Booking summary
+            Drop-off booking summary
           </p>
 
           <div className="bg-gray-50 rounded-xl p-4 mb-4 text-sm divide-y divide-gray-100">
             {[
-              ['Item',     selectedTrade?.title],
-              ['Date',     formattedDate],
-              ['Time',     selectedSlot],
-              ['Location', FACILITY_LOCATION],
-              ['Partner',  selectedTrade?.sellerName],
+              ['Your item',      selectedTrade?.myListingTitle],
+              ['Partner item',   selectedTrade?.partnerListingTitle],
+              ['Partner',        selectedTrade?.partnerName],
+              ['Date',           formattedDate],
+              ['Time',           selectedSlot],
+              ['Location',       FACILITY_LOCATION],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between py-2 first:pt-0 last:pb-0">
                 <span className="text-gray-400">{label}</span>
@@ -202,7 +202,7 @@ const BookingFlowTrades = ({ eligibleTrades, onConfirm, submitting }) => {
               disabled={submitting}
               className="ml-auto px-5 py-2 rounded-full text-sm font-medium bg-dark text-white disabled:opacity-50 transition-opacity"
             >
-              {submitting ? 'Confirming…' : 'Confirm booking'}
+              {submitting ? 'Confirming…' : 'Confirm drop-off'}
             </button>
           </div>
         </div>

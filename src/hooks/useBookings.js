@@ -317,20 +317,38 @@ export async function cancelBooking({ bookingId, orderId, userId }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // createTradeBooking — insert a new booking row for trade exchange
+// Both parties can book independently. Each booking tracks who booked it.
 // ─────────────────────────────────────────────────────────────────────────────
-export async function createTradeBooking({ tradeId, buyerId, sellerId, listingId, date, timeSlot, notes }) {
+export async function createTradeBooking({ tradeId, bookedBy, date, timeSlot, notes }) {
+  // Guard: check if current user already has a booking for this trade
+  const { data: existingBooking, error: checkError } = await supabase
+    .from('bookings')
+    .select('id')
+    .eq('trade_id', tradeId)
+    .eq('booked_by', bookedBy)
+    .neq('status', 'cancelled')
+    .single();
+
+  if (checkError && checkError.code !== 'PGRST116') {
+    // PGRST116 means no rows found, which is expected
+    throw checkError;
+  }
+
+  if (existingBooking) {
+    throw new Error('You have already booked a drop-off for this trade');
+  }
+
   const { data, error } = await supabase
     .from('bookings')
     .insert([{
-      trade_id:   tradeId,
-      buyer_id:   buyerId,
-      seller_id:  sellerId,
-      listing_id: listingId,
+      trade_id:    tradeId,
+      booked_by:   bookedBy,
+      booking_type: 'trade',
       date,
-      time_slot:  timeSlot,
-      location:   FACILITY_LOCATION,
-      status:     'pending',
-      notes:      notes?.trim().slice(0, 500) || null,
+      time_slot:   timeSlot,
+      location:    FACILITY_LOCATION,
+      status:      'pending',
+      notes:       notes?.trim().slice(0, 500) || null,
     }])
     .select()
     .single();
@@ -399,8 +417,8 @@ export function useSellerPendingOrders(userId) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// useEligibleTrades — fetch completed trades that don't have a booking yet
-// These are the trades the receiver can book for exchange
+// useEligibleTrades — fetch accepted trades where user can book for exchange
+// Both initiator and receiver can book independently
 // ─────────────────────────────────────────────────────────────────────────────
 export function useEligibleTrades(userId) {
   const [trades, setTrades] = useState([]);
@@ -415,8 +433,8 @@ export function useEligibleTrades(userId) {
       setError(null);
 
       try {
-        // 1. Get all completed trades for this receiver
-        const { data: completedTrades, error: tradesError } = await supabase
+        // 1. Get all accepted trades where user is initiator OR receiver
+        const { data: acceptedTrades, error: tradesError } = await supabase
           .from('trades')
           .select(`
             id,
@@ -424,63 +442,91 @@ export function useEligibleTrades(userId) {
             requested_listing_id,
             initiator_id,
             receiver_id,
-            listings!trades_offered_listing_id_fkey (
+            status,
+            listings_offered:offered_listing_id (
+              id,
+              title,
+              image_path,
+              price
+            ),
+            listings_requested:requested_listing_id (
               id,
               title,
               image_path,
               price
             )
           `)
-          .eq('status', 'completed')
-          .eq('receiver_id', userId);
+          .eq('status', 'accepted')
+          .or(`initiator_id.eq.${userId},receiver_id.eq.${userId}`);
 
         if (tradesError) throw tradesError;
-        if (!completedTrades || completedTrades.length === 0) {
+        if (!acceptedTrades || acceptedTrades.length === 0) {
           setTrades([]);
           setLoading(false);
           return;
         }
 
-        // 2. Get trade IDs that already have an active booking
-        const tradeIds = completedTrades.map(t => t.id);
-        const { data: existingBookings } = await supabase
+        // 2. For each trade, check if current user already has a booking
+        const tradeIds = acceptedTrades.map(t => t.id);
+        const { data: userBookings } = await supabase
           .from('bookings')
-          .select('trade_id')
+          .select('trade_id, booked_by')
           .in('trade_id', tradeIds)
-          .neq('status', 'cancelled'); // cancelled bookings allow re-booking
+          .neq('status', 'cancelled');
 
-        const bookedTradeIds = new Set((existingBookings || []).map(b => b.trade_id));
+        const userBookedTradesSet = new Set(
+          (userBookings || [])
+            .filter(b => b.booked_by === userId)
+            .map(b => b.trade_id)
+        );
 
-        // 3. Filter out already-booked trades
-        const eligible = completedTrades.filter(t => !bookedTradeIds.has(t.id));
+        // 3. Filter out trades where user already has a booking
+        const eligible = acceptedTrades.filter(t => !userBookedTradesSet.has(t.id));
 
-        // 4. Fetch seller names (initiator)
-        const sellerIds = [...new Set(eligible.map(t => t.initiator_id).filter(Boolean))];
-        let sellerMap = {};
-        if (sellerIds.length > 0) {
-          const { data: sellers } = await supabase
+        // 4. Fetch user info for both initiator and receiver
+        const userIds = [...new Set([
+          ...eligible.map(t => t.initiator_id).filter(Boolean),
+          ...eligible.map(t => t.receiver_id).filter(Boolean),
+        ])];
+        let userMap = {};
+        if (userIds.length > 0) {
+          const { data: users } = await supabase
             .from('users')
             .select('id, username, email')
-            .in('id', sellerIds);
-          if (sellers) {
-            sellerMap = sellers.reduce((acc, s) => {
-              acc[s.id] = s.username || s.email?.split('@')[0] || 'Initiator';
+            .in('id', userIds);
+          if (users) {
+            userMap = users.reduce((acc, u) => {
+              acc[u.id] = u.username || u.email?.split('@')[0] || 'User';
               return acc;
             }, {});
           }
         }
 
-        const formatted = eligible.map(t => ({
-          tradeId:    t.id,
-          listingId:  t.offered_listing_id,
-          title:      t.listings?.title || 'Trade Item',
-          sellerId:   t.initiator_id,
-          sellerName: sellerMap[t.initiator_id] || 'Initiator',
-          price:      t.listings?.price || 0,
-          image:      t.listings?.image_path
-            ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${t.listings.image_path}`
-            : null,
-        }));
+        const formatted = eligible.map(t => {
+          const isInitiator = t.initiator_id === userId;
+          const offeredListing = t.listings_offered;
+          const requestedListing = t.listings_requested;
+          const myListing = isInitiator ? offeredListing : requestedListing;
+          const partnerListing = isInitiator ? requestedListing : offeredListing;
+          const partnerId = isInitiator ? t.receiver_id : t.initiator_id;
+
+          return {
+            tradeId:    t.id,
+            myListingId: myListing?.id,
+            myListingTitle: myListing?.title || 'Trade Item',
+            partnerListingId: partnerListing?.id,
+            partnerListingTitle: partnerListing?.title || 'Trade Item',
+            role: isInitiator ? 'initiator' : 'receiver',
+            partnerId,
+            partnerName: userMap[partnerId] || 'Partner',
+            myImage: myListing?.image_path
+              ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${myListing.image_path}`
+              : null,
+            partnerImage: partnerListing?.image_path
+              ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${partnerListing.image_path}`
+              : null,
+          };
+        });
 
         setTrades(formatted);
       } catch (err) {

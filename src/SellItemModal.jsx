@@ -243,7 +243,6 @@ console.log('Inserting:', {
                 >
                   <option value="sale">Sale</option>
                   <option value="trade">Trade</option>
-                  <option value="either">Either</option>
                 </select>
               </section>
 

@@ -10,6 +10,7 @@ jest.mock('../../utils/supabase', () => ({
 }));
 
 jest.mock('./facilUtils', () => ({
+  badgeClasses: (status) => '',
   formatDate: (date) => date,
   formatTime: (time) => time,
 }));
@@ -23,7 +24,6 @@ jest.mock('./imageUtils', () => ({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// bookings: .select().eq('status','pending').order() → resolves
 const makeBookingsMock = (resolvedValue, updateFn = null) => ({
   select: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
@@ -33,7 +33,6 @@ const makeBookingsMock = (resolvedValue, updateFn = null) => ({
   }),
 });
 
-// orders: .update().eq() → resolves
 const makeOrdersMock = (updateFn = null) => ({
   update: updateFn ?? jest.fn().mockReturnValue({
     eq: jest.fn().mockResolvedValue({ error: null }),
@@ -46,6 +45,27 @@ const makeUsersMock = (resolvedValue) => ({
   in: jest.fn().mockResolvedValue(resolvedValue),
 });
 
+// Base mock booking with all required fields
+const makeSaleBooking = (overrides = {}) => ({
+  id: 'booking-1',
+  trade_id: null,
+  listing_id: 'list-1',
+  order_id: 'order-1',
+  buyer_id: 'buyer-1',
+  seller_id: 'seller-1',
+  booked_by: null,
+  date: '2026-04-30',
+  time_slot: '09:00-10:00',
+  booking_type: 'sale',
+  listings: { id: 'list-1', title: 'Laptop', image_path: null },
+  trades: null,
+  ...overrides,
+});
+
+const mockSellers = [
+  { id: 'seller-1', username: 'seller_user', email: 'seller@test.com' },
+];
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('DropOffsView', () => {
@@ -57,7 +77,7 @@ describe('DropOffsView', () => {
     supabaseModule.supabase.from.mockReturnValue({
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnValue(new Promise(() => {})), // never resolves
+      order: jest.fn().mockReturnValue(new Promise(() => {})),
     });
 
     render(<DropOffsView />);
@@ -77,7 +97,7 @@ describe('DropOffsView', () => {
     });
   });
 
-  it('should render table headers', async () => {
+  it('should render correct table headers', async () => {
     supabaseModule.supabase.from.mockImplementation((table) => {
       if (table === 'bookings') return makeBookingsMock({ data: [], error: null });
       return { select: jest.fn().mockResolvedValue({ data: [], error: null }) };
@@ -87,7 +107,8 @@ describe('DropOffsView', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Item')).toBeInTheDocument();
-      expect(screen.getByText('Seller')).toBeInTheDocument();
+      expect(screen.getByText('Type')).toBeInTheDocument();
+      expect(screen.getByText('Drop-off Party')).toBeInTheDocument();
       expect(screen.getByText('Date')).toBeInTheDocument();
       expect(screen.getByText('Time')).toBeInTheDocument();
       expect(screen.getByText('Action')).toBeInTheDocument();
@@ -95,21 +116,8 @@ describe('DropOffsView', () => {
   });
 
   it('should render drop-off items correctly', async () => {
-    const mockBookings = [
-      {
-        id: 'booking-1',
-        listing_id: 'list-1',
-        order_id: 'order-1',
-        seller_id: 'seller-1',
-        date: '2026-04-30',
-        time_slot: '09:00-10:00',
-        listings: { id: 'list-1', title: 'Laptop' },
-      },
-    ];
-    const mockSellers = [{ id: 'seller-1', username: 'seller_user', email: 'seller@test.com' }];
-
     supabaseModule.supabase.from.mockImplementation((table) => {
-      if (table === 'bookings') return makeBookingsMock({ data: mockBookings, error: null });
+      if (table === 'bookings') return makeBookingsMock({ data: [makeSaleBooking()], error: null });
       if (table === 'users') return makeUsersMock({ data: mockSellers, error: null });
       return { select: jest.fn().mockResolvedValue({ data: [], error: null }) };
     });
@@ -124,21 +132,8 @@ describe('DropOffsView', () => {
   });
 
   it('should render Confirm Receipt button', async () => {
-    const mockBookings = [
-      {
-        id: 'booking-1',
-        listing_id: 'list-1',
-        order_id: 'order-1',
-        seller_id: 'seller-1',
-        date: '2026-04-30',
-        time_slot: '09:00-10:00',
-        listings: { id: 'list-1', title: 'Laptop' },
-      },
-    ];
-    const mockSellers = [{ id: 'seller-1', username: 'seller_user', email: 'seller@test.com' }];
-
     supabaseModule.supabase.from.mockImplementation((table) => {
-      if (table === 'bookings') return makeBookingsMock({ data: mockBookings, error: null });
+      if (table === 'bookings') return makeBookingsMock({ data: [makeSaleBooking()], error: null });
       if (table === 'users') return makeUsersMock({ data: mockSellers, error: null });
       return { select: jest.fn().mockResolvedValue({ data: [], error: null }) };
     });
@@ -151,24 +146,11 @@ describe('DropOffsView', () => {
   });
 
   it('should call update on bookings and orders when Confirm Receipt is clicked', async () => {
-    const mockBookings = [
-      {
-        id: 'booking-1',
-        listing_id: 'list-1',
-        order_id: 'order-1',
-        seller_id: 'seller-1',
-        date: '2026-04-30',
-        time_slot: '09:00-10:00',
-        listings: { id: 'list-1', title: 'Laptop' },
-      },
-    ];
-    const mockSellers = [{ id: 'seller-1', username: 'seller_user', email: 'seller@test.com' }];
-
     const mockUpdateEq = jest.fn().mockResolvedValue({ error: null });
     const mockUpdate = jest.fn().mockReturnValue({ eq: mockUpdateEq });
 
     supabaseModule.supabase.from.mockImplementation((table) => {
-      if (table === 'bookings') return makeBookingsMock({ data: mockBookings, error: null }, mockUpdate);
+      if (table === 'bookings') return makeBookingsMock({ data: [makeSaleBooking()], error: null }, mockUpdate);
       if (table === 'orders') return makeOrdersMock(mockUpdate);
       if (table === 'users') return makeUsersMock({ data: mockSellers, error: null });
       return { select: jest.fn().mockResolvedValue({ data: [], error: null }) };
@@ -186,21 +168,8 @@ describe('DropOffsView', () => {
   });
 
   it('should remove booking from list after successful confirmation', async () => {
-    const mockBookings = [
-      {
-        id: 'booking-1',
-        listing_id: 'list-1',
-        order_id: 'order-1',
-        seller_id: 'seller-1',
-        date: '2026-04-30',
-        time_slot: '09:00-10:00',
-        listings: { id: 'list-1', title: 'Laptop' },
-      },
-    ];
-    const mockSellers = [{ id: 'seller-1', username: 'seller_user', email: 'seller@test.com' }];
-
     supabaseModule.supabase.from.mockImplementation((table) => {
-      if (table === 'bookings') return makeBookingsMock({ data: mockBookings, error: null });
+      if (table === 'bookings') return makeBookingsMock({ data: [makeSaleBooking()], error: null });
       if (table === 'orders') return makeOrdersMock();
       if (table === 'users') return makeUsersMock({ data: mockSellers, error: null });
       return { select: jest.fn().mockResolvedValue({ data: [], error: null }) };
@@ -217,25 +186,12 @@ describe('DropOffsView', () => {
   });
 
   it('should handle error when confirming drop-off', async () => {
-    const mockBookings = [
-      {
-        id: 'booking-1',
-        listing_id: 'list-1',
-        order_id: 'order-1',
-        seller_id: 'seller-1',
-        date: '2026-04-30',
-        time_slot: '09:00-10:00',
-        listings: { id: 'list-1', title: 'Laptop' },
-      },
-    ];
-    const mockSellers = [{ id: 'seller-1', username: 'seller_user', email: 'seller@test.com' }];
-
     const failingUpdate = jest.fn().mockReturnValue({
       eq: jest.fn().mockResolvedValue({ error: new Error('Update failed') }),
     });
 
     supabaseModule.supabase.from.mockImplementation((table) => {
-      if (table === 'bookings') return makeBookingsMock({ data: mockBookings, error: null }, failingUpdate);
+      if (table === 'bookings') return makeBookingsMock({ data: [makeSaleBooking()], error: null }, failingUpdate);
       if (table === 'users') return makeUsersMock({ data: mockSellers, error: null });
       return { select: jest.fn().mockResolvedValue({ data: [], error: null }) };
     });
