@@ -18,18 +18,28 @@ export default function HistoryView() {
     const fetchHistory = async () => {
       setLoading(true);
       try {
-        // Step 1 — fetch bookings + listings
+        // Step 1 — fetch bookings + listings + trades
         const { data: historyData, error } = await supabase
           .from('bookings')
           .select(`
             id,
+            trade_id,
             listing_id,
             buyer_id,
             seller_id,
+            booked_by,
             date,
             time_slot,
             status,
-            listings (id, title, image_path)
+            booking_type,
+            listings (id, title, image_path),
+            trades (
+              id,
+              initiator_id,
+              receiver_id,
+              offered_listing_id,
+              requested_listing_id
+            )
           `)
           .in('status', ['collected', 'cancelled'])
           .order('date', { ascending: false })
@@ -41,11 +51,13 @@ export default function HistoryView() {
           return;
         }
 
-        // Step 2 — fetch all involved users in one query
+        // Step 2 — fetch all involved users
         const userIds = [...new Set([
-          ...historyData.map(b => b.buyer_id),
-          ...historyData.map(b => b.seller_id),
-        ].filter(Boolean))];
+          ...historyData.map(b => b.buyer_id).filter(Boolean),
+          ...historyData.map(b => b.seller_id).filter(Boolean),
+          ...historyData.map(b => b.booked_by).filter(Boolean),
+          ...historyData.filter(b => b.trades).flatMap(b => [b.trades.initiator_id, b.trades.receiver_id]).filter(Boolean),
+        ])];
 
         const { data: usersData } = await supabase
           .from('users')
@@ -57,12 +69,59 @@ export default function HistoryView() {
           return acc;
         }, {});
 
-        // Step 3 — merge
-        setBookings(historyData.map(b => ({
-          ...b,
-          buyer: userMap[b.buyer_id] ?? null,
-          seller: userMap[b.seller_id] ?? null,
-        })));
+        // For trades, fetch both offered and requested listings
+        const tradeIds = historyData.filter(b => b.trade_id).map(b => b.trade_id);
+        let tradedListingMap = {};
+        if (tradeIds.length > 0) {
+          const listingIds = historyData
+            .filter(b => b.trades)
+            .flatMap(b => [b.trades.offered_listing_id, b.trades.requested_listing_id])
+            .filter(Boolean);
+
+          const { data: listings } = await supabase
+            .from('listings')
+            .select('id, title, image_path')
+            .in('id', listingIds);
+
+          if (listings) {
+            tradedListingMap = listings.reduce((acc, l) => {
+              acc[l.id] = l;
+              return acc;
+            }, {});
+          }
+        }
+
+        // Step 3 — merge and format
+        setBookings(historyData.map(b => {
+          const isTrade = b.trade_id && b.trades;
+          let offeredListing = null;
+          let requestedListing = null;
+          let tradePartyRole = null;
+
+          if (isTrade) {
+            const trade = b.trades;
+            const initiatorName = userMap[trade.initiator_id]?.username || userMap[trade.initiator_id]?.email?.split('@')[0] || 'Initiator';
+            const receiverName = userMap[trade.receiver_id]?.username || userMap[trade.receiver_id]?.email?.split('@')[0] || 'Receiver';
+            
+            tradePartyRole = b.booked_by === trade.initiator_id 
+              ? `${initiatorName} (initiator)`
+              : `${receiverName} (receiver)`;
+            
+            offeredListing = tradedListingMap[trade.offered_listing_id];
+            requestedListing = tradedListingMap[trade.requested_listing_id];
+          }
+
+          return {
+            ...b,
+            buyer: userMap[b.buyer_id] ?? null,
+            seller: userMap[b.seller_id] ?? null,
+            bookedByUser: userMap[b.booked_by] ?? null,
+            type: isTrade ? 'Trade' : 'Sale',
+            tradePartyRole,
+            offeredListing,
+            requestedListing,
+          };
+        }));
       } catch (err) {
         console.error('History fetch error:', err);
         setBookings([]);
@@ -91,8 +150,8 @@ export default function HistoryView() {
             <tr className="border-b border-light bg-light">
               <th className="px-3 sm:px-6 py-3 sm:py-4"></th>
               <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Item</th>
-              <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Buyer</th>
-              <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Seller</th>
+              <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Type</th>
+              <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Party</th>
               <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Date</th>
               <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Time</th>
               <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Status</th>
@@ -107,7 +166,17 @@ export default function HistoryView() {
               </tr>
             ) : (
               bookings.map((booking) => {
-                const imageUrl = getImageUrl(booking.listings);
+                const partyDisplay = booking.type === 'Trade'
+                  ? (booking.bookedByUser?.username || booking.bookedByUser?.email?.split('@')[0] || 'Unknown')
+                  : (booking.buyer?.username || booking.buyer?.email?.split('@')[0] || 'N/A');
+                const primaryListing = booking.type === 'Trade'
+                  ? booking.offeredListing
+                  : booking.listings;
+                const imageUrl = getImageUrl(primaryListing);
+                const displayTitle = booking.type === 'Trade'
+                  ? `${booking.offeredListing?.title || 'Item'} ↔ ${booking.requestedListing?.title || 'Item'}`
+                  : booking.listings?.title || 'N/A';
+                
                 return (
                 <tr key={booking.id} className="border-b border-light hover:bg-light/50 transition-colors">
                   <td className="px-3 sm:px-6 py-3 sm:py-4">
@@ -117,12 +186,14 @@ export default function HistoryView() {
                       <div className="w-10 h-10 rounded-lg bg-light flex-shrink-0" />
                     )}
                   </td>
-                  <td className="px-3 sm:px-6 py-3 sm:py-4 font-medium text-dark text-xs sm:text-sm">{booking.listings?.title || 'N/A'}</td>
-                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-text-muted text-xs sm:text-sm">
-                    {booking.buyer?.username || booking.buyer?.email?.split('@')[0] || 'N/A'}
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 font-medium text-dark text-xs sm:text-sm">{displayTitle}</td>
+                  <td className="px-3 sm:px-6 py-3 sm:py-4">
+                    <span className={`inline-flex rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${badgeClasses(booking.type)}`}>
+                      {booking.type}
+                    </span>
                   </td>
                   <td className="px-3 sm:px-6 py-3 sm:py-4 text-text-muted text-xs sm:text-sm">
-                    {booking.seller?.username || booking.seller?.email?.split('@')[0] || 'N/A'}
+                    {partyDisplay}
                   </td>
                   <td className="px-3 sm:px-6 py-3 sm:py-4 text-text-muted text-xs sm:text-sm">{formatDate(booking.date)}</td>
                   <td className="px-3 sm:px-6 py-3 sm:py-4 text-text-muted text-xs sm:text-sm">{formatTime(booking.time_slot)}</td>
@@ -147,7 +218,16 @@ export default function HistoryView() {
           </div>
         ) : (
           bookings.map((booking) => {
-            const imageUrl = getImageUrl(booking.listings);
+            const partyDisplay = booking.type === 'Trade'
+              ? (booking.bookedByUser?.username || booking.bookedByUser?.email?.split('@')[0] || 'Unknown')
+              : (booking.buyer?.username || booking.buyer?.email?.split('@')[0] || 'N/A');
+            const primaryListing = booking.type === 'Trade'
+              ? booking.offeredListing
+              : booking.listings;
+            const imageUrl = getImageUrl(primaryListing);
+            const displayTitle = booking.type === 'Trade'
+              ? `${booking.offeredListing?.title || 'Item'} ↔ ${booking.requestedListing?.title || 'Item'}`
+              : booking.listings?.title || 'N/A';
             return (
             <button
               key={booking.id}
@@ -161,9 +241,9 @@ export default function HistoryView() {
                   <div className="w-10 h-10 rounded-lg bg-light flex-shrink-0" />
                 )}
                 <div>
-                  <p className="font-medium text-dark text-sm">{booking.listings?.title || 'N/A'}</p>
+                  <p className="font-medium text-dark text-sm">{displayTitle}</p>
                   <p className="text-xs text-text-muted mt-1">
-                    {booking.buyer?.username || booking.buyer?.email?.split('@')[0] || 'N/A'}
+                    {partyDisplay}
                   </p>
                 </div>
               </div>
@@ -183,7 +263,10 @@ export default function HistoryView() {
           />
           <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl bg-white p-6 space-y-4 shadow-xl">
             {(() => {
-              const imageUrl = getImageUrl(selectedBooking.listings);
+              const primaryListing = selectedBooking.type === 'Trade'
+                ? selectedBooking.offeredListing
+                : selectedBooking.listings;
+              const imageUrl = getImageUrl(primaryListing);
               return (
                 <>
                   {imageUrl ? (
@@ -198,14 +281,23 @@ export default function HistoryView() {
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Item</span>
-                <span className="font-medium text-dark">{selectedBooking.listings?.title || 'N/A'}</span>
+                <span className="font-medium text-dark">{selectedBooking.type === 'Trade' ? `${selectedBooking.offeredListing?.title || 'Item'} ↔ ${selectedBooking.requestedListing?.title || 'Item'}` : selectedBooking.listings?.title || 'N/A'}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-text-muted">Buyer</span>
-                <span className="font-medium text-dark">
-                  {selectedBooking.buyer?.username || selectedBooking.buyer?.email?.split('@')[0] || 'N/A'}
-                </span>
-              </div>
+              {selectedBooking.type === 'Trade' ? (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Party</span>
+                  <span className="font-medium text-dark">
+                    {selectedBooking.bookedByUser?.username || selectedBooking.bookedByUser?.email?.split('@')[0] || 'Unknown'}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Party</span>
+                  <span className="font-medium text-dark">
+                    {selectedBooking.buyer?.username || selectedBooking.buyer?.email?.split('@')[0] || 'N/A'}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Seller</span>
                 <span className="font-medium text-dark">

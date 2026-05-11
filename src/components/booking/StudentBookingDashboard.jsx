@@ -91,15 +91,13 @@ const StudentBookingDashboard = ({ onClose }) => {
   };
 
   // ── Create trade booking ────────────────────
-  const handleConfirmTrade = async ({ tradeId, sellerId, listingId, date, timeSlot, notes }) => {
+  const handleConfirmTrade = async ({ tradeId, date, timeSlot, notes }) => {
     setSubmitting(true);
     setSubmitError(null);
     try {
       await createTradeBooking({
         tradeId,
-        buyerId:   user.id,
-        sellerId,
-        listingId,
+        bookedBy: user.id,
         date,
         timeSlot,
         notes,

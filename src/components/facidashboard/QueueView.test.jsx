@@ -45,10 +45,7 @@ describe('QueueView', () => {
 
   it('should render table with no bookings message', async () => {
     const mockOrder = {
-      order: jest.fn().mockResolvedValue({
-        data: [],
-        error: null,
-      }),
+      order: jest.fn().mockResolvedValue({ data: [], error: null }),
     };
 
     supabaseModule.supabase.from.mockImplementation((table) => {
@@ -59,13 +56,9 @@ describe('QueueView', () => {
           order: jest.fn().mockReturnValue(mockOrder),
         };
       }
-
       return {
         select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({
-          data: [],
-          error: null,
-        }),
+        in: jest.fn().mockResolvedValue({ data: [], error: null }),
       };
     });
 
@@ -78,12 +71,9 @@ describe('QueueView', () => {
     });
   });
 
-  it('should render table headers', async () => {
+  it('should render correct table headers', async () => {
     const mockOrder = {
-      order: jest.fn().mockResolvedValue({
-        data: [],
-        error: null,
-      }),
+      order: jest.fn().mockResolvedValue({ data: [], error: null }),
     };
 
     supabaseModule.supabase.from.mockImplementation((table) => {
@@ -94,13 +84,9 @@ describe('QueueView', () => {
           order: jest.fn().mockReturnValue(mockOrder),
         };
       }
-
       return {
         select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({
-          data: [],
-          error: null,
-        }),
+        in: jest.fn().mockResolvedValue({ data: [], error: null }),
       };
     });
 
@@ -108,26 +94,30 @@ describe('QueueView', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Item')).toBeInTheDocument();
-      expect(screen.getByText('Buyer')).toBeInTheDocument();
-      expect(screen.getByText('Seller')).toBeInTheDocument();
+      expect(screen.getByText('Type')).toBeInTheDocument();
+      expect(screen.getByText('Booking Party')).toBeInTheDocument();
       expect(screen.getByText('Date')).toBeInTheDocument();
       expect(screen.getByText('Time')).toBeInTheDocument();
       expect(screen.getByText('Status')).toBeInTheDocument();
     });
   });
 
-  it('should render bookings data correctly', async () => {
+  it('should render sale booking data correctly — shows buyer in Booking Party', async () => {
     const mockBookings = [
       {
         id: '1',
+        trade_id: null,
         listing_id: 'list-1',
         buyer_id: 'buyer-1',
         seller_id: 'seller-1',
+        booked_by: null,
         date: '2026-04-30',
         time_slot: '09:00-10:00',
         location: 'Library',
         status: 'pending',
-        listings: { id: 'list-1', title: 'Physics Textbook' },
+        booking_type: 'sale',
+        listings: { id: 'list-1', title: 'Physics Textbook', image_path: null },
+        trades: null,
       },
     ];
 
@@ -137,10 +127,7 @@ describe('QueueView', () => {
     ];
 
     const mockOrder = {
-      order: jest.fn().mockResolvedValue({
-        data: mockBookings,
-        error: null,
-      }),
+      order: jest.fn().mockResolvedValue({ data: mockBookings, error: null }),
     };
 
     supabaseModule.supabase.from.mockImplementation((table) => {
@@ -151,22 +138,14 @@ describe('QueueView', () => {
           order: jest.fn().mockReturnValue(mockOrder),
         };
       }
-
       if (table === 'users') {
         return {
           select: jest.fn().mockReturnThis(),
-          in: jest.fn().mockResolvedValue({
-            data: mockUsers,
-            error: null,
-          }),
+          in: jest.fn().mockResolvedValue({ data: mockUsers, error: null }),
         };
       }
-
       return {
-        select: jest.fn().mockResolvedValue({
-          data: [],
-          error: null,
-        }),
+        select: jest.fn().mockResolvedValue({ data: [], error: null }),
       };
     });
 
@@ -174,35 +153,119 @@ describe('QueueView', () => {
 
     await waitFor(() => {
       expect(screen.getAllByText('Physics Textbook').length).toBeGreaterThan(0);
+      // Buyer shown in Booking Party column for sale bookings
       expect(screen.getAllByText('john_doe').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('jane_smith').length).toBeGreaterThan(0);
       expect(screen.getByText('09:00-10:00')).toBeInTheDocument();
     });
   });
 
-  it('should handle multiple bookings with sorting', async () => {
+  it('should render trade booking data correctly — shows trade party role', async () => {
+    const mockBookings = [
+      {
+        id: '2',
+        trade_id: 'trade-1',
+        listing_id: null,
+        buyer_id: null,
+        seller_id: null,
+        booked_by: 'initiator-1',
+        date: '2026-05-01',
+        time_slot: '10:00-11:00',
+        location: 'Trade Facility — Room 2B',
+        status: 'pending',
+        booking_type: 'trade',
+        listings: null,
+        trades: {
+          id: 'trade-1',
+          initiator_id: 'initiator-1',
+          receiver_id: 'receiver-1',
+          offered_listing_id: 'offered-1',
+          requested_listing_id: 'requested-1',
+        },
+      },
+    ];
+
+    const mockUsers = [
+      { id: 'initiator-1', username: 'alice', email: 'alice@test.com' },
+      { id: 'receiver-1', username: 'bob', email: 'bob@test.com' },
+    ];
+
+    const mockTradeListings = [
+      { id: 'offered-1', title: 'Laptop', image_path: null },
+      { id: 'requested-1', title: 'Phone', image_path: null },
+    ];
+
+    const mockOrder = {
+      order: jest.fn().mockResolvedValue({ data: mockBookings, error: null }),
+    };
+
+    supabaseModule.supabase.from.mockImplementation((table) => {
+      if (table === 'bookings') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis(),
+          order: jest.fn().mockReturnValue(mockOrder),
+        };
+      }
+      if (table === 'users') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockResolvedValue({ data: mockUsers, error: null }),
+        };
+      }
+      if (table === 'listings') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockResolvedValue({ data: mockTradeListings, error: null }),
+        };
+      }
+      return {
+        select: jest.fn().mockResolvedValue({ data: [], error: null }),
+      };
+    });
+
+    render(<QueueView />);
+
+    await waitFor(() => {
+      // Trade type badge shown
+      expect(screen.getAllByText('Trade').length).toBeGreaterThan(0);
+      // Booking party shows booked_by user's username
+      expect(screen.getAllByText('alice').length).toBeGreaterThan(0);
+      // Trade items shown
+      expect(screen.getAllByText('Laptop ↔ Phone').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('should handle multiple bookings', async () => {
     const mockBookings = [
       {
         id: '1',
+        trade_id: null,
         listing_id: 'list-1',
         buyer_id: 'buyer-1',
         seller_id: 'seller-1',
+        booked_by: null,
         date: '2026-04-30',
         time_slot: '09:00-10:00',
         location: 'Library',
         status: 'pending',
-        listings: { id: 'list-1', title: 'Book A' },
+        booking_type: 'sale',
+        listings: { id: 'list-1', title: 'Book A', image_path: null },
+        trades: null,
       },
       {
         id: '2',
+        trade_id: null,
         listing_id: 'list-2',
         buyer_id: 'buyer-1',
         seller_id: 'seller-1',
+        booked_by: null,
         date: '2026-04-30',
         time_slot: '10:00-11:00',
         location: 'Cafe',
         status: 'confirmed',
-        listings: { id: 'list-2', title: 'Book B' },
+        booking_type: 'sale',
+        listings: { id: 'list-2', title: 'Book B', image_path: null },
+        trades: null,
       },
     ];
 
@@ -212,10 +275,7 @@ describe('QueueView', () => {
     ];
 
     const mockOrder = {
-      order: jest.fn().mockResolvedValue({
-        data: mockBookings,
-        error: null,
-      }),
+      order: jest.fn().mockResolvedValue({ data: mockBookings, error: null }),
     };
 
     supabaseModule.supabase.from.mockImplementation((table) => {
@@ -226,22 +286,14 @@ describe('QueueView', () => {
           order: jest.fn().mockReturnValue(mockOrder),
         };
       }
-
       if (table === 'users') {
         return {
           select: jest.fn().mockReturnThis(),
-          in: jest.fn().mockResolvedValue({
-            data: mockUsers,
-            error: null,
-          }),
+          in: jest.fn().mockResolvedValue({ data: mockUsers, error: null }),
         };
       }
-
       return {
-        select: jest.fn().mockResolvedValue({
-          data: [],
-          error: null,
-        }),
+        select: jest.fn().mockResolvedValue({ data: [], error: null }),
       };
     });
 
@@ -269,18 +321,12 @@ describe('QueueView', () => {
           order: jest.fn().mockReturnValue(mockOrder),
         };
       }
-
       return {
-        select: jest.fn().mockResolvedValue({
-          data: [],
-          error: null,
-        }),
+        select: jest.fn().mockResolvedValue({ data: [], error: null }),
       };
     });
 
-    const consoleErrorSpy = jest
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     render(<QueueView />);
 
@@ -294,26 +340,27 @@ describe('QueueView', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('should handle missing user data gracefully', async () => {
+  it('should handle missing user data gracefully — shows N/A', async () => {
     const mockBookings = [
       {
         id: '1',
+        trade_id: null,
         listing_id: 'list-1',
         buyer_id: 'buyer-1',
         seller_id: 'seller-1',
+        booked_by: null,
         date: '2026-04-30',
         time_slot: '09:00-10:00',
         location: 'Library',
         status: 'pending',
-        listings: { id: 'list-1', title: 'Physics Textbook' },
+        booking_type: 'sale',
+        listings: { id: 'list-1', title: 'Physics Textbook', image_path: null },
+        trades: null,
       },
     ];
 
     const mockOrder = {
-      order: jest.fn().mockResolvedValue({
-        data: mockBookings,
-        error: null,
-      }),
+      order: jest.fn().mockResolvedValue({ data: mockBookings, error: null }),
     };
 
     supabaseModule.supabase.from.mockImplementation((table) => {
@@ -324,22 +371,14 @@ describe('QueueView', () => {
           order: jest.fn().mockReturnValue(mockOrder),
         };
       }
-
       if (table === 'users') {
         return {
           select: jest.fn().mockReturnThis(),
-          in: jest.fn().mockResolvedValue({
-            data: [],
-            error: null,
-          }),
+          in: jest.fn().mockResolvedValue({ data: [], error: null }),
         };
       }
-
       return {
-        select: jest.fn().mockResolvedValue({
-          data: [],
-          error: null,
-        }),
+        select: jest.fn().mockResolvedValue({ data: [], error: null }),
       };
     });
 

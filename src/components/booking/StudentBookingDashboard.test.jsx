@@ -41,14 +41,29 @@ jest.mock('./CancelModal', () => ({ booking, onConfirm, onClose, loading }) =>
   ) : null
 );
 
+jest.mock('./BookingFlowTrades', () => ({ eligibleTrades, onConfirm, submitting }) => (
+  <div data-testid="booking-flow-trades">
+    <button
+      onClick={() =>
+        onConfirm({ tradeId: 'trade-1', date: '2024-09-15', timeSlot: '10:00', notes: '' })
+      }
+    >
+      Confirm trade booking
+    </button>
+    {submitting && <p>Submitting…</p>}
+  </div>
+));
+
 // ── Mock hooks ────────────────────────────────────────────────────────────
 const mockRefetch = jest.fn();
 
 jest.mock('../../hooks/useBookings', () => ({
   useBookings:            jest.fn(),
   useEligibleOrders:      jest.fn(),
+  useEligibleTrades:      jest.fn(),
   useSellerPendingOrders: jest.fn(),
   createBooking:          jest.fn(),
+  createTradeBooking:     jest.fn(),
   cancelBooking:          jest.fn(),
 }));
 
@@ -57,18 +72,20 @@ jest.mock('../../AuthContext', () => ({
 }));
 
 import {
-  useBookings, useEligibleOrders, useSellerPendingOrders,
-  createBooking, cancelBooking,
+  useBookings, useEligibleOrders, useEligibleTrades,
+  useSellerPendingOrders, createBooking, createTradeBooking, cancelBooking,
 } from '../../hooks/useBookings';
 
 // ── Default hook returns ──────────────────────────────────────────────────
 const defaultBookings = { bookings: [], loading: false, error: null, refetch: mockRefetch };
 const defaultOrders   = { orders: [{ orderId: 'order-1', buyerId: 'user-123', title: 'Textbook', sellerName: 'Alice' }], loading: false, error: null };
+const defaultTrades   = { trades: [], loading: false, error: null };
 const defaultPending  = { pendingOrders: [] };
 
 const setup = (props = {}) => {
   useBookings.mockReturnValue(defaultBookings);
   useEligibleOrders.mockReturnValue(defaultOrders);
+  useEligibleTrades.mockReturnValue(defaultTrades);
   useSellerPendingOrders.mockReturnValue(defaultPending);
   return render(<StudentBookingDashboard onClose={jest.fn()} {...props} />);
 };
@@ -144,6 +161,12 @@ describe('Tab navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: /My bookings/i }));
     expect(screen.getByRole('button', { name: /My bookings/i }).className).toContain('border-dark');
   });
+
+  test('switching to Trade exchanges tab shows BookingFlowTrades', () => {
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: /Trade exchanges/i }));
+    expect(screen.getByTestId('booking-flow-trades')).toBeInTheDocument();
+  });
 });
 
 // ===========================================================================
@@ -158,6 +181,7 @@ describe('Pending orders banner', () => {
   test('shows singular text for one pending order', () => {
     useBookings.mockReturnValue(defaultBookings);
     useEligibleOrders.mockReturnValue(defaultOrders);
+    useEligibleTrades.mockReturnValue(defaultTrades);
     useSellerPendingOrders.mockReturnValue({ pendingOrders: [{ id: 'p1' }] });
     render(<StudentBookingDashboard />);
     expect(screen.getByText(/You have 1 new order to drop off/i)).toBeInTheDocument();
@@ -166,6 +190,7 @@ describe('Pending orders banner', () => {
   test('shows plural text for multiple pending orders', () => {
     useBookings.mockReturnValue(defaultBookings);
     useEligibleOrders.mockReturnValue(defaultOrders);
+    useEligibleTrades.mockReturnValue(defaultTrades);
     useSellerPendingOrders.mockReturnValue({ pendingOrders: [{ id: 'p1' }, { id: 'p2' }] });
     render(<StudentBookingDashboard />);
     expect(screen.getByText(/You have 2 new orders to drop off/i)).toBeInTheDocument();
@@ -174,6 +199,7 @@ describe('Pending orders banner', () => {
   test('shows buyer payment instruction in banner', () => {
     useBookings.mockReturnValue(defaultBookings);
     useEligibleOrders.mockReturnValue(defaultOrders);
+    useEligibleTrades.mockReturnValue(defaultTrades);
     useSellerPendingOrders.mockReturnValue({ pendingOrders: [{ id: 'p1' }] });
     render(<StudentBookingDashboard />);
     expect(screen.getByText(/A buyer has paid for your item/i)).toBeInTheDocument();
@@ -187,6 +213,7 @@ describe('Orders loading state', () => {
   test('shows spinner when ordersLoading is true', () => {
     useBookings.mockReturnValue(defaultBookings);
     useEligibleOrders.mockReturnValue({ orders: [], loading: true, error: null });
+    useEligibleTrades.mockReturnValue(defaultTrades);
     useSellerPendingOrders.mockReturnValue(defaultPending);
     const { container } = render(<StudentBookingDashboard />);
     expect(container.querySelector('.animate-spin')).toBeInTheDocument();
@@ -195,6 +222,7 @@ describe('Orders loading state', () => {
   test('hides BookingFlow while orders are loading', () => {
     useBookings.mockReturnValue(defaultBookings);
     useEligibleOrders.mockReturnValue({ orders: [], loading: true, error: null });
+    useEligibleTrades.mockReturnValue(defaultTrades);
     useSellerPendingOrders.mockReturnValue(defaultPending);
     render(<StudentBookingDashboard />);
     expect(screen.queryByTestId('booking-flow')).not.toBeInTheDocument();
@@ -314,6 +342,7 @@ describe('Cancel booking flow', () => {
   beforeEach(() => {
     useBookings.mockReturnValue({ ...defaultBookings, bookings: [mockBooking] });
     useEligibleOrders.mockReturnValue(defaultOrders);
+    useEligibleTrades.mockReturnValue(defaultTrades);
     useSellerPendingOrders.mockReturnValue(defaultPending);
     cancelBooking.mockResolvedValue({});
   });

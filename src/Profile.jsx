@@ -189,6 +189,32 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
     try {
       setActionLoading(tradeId);
 
+      // If accepting the trade, mark both listings as removed
+      if (newStatus === 'accepted') {
+        const { data: tradeData, error: fetchError } = await supabase
+          .from('trades')
+          .select('offered_listing_id, requested_listing_id')
+          .eq('id', tradeId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        // Mark both listings as removed
+        const { error: error1 } = await supabase
+          .from('listings')
+          .update({ status: 'removed', updated_at: new Date().toISOString() })
+          .eq('id', tradeData.offered_listing_id);
+
+        if (error1) console.error('Error removing offered listing:', error1);
+
+        const { error: error2 } = await supabase
+          .from('listings')
+          .update({ status: 'removed', updated_at: new Date().toISOString() })
+          .eq('id', tradeData.requested_listing_id);
+
+        if (error2) console.error('Error removing requested listing:', error2);
+      }
+
       // If completing the trade, update listing statuses
       if (newStatus === 'completed') {
         // Fetch the trade to get listing IDs and parties
@@ -624,40 +650,6 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
                               </button>
                             </>
                           )}
-                        </section>
-                      )}
-                      {/* Accepted status - show Confirm/Complete buttons for receiver */}
-                      {trade.status === 'accepted' && !isSender && (
-                        <section className="flex gap-2 pt-2 border-t border-gray-100">
-                          <button
-                            onClick={() => handleTradeAction(trade.id, 'confirmed')}
-                            disabled={actionLoading === trade.id}
-                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                          >
-                            {actionLoading === trade.id ? (
-                              <Loader size={14} className="animate-spin" />
-                            ) : (
-                              <CheckCircle size={14} />
-                            )}
-                            Confirm
-                          </button>
-                        </section>
-                      )}
-                      {/* Confirmed status - show Complete button for both parties */}
-                      {trade.status === 'confirmed' && (
-                        <section className="flex gap-2 pt-2 border-t border-gray-100">
-                          <button
-                            onClick={() => handleTradeAction(trade.id, 'completed')}
-                            disabled={actionLoading === trade.id}
-                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                          >
-                            {actionLoading === trade.id ? (
-                              <Loader size={14} className="animate-spin" />
-                            ) : (
-                              <CircleDot size={14} />
-                            )}
-                            Mark Complete
-                          </button>
                         </section>
                       )}
                     </section>
