@@ -219,6 +219,17 @@ describe("Layout & static content", () => {
     ).toBeInTheDocument();
   });
 
+  test("renders Reports & Exports section heading", () => {
+    setup();
+    expect(within(getMain()).getByText("Reports & Exports")).toBeInTheDocument();
+  });
+
+  test("renders report export buttons", () => {
+    setup();
+    expect(screen.getByRole("button", { name: /Export Categories CSV/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Export Categories PDF/i })).toBeInTheDocument();
+  });
+
   test("renders loading state initially", () => {
     setup();
     expect(within(getMain()).getByText("Loading analytics...")).toBeInTheDocument();
