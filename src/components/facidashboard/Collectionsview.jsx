@@ -20,35 +20,33 @@ export default function CollectionsView({ user }) {
     const fetchCollections = async () => {
       setLoading(true);
       try {
-        // confirmed = item held by staff, get orders where buyer can now collect
-        const { data: ordersData, error: ordersError } = await supabase
-          .from('orders')
-          .select('id')
-          .eq('seller_status', 'dropped_off')
-          .eq('buyer_status', 'ready_for_collection');
-
-        if (ordersError) throw ordersError;
-        if (!ordersData || ordersData.length === 0) {
-          setBookings([]);
-          return;
-        }
-
-        const orderIds = ordersData.map(o => o.id);
-
-        // Fetch confirmed bookings for those orders
+        // confirmed = item held by staff, ready for collection
+        // For sales: get orders where seller has dropped off
+        // For trades: get bookings where both parties (for same trade) have confirmed
+        
         const { data: bookingsData, error: bookingsError } = await supabase
           .from('bookings')
           .select(`
             id,
+            trade_id,
             listing_id,
             order_id,
+            booked_by,
             buyer_id,
+            status,
+            booking_type,
             date,
             time_slot,
-            listings (id, title, image_path)
+            listings (id, title, image_path),
+            trades (
+              id,
+              initiator_id,
+              receiver_id,
+              offered_listing_id,
+              requested_listing_id
+            )
           `)
           .eq('status', 'confirmed')
-          .in('order_id', orderIds)
           .order('date', { ascending: true });
 
         if (bookingsError) throw bookingsError;
@@ -57,35 +55,136 @@ export default function CollectionsView({ user }) {
           return;
         }
 
-        // Fetch buyers manually — no FK on bookings.seller_id
-        const buyerIds = [...new Set(bookingsData.map(b => b.buyer_id).filter(Boolean))];
+        // Separate sale bookings and trade bookings
+        const saleBookings = bookingsData.filter(b => !b.trade_id);
+        const tradeBookings = bookingsData.filter(b => b.trade_id);
+
+        // For sales: check if order exists and has seller_status = 'dropped_off'
+        let salesToShow = [];
+        if (saleBookings.length > 0) {
+          const orderIds = saleBookings.map(b => b.order_id).filter(Boolean);
+          if (orderIds.length > 0) {
+            const { data: ordersData } = await supabase
+              .from('orders')
+              .select('id, seller_status, buyer_status')
+              .in('id', orderIds)
+              .eq('seller_status', 'dropped_off');
+
+            const validOrderIds = new Set((ordersData || []).map(o => o.id));
+            salesToShow = saleBookings.filter(b => validOrderIds.has(b.order_id));
+          }
+        }
+
+        // For trades: check that BOTH booking rows for the same trade_id have status='confirmed'
+        let tradesToShow = [];
+        if (tradeBookings.length > 0) {
+          const tradeIds = [...new Set(tradeBookings.map(b => b.trade_id))];
+          const { data: allTradeBookings } = await supabase
+            .from('bookings')
+            .select('trade_id, booked_by, status')
+            .in('trade_id', tradeIds);
+
+          const bookingsByTrade = (allTradeBookings || []).reduce((acc, b) => {
+            if (!acc[b.trade_id]) acc[b.trade_id] = [];
+            acc[b.trade_id].push(b);
+            return acc;
+          }, {});
+
+          // Only include trades where all bookings for that trade are confirmed
+          tradesToShow = tradeBookings.filter(b => {
+            const tradeBookingsForId = bookingsByTrade[b.trade_id] || [];
+            return tradeBookingsForId.length > 0 && tradeBookingsForId.every(tb => tb.status === 'confirmed');
+          });
+        }
+
+        const allBookings = [...salesToShow, ...tradesToShow];
+        if (allBookings.length === 0) {
+          setBookings([]);
+          return;
+        }
+
+        // Fetch all involved users
+        const userIds = [...new Set([
+          ...allBookings.map(b => b.buyer_id).filter(Boolean),
+          ...allBookings.map(b => b.booked_by).filter(Boolean),
+          ...allBookings.filter(b => b.trades).flatMap(b => [b.trades.initiator_id, b.trades.receiver_id]).filter(Boolean),
+        ])];
 
         const { data: usersData } = await supabase
           .from('users')
           .select('id, username, email')
-          .in('id', buyerIds);
+          .in('id', userIds);
 
         const userMap = (usersData || []).reduce((acc, u) => {
           acc[u.id] = u;
           return acc;
         }, {});
 
+        // For trades, fetch both offered and requested listings
+        const tradeIds = allBookings.filter(b => b.trade_id).map(b => b.trade_id);
+        let tradedListingMap = {};
+        if (tradeIds.length > 0) {
+          const listingIds = allBookings
+            .filter(b => b.trades)
+            .flatMap(b => [b.trades.offered_listing_id, b.trades.requested_listing_id])
+            .filter(Boolean);
+
+          const { data: listings } = await supabase
+            .from('listings')
+            .select('id, title, image_path')
+            .in('id', listingIds);
+
+          if (listings) {
+            tradedListingMap = listings.reduce((acc, l) => {
+              acc[l.id] = l;
+              return acc;
+            }, {});
+          }
+        }
+
         // Fetch payments via order_id
-        const { data: paymentsData } = await supabase
-          .from('payments')
-          .select('id, order_id, cash_shortfall, cash_settled')
-          .in('order_id', orderIds);
+        const orderIds = allBookings.map(b => b.order_id).filter(Boolean);
+        let paymentMap = {};
+        if (orderIds.length > 0) {
+          const { data: paymentsData } = await supabase
+            .from('payments')
+            .select('id, order_id, cash_shortfall, cash_settled')
+            .in('order_id', orderIds);
 
-        const paymentMap = (paymentsData || []).reduce((acc, p) => {
-          acc[p.order_id] = p;
-          return acc;
-        }, {});
+          paymentMap = (paymentsData || []).reduce((acc, p) => {
+            acc[p.order_id] = p;
+            return acc;
+          }, {});
+        }
 
-        setBookings(bookingsData.map(b => ({
-          ...b,
-          buyer: userMap[b.buyer_id] ?? null,
-          payment: paymentMap[b.order_id] ?? null,
-        })));
+        const processedBookings = allBookings.map(b => {
+          const isTrade = b.trade_id && b.trades;
+          let offeredListing = null;
+          let requestedListing = null;
+
+          if (isTrade) {
+            const trade = b.trades;
+            offeredListing = tradedListingMap[trade.offered_listing_id];
+            requestedListing = tradedListingMap[trade.requested_listing_id];
+          }
+
+          return {
+            ...b,
+            buyer: userMap[b.buyer_id] ?? null,
+            bookedByUser: userMap[b.booked_by] ?? null,
+            payment: paymentMap[b.order_id] ?? null,
+            type: isTrade ? 'Trade' : 'Sale',
+            offeredListing,
+            requestedListing,
+          };
+        });
+        
+        console.log('bookings sample:', processedBookings[0]);
+        console.log('trades data:', processedBookings[0]?.trades);
+        console.log('offeredListing:', processedBookings[0]?.offeredListing);
+        console.log('requestedListing:', processedBookings[0]?.requestedListing);
+        
+        setBookings(processedBookings);
       } catch (err) {
         console.error('Collections fetch error:', err);
         setBookings([]);
@@ -97,36 +196,49 @@ export default function CollectionsView({ user }) {
     fetchCollections();
   }, []);
 
-  const handleReleaseItem = async (booking) => {
-  setActionLoading(booking.id);
-  try {
-    const { error: orderError } = await supabase
-      .from('orders')
-      .update({ buyer_status: 'collected', status: 'completed' })
-      .eq('id', booking.order_id);
+const handleReleaseItem = async (booking) => {
+    setActionLoading(booking.id);
+    try {
+      if (booking.type === 'Trade') {
+        const { error: bookingsError } = await supabase
+          .from('bookings')
+          .update({ status: 'collected' })
+          .eq('trade_id', booking.trade_id);
 
-    if (orderError) throw orderError;
+        if (bookingsError) throw bookingsError;
 
-    const { error: bookingError } = await supabase
-      .from('bookings')
-      .update({ status: 'collected' })
-      .eq('id', booking.id);
+        const { error: tradeError } = await supabase
+          .from('trades')
+          .update({ status: 'completed' })
+          .eq('id', booking.trade_id);
 
-    if (bookingError) throw bookingError;
+        if (tradeError) throw tradeError;
+      } else {
+        const { error: orderError } = await supabase
+          .from('orders')
+          .update({ buyer_status: 'collected', status: 'completed' })
+          .eq('id', booking.order_id);
 
-    setBookings(prev => prev.filter(b => b.id !== booking.id));
+        if (orderError) throw orderError;
 
-    // ← trigger review flow
-    navigate(`/review/${booking.order_id}`);
+        const { error: bookingError } = await supabase
+          .from('bookings')
+          .update({ status: 'collected' })
+          .eq('id', booking.id);
 
-  } catch (err) {
-    console.error('Release item error:', err);
-    alert('Failed to release item. Please try again.');
-  } finally {
-    setActionLoading(null);
-    setSelectedBooking(null);
-  }
-};
+        if (bookingError) throw bookingError;
+      }
+
+      setBookings(prev => prev.filter(b => b.id !== booking.id));
+      navigate(`/review/${booking.order_id}`);
+    } catch (err) {
+      console.error('Release item error:', err);
+      alert('Failed to release item. Please try again.');
+    } finally {
+      setActionLoading(null);
+      setSelectedBooking(null);
+    }
+  };
 
   const handleMarkCashSettled = async (booking) => {
     setActionLoading(`cash-${booking.id}`);
@@ -173,7 +285,8 @@ export default function CollectionsView({ user }) {
             <tr className="border-b border-light bg-light">
               <th className="px-3 sm:px-6 py-3 sm:py-4"></th>
               <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Item</th>
-              <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Buyer</th>
+              <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Type</th>
+              <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Buyer/Party</th>
               <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Date</th>
               <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Time</th>
               <th className="px-3 sm:px-6 py-3 sm:py-4 text-left font-semibold text-dark uppercase tracking-wider">Payment</th>
@@ -189,11 +302,31 @@ export default function CollectionsView({ user }) {
               </tr>
             ) : (
               bookings.map((booking) => {
-                const imageUrl = getImageUrl(booking.listings);
+                const partyDisplay = booking.type === 'Trade'
+                  ? (booking.bookedByUser?.username || booking.bookedByUser?.email?.split('@')[0] || 'Unknown')
+                  : (booking.buyer?.username || booking.buyer?.email?.split('@')[0] || 'N/A');
+                const primaryListing = booking.type === 'Trade'
+                  ? booking.offeredListing
+                  : booking.listings;
+                const imageUrl = getImageUrl(primaryListing);
+                
+                // For trades, show what this party collects and drops off
+                const isInitiator = booking.booked_by === booking.trades?.initiator_id;
+                const collecting = isInitiator
+                  ? booking.requestedListing?.title
+                  : booking.offeredListing?.title;
+                const droppingOff = isInitiator
+                  ? booking.offeredListing?.title
+                  : booking.requestedListing?.title;
+                
+                const displayTitle = booking.type === 'Trade'
+                  ? `Collects: ${collecting || 'N/A'} · Drops off: ${droppingOff || 'N/A'}`
+                  : booking.listings?.title || 'N/A';
+                
                 const payment = booking.payment;
                 const isPaymentClear = !payment || (payment.cash_shortfall <= 0 || payment.cash_settled);
                 const hasCashOutstanding = payment && payment.cash_shortfall > 0 && !payment.cash_settled;
-                const canRelease = isPaymentClear || !hasCashOutstanding;
+                const canRelease = booking.type === 'Trade' || isPaymentClear || !hasCashOutstanding;
 
                 return (
                   <tr key={booking.id} className="border-b border-light hover:bg-light/50 transition-colors">
@@ -204,16 +337,25 @@ export default function CollectionsView({ user }) {
                         <div className="w-10 h-10 rounded-lg bg-light flex-shrink-0" />
                       )}
                     </td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 font-medium text-dark text-xs sm:text-sm">{booking.listings?.title || 'N/A'}</td>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 font-medium text-dark text-xs sm:text-sm">{displayTitle}</td>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      <span className={`inline-flex rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${badgeClasses(booking.type)}`}>
+                        {booking.type}
+                      </span>
+                    </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-text-muted text-xs sm:text-sm">
-                      {booking.buyer?.username || booking.buyer?.email?.split('@')[0] || 'N/A'}
+                      {partyDisplay}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-text-muted text-xs sm:text-sm">{formatDate(booking.date)}</td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-text-muted text-xs sm:text-sm">{formatTime(booking.time_slot)}</td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
-                      <span className={`inline-flex rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${badgeClasses(isPaymentClear ? 'Payment clear' : 'Cash outstanding')}`}>
-                        {isPaymentClear ? 'Clear' : 'Outstanding'}
-                      </span>
+                      {booking.type === 'Trade' ? (
+                        <span className="text-xs text-gray-500">N/A</span>
+                      ) : (
+                        <span className={`inline-flex rounded-full px-2 sm:px-3 py-1 text-xs font-semibold ${badgeClasses(isPaymentClear ? 'Payment clear' : 'Cash outstanding')}`}>
+                          {isPaymentClear ? 'Clear' : 'Outstanding'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
@@ -224,7 +366,7 @@ export default function CollectionsView({ user }) {
                         >
                           {actionLoading === booking.id ? 'Processing...' : 'Release'}
                         </button>
-                        {hasCashOutstanding && (
+                        {booking.type === 'Sale' && hasCashOutstanding && (
                           <button
                             onClick={() => handleMarkCashSettled(booking)}
                             disabled={actionLoading === `cash-${booking.id}`}
@@ -251,7 +393,26 @@ export default function CollectionsView({ user }) {
           </div>
         ) : (
           bookings.map((booking) => {
-            const imageUrl = getImageUrl(booking.listings);
+            const partyDisplay = booking.type === 'Trade'
+              ? (booking.bookedByUser?.username || booking.bookedByUser?.email?.split('@')[0] || 'Unknown')
+              : (booking.buyer?.username || booking.buyer?.email?.split('@')[0] || 'N/A');
+            const primaryListing = booking.type === 'Trade'
+              ? booking.offeredListing
+              : booking.listings;
+            const imageUrl = getImageUrl(primaryListing);
+            
+            // For trades, show what this party collects and drops off
+            const isInitiator = booking.booked_by === booking.trades?.initiator_id;
+            const collecting = isInitiator
+              ? booking.requestedListing?.title
+              : booking.offeredListing?.title;
+            const droppingOff = isInitiator
+              ? booking.offeredListing?.title
+              : booking.requestedListing?.title;
+            
+            const displayTitle = booking.type === 'Trade'
+              ? `Collects: ${collecting || 'N/A'} · Drops off: ${droppingOff || 'N/A'}`
+              : booking.listings?.title || 'N/A';
             return (
             <button
               key={booking.id}
@@ -265,9 +426,9 @@ export default function CollectionsView({ user }) {
                   <div className="w-10 h-10 rounded-lg bg-light flex-shrink-0" />
                 )}
                 <div>
-                  <p className="font-medium text-dark text-sm">{booking.listings?.title || 'N/A'}</p>
+                  <p className="font-medium text-dark text-sm">{displayTitle}</p>
                   <p className="text-xs text-text-muted mt-1">
-                    {booking.buyer?.username || booking.buyer?.email?.split('@')[0] || 'N/A'}
+                    {partyDisplay}
                   </p>
                 </div>
               </div>
@@ -292,7 +453,10 @@ export default function CollectionsView({ user }) {
             />
             <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl bg-white p-6 space-y-4 shadow-xl">
               {(() => {
-                const imageUrl = getImageUrl(selectedBooking.listings);
+                const primaryListing = selectedBooking.type === 'Trade'
+                  ? selectedBooking.offeredListing
+                  : selectedBooking.listings;
+                const imageUrl = getImageUrl(primaryListing);
                 return (
                   <>
                     {imageUrl ? (
@@ -307,7 +471,21 @@ export default function CollectionsView({ user }) {
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-text-muted">Item</span>
-                  <span className="font-medium text-dark">{selectedBooking.listings?.title || 'N/A'}</span>
+                <span className="font-medium text-dark">
+                  {selectedBooking.type === 'Trade' 
+                    ? (() => {
+                        const isInitiator = selectedBooking.booked_by === selectedBooking.trades?.initiator_id;
+                        const collecting = isInitiator
+                          ? selectedBooking.requestedListing?.title
+                          : selectedBooking.offeredListing?.title;
+                        const droppingOff = isInitiator
+                          ? selectedBooking.offeredListing?.title
+                          : selectedBooking.requestedListing?.title;
+                        return `Collects: ${collecting || 'N/A'} · Drops off: ${droppingOff || 'N/A'}`;
+                      })()
+                    : selectedBooking.listings?.title || 'N/A'
+                  }
+                </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-text-muted">Buyer</span>

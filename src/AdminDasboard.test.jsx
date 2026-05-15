@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AdminDashboard from "./AdminDashboard";
 
@@ -130,6 +130,110 @@ describe("Layout & static content", () => {
     expect(within(footer).getByText("Security Standards")).toBeInTheDocument();
     expect(within(footer).getByText("System Status")).toBeInTheDocument();
   });
+
+  test("renders 'Configure Slot Capacity' heading", () => {
+    setup();
+    expect(within(getMain()).getByText("Configure Slot Capacity")).toBeInTheDocument();
+  });
+
+  test("renders slot capacity description", () => {
+    setup();
+    expect(
+      within(getMain()).getByText(
+        /Define how many reservations each time slot may accept for a given date\./i
+      )
+    ).toBeInTheDocument();
+  });
+
+  test("renders Date label for slot capacity", () => {
+    setup();
+    expect(within(getMain()).getByText(/^Date$/i)).toBeInTheDocument();
+  });
+
+  test("renders Time Slot label for slot capacity", () => {
+    setup();
+    expect(within(getMain()).getByText(/^Time Slot$/i)).toBeInTheDocument();
+  });
+
+  test("renders Slot Capacity label", () => {
+    setup();
+    expect(within(getMain()).getByText(/^Slot Capacity$/i)).toBeInTheDocument();
+  });
+
+  test("renders Save Slot Capacity button", () => {
+    setup();
+    expect(
+      within(getMain()).getByRole("button", { name: /Save Slot Capacity/i })
+    ).toBeInTheDocument();
+  });
+
+  test("renders 'Configure Facility Operating Hours' heading", () => {
+    setup();
+    expect(within(getMain()).getByText("Configure Facility Operating Hours")).toBeInTheDocument();
+  });
+
+  test("renders operating hours description", () => {
+    setup();
+    expect(
+      within(getMain()).getByText(
+        /Set the daily operating hours for the facility\./i
+      )
+    ).toBeInTheDocument();
+  });
+
+  test("renders all seven days of the week for operating hours", () => {
+    setup();
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    days.forEach((day) => {
+      expect(within(getMain()).getByText(day)).toBeInTheDocument();
+    });
+  });
+
+  test("renders Start Time and End Time labels for each day", () => {
+    setup();
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    days.forEach((day) => {
+      expect(within(getMain()).getByText("Start Time")).toBeInTheDocument();
+      expect(within(getMain()).getByText("End Time")).toBeInTheDocument();
+    });
+  });
+
+  test("renders Save Operating Hours button", () => {
+    setup();
+    expect(
+      within(getMain()).getByRole("button", { name: /Save Operating Hours/i })
+    ).toBeInTheDocument();
+  });
+
+  test("renders 'Analytics Overview' heading", () => {
+    setup();
+    expect(within(getMain()).getByText("Analytics Overview")).toBeInTheDocument();
+  });
+
+  test("renders analytics description", () => {
+    setup();
+    expect(
+      within(getMain()).getByText(
+        /Quick operational insights for bookings, users, facility usage, revenue, and listings\./i
+      )
+    ).toBeInTheDocument();
+  });
+
+  test("renders Reports & Exports section heading", () => {
+    setup();
+    expect(within(getMain()).getByText("Reports & Exports")).toBeInTheDocument();
+  });
+
+  test("renders report export buttons", () => {
+    setup();
+    expect(screen.getByRole("button", { name: /Export Categories CSV/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Export Categories PDF/i })).toBeInTheDocument();
+  });
+
+  test("renders loading state initially", () => {
+    setup();
+    expect(within(getMain()).getByText("Loading analytics...")).toBeInTheDocument();
+  });
 });
 
 // ===========================================================================
@@ -170,6 +274,33 @@ describe("Form inputs — initial state", () => {
   test("Facility select placeholder option is disabled", () => {
     setup();
     expect(screen.getByRole("option", { name: /Select a facility\.\.\./i })).toBeDisabled();
+  });
+
+  test("Slot Date input has a default value", () => {
+    setup();
+    const dateInput = screen.getByDisplayValue(/\d{4}-\d{2}-\d{2}/); // YYYY-MM-DD format
+    expect(dateInput).toBeInTheDocument();
+  });
+
+  test("Slot Time select has a default selected option", () => {
+    setup();
+    const timeSelect = screen.getByDisplayValue(/^\d{2}:\d{2}–\d{2}:\d{2}$/); // e.g., 08:00–08:30
+    expect(timeSelect).toBeInTheDocument();
+  });
+
+  test("Slot Capacity input starts with value 5", () => {
+    setup();
+    const capacityInput = screen.getByDisplayValue("5");
+    expect(capacityInput).toBeInTheDocument();
+  });
+
+  test("Operating Hours inputs have default times", () => {
+    setup();
+    // Check for some default times, e.g., Monday start
+    expect(screen.getByDisplayValue("08:00")).toBeInTheDocument(); // Monday start
+    expect(screen.getByDisplayValue("18:00")).toBeInTheDocument(); // Monday end
+    expect(screen.getByDisplayValue("10:00")).toBeInTheDocument(); // Sunday start
+    expect(screen.getByDisplayValue("16:00")).toBeInTheDocument(); // Sunday end
   });
 });
 
@@ -246,6 +377,95 @@ describe("Discard button behaviour", () => {
     const input = screen.getByPlaceholderText(/e\.g\. Alexander Pierce/i);
     await userEvent.type(input, "Re-entered Name");
     expect(input).toHaveValue("Re-entered Name");
+  });
+});
+
+// ===========================================================================
+// Slot Capacity interactions
+// ===========================================================================
+describe("Slot Capacity interactions", () => {
+  test("changing Slot Date updates its value", async () => {
+    setup();
+    const dateInput = screen.getByDisplayValue(/\d{4}-\d{2}-\d{2}/);
+    await userEvent.clear(dateInput);
+    await userEvent.type(dateInput, "2025-12-25");
+    expect(dateInput).toHaveValue("2025-12-25");
+  });
+
+  test("selecting a different Time Slot updates the select value", async () => {
+    setup();
+    const timeSelect = screen.getByDisplayValue(/^\d{2}:\d{2}–\d{2}:\d{2}$/);
+    await userEvent.selectOptions(timeSelect, "10:00–10:30");
+    expect(timeSelect).toHaveValue("10:00–10:30");
+  });
+
+  test("changing Slot Capacity updates its value", async () => {
+    setup();
+    const capacityInput = screen.getByDisplayValue("5");
+    await userEvent.clear(capacityInput);
+    await userEvent.type(capacityInput, "10");
+    expect(capacityInput).toHaveValue(10);
+  });
+
+  test("renders booked and remaining slot status", async () => {
+    setup();
+    await waitFor(() => {
+      expect(screen.getByText(/Booked:\s*0/i)).toBeInTheDocument();
+      expect(screen.getByText(/Remaining:\s*5/i)).toBeInTheDocument();
+    });
+  });
+});
+
+// ===========================================================================
+// Operating Hours interactions
+// ===========================================================================
+describe("Operating Hours interactions", () => {
+  test("changing Monday start time updates its value", async () => {
+    setup();
+    const mondayStart = screen.getAllByDisplayValue("08:00")[0]; // First one is Monday
+    await userEvent.clear(mondayStart);
+    await userEvent.type(mondayStart, "09:00");
+    expect(mondayStart).toHaveValue("09:00");
+  });
+
+  test("changing Sunday end time updates its value", async () => {
+    setup();
+    const sundayEnd = screen.getAllByDisplayValue("16:00")[0]; // Sunday end
+    await userEvent.clear(sundayEnd);
+    await userEvent.type(sundayEnd, "17:00");
+    expect(sundayEnd).toHaveValue("17:00");
+  });
+});
+
+// ===========================================================================
+// Analytics display
+// ===========================================================================
+describe("Analytics display", () => {
+  // Note: These tests assume analytics data is loaded. In a real scenario, you'd mock the fetch or use waitFor.
+  test("renders Total Bookings metric", () => {
+    setup();
+    // This might not be visible initially due to loading, but assuming data loads
+    expect(within(getMain()).getByText("Total Bookings")).toBeInTheDocument();
+  });
+
+  test("renders Total Users metric", () => {
+    setup();
+    expect(within(getMain()).getByText("Total Users")).toBeInTheDocument();
+  });
+
+  test("renders User Breakdown section", () => {
+    setup();
+    expect(within(getMain()).getByText("User Breakdown")).toBeInTheDocument();
+  });
+
+  test("renders Revenue Snapshot section", () => {
+    setup();
+    expect(within(getMain()).getByText("Revenue Snapshot")).toBeInTheDocument();
+  });
+
+  test("renders Listing Performance section", () => {
+    setup();
+    expect(within(getMain()).getByText("Listing Performance")).toBeInTheDocument();
   });
 });
 

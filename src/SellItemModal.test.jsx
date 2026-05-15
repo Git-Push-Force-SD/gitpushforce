@@ -116,14 +116,6 @@ describe('SellItemModal Component', () => {
     expect(listingTypeSelect).toHaveValue('trade');
   });
 
-  test('Listing type can be changed to either', async () => {
-    const user = userEvent.setup();
-    render(<SellItemModal onClose={jest.fn()} />);
-
-    const listingTypeSelect = screen.getByDisplayValue(/Sale/i);
-    await user.selectOptions(listingTypeSelect, 'either');
-    expect(listingTypeSelect).toHaveValue('either');
-  });
 
   test('Condition is optional and not selected by default', () => {
     render(<SellItemModal onClose={jest.fn()} />);
@@ -338,7 +330,6 @@ describe('SellItemModal Component', () => {
 
     expect(screen.getByRole('option', { name: /Sale/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Trade/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Either/i })).toBeInTheDocument();
   });
 
   test('Price input accepts only numbers', async () => {

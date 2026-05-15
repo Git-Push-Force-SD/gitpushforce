@@ -24,6 +24,7 @@ module.exports = {
   ],
   transform: {
     '^.+\\.(js|jsx)$': 'babel-jest',
-  },
-  moduleFileExtensions: ['js', 'jsx', 'json'],
+  },  transformIgnorePatterns: [
+    '/node_modules/(?!(jspdf)/)',
+  ],  moduleFileExtensions: ['js', 'jsx', 'json'],
 };

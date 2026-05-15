@@ -114,24 +114,23 @@ export function useEligibleOrders(userId) {
       try {
         // 1. Get all paid orders for this buyer
         const { data: paidOrders, error: ordersError } = await supabase
-  .from('orders')
-  .select(`
-    id,
-    listing_id,
-    status,
-    amount_due,
-    placed_at,
-    listings (
-      id,
-      title,
-      image_path,
-      seller_id,
-      price
-    )
-  `)
-   .eq('status', 'paid');
-
-  
+        .from('orders')
+          .select(`
+            id,
+            buyer_id,
+            listing_id,
+            status,
+            amount_due,
+            placed_at,
+            listings (
+              id,
+              title,
+              image_path,
+              seller_id,
+              price
+            )
+          `)
+          .eq('status', 'paid');
 
         // 2. Get order IDs that already have an active booking
         const orderIds = paidOrders.map(o => o.id);
@@ -167,6 +166,7 @@ export function useEligibleOrders(userId) {
 
         const formatted = eligible.map(o => ({
           orderId:    o.id,
+          buyerId:    o.buyer_id,
           listingId:  o.listing_id,
           title:      o.listings?.title || 'Unknown Item',
           sellerId:   o.listings?.seller_id,
@@ -333,6 +333,7 @@ export async function cancelBooking({ bookingId, orderId, userId }) {
     .update({ status: 'paid' })
     .eq('id', orderId);
 }
+
 // ─── useSellerPendingOrders ───────────────────────────────────────────────────
 export function useSellerPendingOrders(userId) {
   const [pendingOrders, setPendingOrders] = useState([]);

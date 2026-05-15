@@ -176,7 +176,7 @@ function Landing() {
         </header>
 
         {/* 1. Bento Hero Section */}
-        <section className="px-5 md:px-10 pb-16 w-full">
+        <section className="px-5 md:px-10 pb-16 w-full max-w-[1400px] mx-auto">
           <section className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 min-h-[65vh]">
 
             {/* Left Large Column */}
@@ -262,7 +262,7 @@ function Landing() {
         </section>
 
         {/* 2. Asymmetrical Grid */}
-        <section className="py-24 px-5 md:px-10 w-full">
+        <section className="py-24 px-5 md:px-10 w-full max-w-[1400px] mx-auto">
           <section className="flex flex-col md:grid md:grid-cols-12 gap-8">
 
             {/* Card 1 */}
@@ -311,9 +311,18 @@ function Landing() {
 
         {/* 3. Stacked Text Parallax Section */}
         <section className="py-20 bg-white relative overflow-hidden">
+          <RevealOnScroll>
+            <section className="mb-16 text-center">
+              <h2 className="text-[1.5rem] font-semibold tracking-[-0.5px]">Designed for Students,<br/>Built For Campus.</h2>
+            </section>
+          </RevealOnScroll>
 
-          <section className="flex flex-row items-center justify-center relative leading-[0.9] gap-10">
-            <img src="/Images/thematrix.jpeg" alt="Students" className="w-[60vw] max-w-[450px] rounded-xl z-10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]" />
+          <section className="flex flex-col items-center relative leading-[0.9]">
+            <img
+              src="/Images/thematrix.jpeg"
+              alt="Students"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] md:w-[40vw] lg:w-[30vw] max-w-[450px] h-[200px] md:h-[260px] rounded-xl z-10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] object-cover object-top"
+            />
             <section className="flex flex-col">
               <section className="text-[10vw] font-display text-outline relative whitespace-nowrap" style={parallaxStyle(-0.05)}>TEXTBOOKS<span className="inline-block w-[2vw] h-[2vw] rounded-full bg-primary absolute -right-[3vw] top-[20%]"></span></section>
               <section className="text-[10vw] font-display text-dark relative whitespace-nowrap" style={parallaxStyle(0.08)}>ELECTRONICS<span className="inline-block w-[2vw] h-[2vw] rounded-full bg-dark absolute -right-[3vw] top-[20%]"></span></section>
@@ -325,15 +334,15 @@ function Landing() {
 
         {/* 4. Rounded Feature Showcase */}
         <section className="py-20 px-5 md:px-10 w-full">
-          <RevealOnScroll className="rounded-[32px] overflow-hidden relative flex min-h-[600px] bg-white text-white">
+          <RevealOnScroll className="rounded-[32px] overflow-hidden relative flex min-h-[600px] bg-dark text-white">
 
             <section className="absolute inset-0 z-0">
               <img
-                src="/Images/whitetower.jpeg"
+                src="/Images/msb.jpeg"
                 alt="Students on campus"
-                className="w-full h-full object-contain object-center opacity-80"
+                className="w-full h-full object-cover"
               />
-              
+              <section className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/30"></section>
             </section>
 
             <section className="w-full flex flex-col md:flex-row justify-between items-start md:items-center p-10 md:p-20 z-10 relative">
@@ -343,11 +352,11 @@ function Landing() {
                   TRUSTED SYSTEM
                 </section>
 
-                <h2 className="text-2xl md:text-[2.5rem] text-black leading-[0.9] uppercase mb-2 font-display">
+                <h2 className="text-4xl md:text-[4rem] text-white leading-[0.9] uppercase mb-6 font-display">
                   Secure Campus<br />Exchange<br />System
                 </h2>
 
-                <p className="opacity-80 max-w-[300px] text-black leading-relaxed text-[1.1rem]">
+                <p className="opacity-80 max-w-[300px] leading-relaxed text-[1.1rem]">
                   Every transaction is handled through a structured campus system, ensuring items are exchanged securely without direct meetups between students.
                 </p>
               </section>
@@ -359,7 +368,7 @@ function Landing() {
         </section>
 
         {/* 5. Minimalist Product Browse Grid */}
-        <section className="py-24 px-5 md:px-10 w-full">
+        <section className="py-24 px-5 md:px-10 w-full max-w-[1400px] mx-auto">
           <RevealOnScroll>
             <h2 className="text-center text-[2rem] font-bold mb-10 uppercase tracking-[-0.02em]">Browse The Feed</h2>
           </RevealOnScroll>

@@ -64,20 +64,21 @@ const BookingFlow = ({ eligibleOrders, onConfirm, submitting }) => {
     setStep(2);
   };
 
-  const handleSubmit = () => {
-  onConfirm({
-    orderId:    selectedOrder.orderId,
-    sellerId:   selectedOrder.sellerId,
-    listingId:  selectedOrder.listingId,
-    date:       selectedDate,
-    timeSlot:   selectedSlot,
-    notes,
-  });
-  setSlotRefreshKey(k => k + 1);
-  setSelectedSlot(null);
-  setStep(1);
-  setSelectedDate(null);
-};
+const handleSubmit = () => {
+    onConfirm({
+      orderId:   selectedOrder.orderId,
+      buyerId:   selectedOrder.buyerId,
+      sellerId:  selectedOrder.sellerId,
+      listingId: selectedOrder.listingId,
+      date:      selectedDate,
+      timeSlot:  selectedSlot,
+      notes,
+    });
+    setSlotRefreshKey(k => k + 1);
+    setSelectedSlot(null);
+    setStep(1);
+    setSelectedDate(null);
+  };
 
   const formattedDate = selectedDate
     ? new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-ZA', {

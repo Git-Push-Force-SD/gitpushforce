@@ -26,6 +26,10 @@ class MockIntersectionObserver {
 global.IntersectionObserver = MockIntersectionObserver;
 window.IntersectionObserver = MockIntersectionObserver;
 
+const util = require('util');
+global.TextEncoder = util.TextEncoder;
+global.TextDecoder = util.TextDecoder;
+
 // Mock window.location
 delete window.location;
 window.location = { 
