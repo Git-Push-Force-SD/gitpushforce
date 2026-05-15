@@ -8,6 +8,7 @@ export default defineConfig({
       '/create-checkout-session': 'http://localhost:3000',
       '/checkout-session': 'http://localhost:3000',
       '/bookings': 'http://localhost:3000',
+      '/mark-payment-complete':   'http://localhost:3000',
     }
   }
 })

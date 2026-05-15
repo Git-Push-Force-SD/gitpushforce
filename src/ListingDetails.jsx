@@ -44,7 +44,7 @@ const ListingDetails = ({ user }) => {
           setLoading(false);
           return;
         }
-        
+
         setListing(listingData);
 
         const { data: sellerData, error: sellerError } = await supabase
@@ -52,7 +52,7 @@ const ListingDetails = ({ user }) => {
           .select('id, username, email')
           .eq('id', listingData.seller_id)
           .single();
-          
+
         if (!sellerError && sellerData) {
           setSeller(sellerData);
         }
@@ -82,12 +82,13 @@ const ListingDetails = ({ user }) => {
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     return created.toLocaleDateString('en-ZA');
   };
-    const handleBuy = async () => {
+
+  const handleBuy = async () => {
     if (!authUser) { navigate('/login'); return; }
-    
+
     const amount = parseFloat(offerAmount);
     if (!offerAmount || isNaN(amount) || amount <= 0) {
-      alert("Please enter a valid amount greater than 0.");
+      alert('Please enter a valid amount greater than 0.');
       return;
     }
 
@@ -98,8 +99,7 @@ const ListingDetails = ({ user }) => {
 
     setBuyLoading(true);
     try {
-      // 1. Check if a pending order already exists for this buyer and listing
-      const { data: existingOrder, error: existingOrderError } = await supabase
+      const { data: existingOrder } = await supabase
         .from('orders')
         .select('id')
         .eq('buyer_id', authUser.id)
@@ -109,10 +109,8 @@ const ListingDetails = ({ user }) => {
 
       let order;
       if (existingOrder) {
-        // Reuse existing pending order
         order = existingOrder;
       } else {
-        // Create new order only if no pending one exists
         const { data: newOrder, error: orderError } = await supabase
           .from('orders')
           .insert({
@@ -130,28 +128,15 @@ const ListingDetails = ({ user }) => {
         order = newOrder;
       }
 
-      // //2.Send order_id to Stripe as metadata
-      // const res = await fetch('/create-checkout-session', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ 
-      //     price: parseFloat(offerAmount), 
-      //     name: listing.title,
-      //     paymentType: 'custom'
-
-      // 2. Send order_id to Stripe as metadata
       const res = await fetch('/create-checkout-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        price:     amount,
-        name:      listing.title,
-        order_id:  order.id,  // ← pass order id
-      }),
-          
-        });
-      
-
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          price:    amount,
+          name:     listing.title,
+          order_id: order.id,
+        }),
+      });
 
       const data = await res.json();
       if (!data.url) throw new Error(data.error || 'No checkout URL');
@@ -164,10 +149,7 @@ const ListingDetails = ({ user }) => {
   };
 
   const handleMessageSeller = async () => {
-    if (!authUser) {
-      navigate('/login');
-      return;
-    }
+    if (!authUser) { navigate('/login'); return; }
 
     if (authUser.id === seller?.id) {
       alert('You cannot message yourself');
@@ -178,9 +160,9 @@ const ListingDetails = ({ user }) => {
       const conversationId = await getOrCreateConversation(id, seller.id, authUser.id);
       navigate(`/messages/${conversationId}`, {
         state: {
-          receiverId: seller.id,
+          receiverId:   seller.id,
           receiverName: seller.username || seller.email?.split('@')[0],
-          listingId: id,
+          listingId:    id,
         },
       });
     } catch (err) {
@@ -209,21 +191,13 @@ const ListingDetails = ({ user }) => {
   };
 
   const resetTradeForm = () => {
-    setTradeForm({
-      title: '',
-      description: '',
-      category: '',
-      condition: '',
-    });
+    setTradeForm({ title: '', description: '', category: '', condition: '' });
     setTradeImageFile(null);
     setTradeUploadError(null);
   };
 
   const openTradeModal = () => {
-    if (!authUser) {
-      navigate('/login');
-      return;
-    }
+    if (!authUser) { navigate('/login'); return; }
     setShowTradeModal(true);
   };
 
@@ -239,10 +213,7 @@ const ListingDetails = ({ user }) => {
 
   const handleSubmitTrade = async (e) => {
     e.preventDefault();
-    if (!authUser) {
-      navigate('/login');
-      return;
-    }
+    if (!authUser) { navigate('/login'); return; }
 
     if (!listing?.id || !listing?.seller_id) {
       alert('Listing data is unavailable. Please refresh and try again.');
@@ -277,15 +248,14 @@ const ListingDetails = ({ user }) => {
       const { data: offeredListing, error: offeredListingError } = await supabase
         .from('listings')
         .insert({
-          seller_id: authUser.id,
-          title: tradeForm.title.trim(),
-          description: tradeForm.description.trim(),
-          price: 0,
-          category: tradeForm.category,
-          condition: tradeForm.condition,
-          image_path: fileName,
-          // Keep trade-offer listings hidden from public feeds.
-          status: 'removed',
+          seller_id:    authUser.id,
+          title:        tradeForm.title.trim(),
+          description:  tradeForm.description.trim(),
+          price:        0,
+          category:     tradeForm.category,
+          condition:    tradeForm.condition,
+          image_path:   fileName,
+          status:       'removed',
           listing_type: 'trade',
         })
         .select('id')
@@ -297,11 +267,11 @@ const ListingDetails = ({ user }) => {
       const { error: tradeError } = await supabase
         .from('trades')
         .insert({
-          initiator_id: authUser.id,
-          receiver_id: listing.seller_id,
-          offered_listing_id: offeredListing.id,
+          initiator_id:        authUser.id,
+          receiver_id:         listing.seller_id,
+          offered_listing_id:  offeredListing.id,
           requested_listing_id: listing.id,
-          status: 'pending',
+          status:              'pending',
         });
 
       if (tradeError) throw tradeError;
@@ -311,14 +281,11 @@ const ListingDetails = ({ user }) => {
     } catch (err) {
       console.error('Error creating trade:', err);
       if (offeredListingId) {
-        await supabase
-          .from('listings')
-          .update({ status: 'removed' })
-          .eq('id', offeredListingId);
+        await supabase.from('listings').update({ status: 'removed' }).eq('id', offeredListingId);
       }
       const message = err?.message || err?.error_description || 'Unknown error';
       if (err?.code === '42501' || err?.status === 403) {
-        alert(`Trade failed due to database permissions (RLS). Please add a trades insert policy in Supabase.\n\nDetails: ${message}`);
+        alert(`Trade failed due to database permissions (RLS).\n\nDetails: ${message}`);
       } else {
         alert(`Failed to send trade request. ${message}`);
       }
@@ -339,35 +306,36 @@ const ListingDetails = ({ user }) => {
   }
 
   const sellerDisplayName = seller?.username || (seller?.email ? seller.email.split('@')[0] : 'Loading...');
-  const imageUrl = listing?.image_path ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${listing.image_path}` : 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80';
-  const formattedPrice = listing?.price 
+  const imageUrl = listing?.image_path
+    ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${listing.image_path}`
+    : 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80';
+  const formattedPrice = listing?.price
     ? `R${parseFloat(listing.price).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : 'R---.--';
   const canTradeThisListing = ['trade', 'either'].includes((listing?.listing_type || '').toLowerCase());
   const isTradeOnly = listing?.listing_type === 'trade' || listing?.listing_type === 'either';
-  const canBuyThisListing = !isTradeOnly; // Hide buy/offer for trade-only listings
+  const canBuyThisListing = !isTradeOnly;
+
   return (
     <section className="min-h-screen bg-offwhite font-main text-dark pb-20">
       <section className="w-full px-5 md:px-10 pt-8">
-        
-        {/* Back Button */}
-        <button 
-          onClick={() => navigate(-1)} 
+
+        <button
+          onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-text-muted hover:text-dark font-medium transition-colors mb-8 group"
         >
-          <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" /> 
+          <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
           Back to {listing?.category || 'Listings'}
         </button>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          
-          {/* Left Column - Images */}
+
+          {/* Left Column - Image */}
           <section className="flex flex-col gap-4">
-            {/* Main Image */}
             <section className={`relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-light border border-gray-200 group ${loading ? 'animate-pulse' : ''}`}>
-              <img 
-                src={imageUrl} 
-                alt={listing?.title || 'Loading'} 
+              <img
+                src={imageUrl}
+                alt={listing?.title || 'Loading'}
                 className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${loading ? 'opacity-0' : 'opacity-100'}`}
               />
               <button className="absolute top-4 right-4 bg-white/90 p-2.5 rounded-full shadow-sm hover:scale-110 transition-transform">
@@ -378,8 +346,7 @@ const ListingDetails = ({ user }) => {
 
           {/* Right Column - Details */}
           <section className="flex flex-col">
-            
-            {/* Condition & Time */}
+
             <section className="flex items-center gap-4 mb-4">
               <span className={`px-3 py-1 bg-light text-dark text-[0.75rem] font-bold tracking-wider uppercase rounded-full border border-gray-200 shadow-sm ${loading ? 'animate-pulse text-transparent bg-gray-200 border-none' : ''}`}>
                 {listing?.condition || 'DEFAULT'}
@@ -389,12 +356,10 @@ const ListingDetails = ({ user }) => {
               </span>
             </section>
 
-            {/* Title */}
             <h1 className={`text-4xl md:text-5xl font-display uppercase tracking-tight leading-[1.05] mb-4 ${loading ? 'animate-pulse text-transparent bg-gray-200 rounded min-h-[3rem]' : 'text-dark'}`}>
               {listing?.title || 'Loading item'}
             </h1>
 
-            {/* Price */}
             <section className="flex items-end gap-3 mb-8">
               <span className={`font-bold text-4xl ${loading ? 'text-transparent bg-gray-200 animate-pulse rounded' : 'text-dark'}`}>
                 {formattedPrice}
@@ -405,9 +370,9 @@ const ListingDetails = ({ user }) => {
             <section className="bg-white rounded-2xl p-4 flex items-center justify-between border border-gray-200 shadow-sm mb-6 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group">
               <section className="flex items-center gap-4">
                 <section className={`w-12 h-12 rounded-full border border-light overflow-hidden ${loading ? 'bg-gray-200 animate-pulse' : 'bg-white'}`}>
-                  <img 
-                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60" 
-                    alt={sellerDisplayName} 
+                  <img
+                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60"
+                    alt={sellerDisplayName}
                     className={`w-full h-full object-cover ${loading ? 'opacity-0' : 'opacity-100'}`}
                   />
                 </section>
@@ -421,19 +386,19 @@ const ListingDetails = ({ user }) => {
 
             {/* Action Buttons */}
             <section className="flex flex-col gap-3 mb-4">
-              <button 
+              <button
                 onClick={handleMessageSeller}
                 disabled={conversationLoading || !seller}
                 className="w-full bg-dark hover:bg-black text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <MessageCircle size={22} className="stroke-[2.5]" /> 
+                <MessageCircle size={22} className="stroke-[2.5]" />
                 {conversationLoading ? 'Opening chat...' : 'Message Seller'}
               </button>
 
-               {(!authUser || authUser.id !== listing?.seller_id) && (
+              {(!authUser || authUser.id !== listing?.seller_id) && (
                 <>
                   {canBuyThisListing && !showOfferInput && (
-                    <button 
+                    <button
                       onClick={() => setShowOfferInput(true)}
                       className="w-full bg-white text-dark border border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
                     >
@@ -452,7 +417,7 @@ const ListingDetails = ({ user }) => {
                         className="w-full border border-gray-300 py-3.5 px-4 rounded-xl font-bold text-center text-lg focus:outline-none focus:ring-2 focus:ring-dark"
                         autoFocus
                       />
-                      <button 
+                      <button
                         onClick={handleBuy}
                         disabled={buyLoading || !offerAmount}
                         className="w-full bg-primary text-white hover:bg-primary-dark py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg disabled:opacity-50"
@@ -475,13 +440,11 @@ const ListingDetails = ({ user }) => {
               )}
             </section>
 
-            {/* Campus Secure Guarantee */}
             <section className="flex items-center justify-center gap-2 text-[0.8rem] text-text-muted font-medium mb-10 pb-8 border-b border-gray-200">
               <ShieldCheck size={16} className="text-primary" />
               <span><strong className="text-dark">Campus Secure™ Guarantee:</strong> Transaction protection for all students.</span>
             </section>
 
-            {/* Description */}
             <section className="mb-8">
               <h3 className="text-lg font-display mb-3 uppercase tracking-wider text-dark">Description</h3>
               <p className={`text-text-muted leading-relaxed whitespace-pre-wrap ${loading ? 'text-transparent bg-gray-200 animate-pulse rounded min-h-[4rem]' : ''}`}>
@@ -489,17 +452,20 @@ const ListingDetails = ({ user }) => {
               </p>
             </section>
 
-            {/* Specifications */}
             <section>
               <h3 className="text-lg font-display mb-4 uppercase tracking-wider text-dark">Specifications</h3>
               <section className="grid grid-cols-2 gap-y-4">
                 <section>
                   <p className="text-[0.7rem] font-display uppercase tracking-wider text-gray-400 mb-1">Category</p>
-                  <p className={`font-semibold text-dark ${loading ? 'text-transparent bg-gray-200 animate-pulse rounded max-w-[100px]' : ''}`}>{listing?.category || (!loading ? 'Other' : 'Loading')}</p>
+                  <p className={`font-semibold text-dark ${loading ? 'text-transparent bg-gray-200 animate-pulse rounded max-w-[100px]' : ''}`}>
+                    {listing?.category || (!loading ? 'Other' : 'Loading')}
+                  </p>
                 </section>
                 <section>
                   <p className="text-[0.7rem] font-display uppercase tracking-wider text-gray-400 mb-1">Condition</p>
-                  <p className={`font-semibold text-dark capitalize ${loading ? 'text-transparent bg-gray-200 animate-pulse rounded max-w-[100px]' : ''}`}>{listing?.condition ? listing.condition.toLowerCase() : (!loading ? 'Not Specified' : 'Loading')}</p>
+                  <p className={`font-semibold text-dark capitalize ${loading ? 'text-transparent bg-gray-200 animate-pulse rounded max-w-[100px]' : ''}`}>
+                    {listing?.condition ? listing.condition.toLowerCase() : (!loading ? 'Not Specified' : 'Loading')}
+                  </p>
                 </section>
               </section>
             </section>
@@ -507,6 +473,8 @@ const ListingDetails = ({ user }) => {
           </section>
         </section>
       </section>
+
+      {/* Trade Modal */}
       {showTradeModal && (
         <section className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 sm:p-6 backdrop-blur-sm overflow-y-auto">
           <section className="bg-white w-full max-w-xl rounded-2xl shadow-xl relative">
@@ -538,7 +506,7 @@ const ListingDetails = ({ user }) => {
                     <>
                       <UploadCloud size={28} className="mb-2" />
                       <span className="text-sm font-medium">Click to upload image</span>
-                      <span className="text-xs mt-1">PNG, JPG up to 5MB</span>
+                      <span className="text-xs mt-1">PNG, JPG up to 1MB</span>
                     </>
                   )}
                 </button>

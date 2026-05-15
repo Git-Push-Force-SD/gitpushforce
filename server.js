@@ -19,7 +19,11 @@ const PORT = process.env.PORT || 3000
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY) 
 const FRONTEND_URL = process.env.FRONTEND_URL || `http://localhost:${PORT}`
 
-app.use(cors())
+// replace your existing app.use(cors()) with this:
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  methods: ['GET', 'POST'],
+}));
 app.use(express.json())
 app.use(express.static(path.join(__dirname, 'dist'), {
   maxAge: '1d',

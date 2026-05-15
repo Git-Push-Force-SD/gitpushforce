@@ -4,7 +4,7 @@ import { Loader, ChevronRight } from 'lucide-react';
 import { supabase } from '../../utils/supabase';
 import { badgeClasses, formatDate, formatTime } from './facilUtils';
 import { getImageUrl } from './imageUtils';
-
+import { useNavigate } from 'react-router-dom';
 // ─────────────────────────────────────────────────────────────────────────────
 // COLLECTIONS VIEW
 // Shows confirmed bookings where item is held by staff and buyer is ready
@@ -196,11 +196,10 @@ export default function CollectionsView({ user }) {
     fetchCollections();
   }, []);
 
-  const handleReleaseItem = async (booking) => {
+const handleReleaseItem = async (booking) => {
     setActionLoading(booking.id);
     try {
       if (booking.type === 'Trade') {
-        // For trades: set all bookings for this trade to 'collected' and update trade status
         const { error: bookingsError } = await supabase
           .from('bookings')
           .update({ status: 'collected' })
@@ -215,7 +214,6 @@ export default function CollectionsView({ user }) {
 
         if (tradeError) throw tradeError;
       } else {
-        // For sales: update order and booking as before
         const { error: orderError } = await supabase
           .from('orders')
           .update({ buyer_status: 'collected', status: 'completed' })
@@ -232,6 +230,7 @@ export default function CollectionsView({ user }) {
       }
 
       setBookings(prev => prev.filter(b => b.id !== booking.id));
+      navigate(`/review/${booking.order_id}`);
     } catch (err) {
       console.error('Release item error:', err);
       alert('Failed to release item. Please try again.');

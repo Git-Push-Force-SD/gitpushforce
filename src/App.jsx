@@ -498,13 +498,15 @@ function ListingDetailsRoute() {
   return <ListingDetails user={user} />;
 }
 
+// 
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<LoginRoute />} />
+          
           <Route
             path="/studentdashboard"
             element={
@@ -586,6 +588,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/login" element={<LoginRoute />} />
               <Route path="/success" element={<PaymentSuccess />} />
           <Route path="/cancel" element={<PaymentCancel />} />
           <Route path="*" element={<Navigate to="/" replace />} />

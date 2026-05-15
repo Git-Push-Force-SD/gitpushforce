@@ -54,24 +54,30 @@ const BookingFlow = ({ eligibleOrders, onConfirm, submitting }) => {
   const [selectedSlot,  setSelectedSlot]  = useState(null);
   const [notes,         setNotes]         = useState('');
 
+  const [slotRefreshKey, setSlotRefreshKey] = useState(0);
   const { slots, loading: slotsLoading } = useAvailableSlots(selectedDate);
 
+  
   const handleDateSelect = (date) => {
     setSelectedDate(date);
     setSelectedSlot(null);
     setStep(2);
   };
 
-  const handleSubmit = () => {
+const handleSubmit = () => {
     onConfirm({
-      orderId:    selectedOrder.orderId,
-      buyerId:    selectedOrder.buyerId,
-      sellerId:   selectedOrder.sellerId,
-      listingId:  selectedOrder.listingId,
-      date:       selectedDate,
-      timeSlot:   selectedSlot,
+      orderId:   selectedOrder.orderId,
+      buyerId:   selectedOrder.buyerId,
+      sellerId:  selectedOrder.sellerId,
+      listingId: selectedOrder.listingId,
+      date:      selectedDate,
+      timeSlot:  selectedSlot,
       notes,
     });
+    setSlotRefreshKey(k => k + 1);
+    setSelectedSlot(null);
+    setStep(1);
+    setSelectedDate(null);
   };
 
   const formattedDate = selectedDate
