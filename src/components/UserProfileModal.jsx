@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import StarRating from './StarRating';
-import Transactions from './Transactions';
+import Transactions from './../Transactions';
 
 const UserProfileModal = ({ isOpen, onClose, userId }) => {
   const [user, setUser] = useState(null);
@@ -186,7 +186,7 @@ const UserProfileModal = ({ isOpen, onClose, userId }) => {
                     {avgRating ? (
                       <>
                         <div className="flex items-center gap-1">
-                          <StarRating rating={Math.round(parseFloat(avgRating))} interactive={false} />
+                          <StarRating rating={parseFloat(avgRating)} interactive={false} />
                           <span className="text-sm font-semibold text-gray-900">
                             {avgRating}
                           </span>
