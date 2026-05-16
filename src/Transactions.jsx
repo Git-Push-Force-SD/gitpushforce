@@ -17,7 +17,7 @@ const badgeClasses = (status) => {
   return 'bg-gray-100 text-gray-700 border-gray-200';
 };
 
-export default function StudentTransactions({ user, onBack }) {
+export default function Transactions({ user, onBack }) {
   const [transactions, setTransactions] = useState([]);
   const [activeView, setActiveView] = useState('queue');
   const [search, setSearch] = useState('');
