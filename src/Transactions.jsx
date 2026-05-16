@@ -2,18 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Search, Package, ShoppingBag, Store, Repeat2 } from 'lucide-react';
 import { supabase } from '../utils/supabase';
 
-const statusClasses = {
-  completed: 'bg-green-100 text-green-700 border-green-200',
-  collected: 'bg-green-100 text-green-700 border-green-200',
-};
-
 const formatPrice = (price) =>
   `R${Number(price || 0).toLocaleString('en-ZA', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 
-export default function Transactions({ user, onBack }) {
+export default function Transactions({ user, onBack, compact = false }) {
   const [activeTab, setActiveTab] = useState('purchases');
   const [orders, setOrders] = useState([]);
   const [trades, setTrades] = useState([]);
@@ -22,7 +17,10 @@ export default function Transactions({ user, onBack }) {
 
   useEffect(() => {
     const fetchTransactions = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
 
       setLoading(true);
 
@@ -181,24 +179,28 @@ export default function Transactions({ user, onBack }) {
   ];
 
   return (
-    <section className="min-h-screen bg-offwhite p-4 sm:p-8 text-dark">
-      <section className="mx-auto max-w-7xl space-y-6">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-dark"
-        >
-          <ArrowLeft size={16} />
-          Back to dashboard
-        </button>
+    <section className={`${compact ? '' : 'min-h-screen bg-offwhite p-4 sm:p-8'} text-dark`}>
+      <section className={`${compact ? 'space-y-4' : 'mx-auto max-w-7xl space-y-6'}`}>
+        {!compact && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-dark"
+          >
+            <ArrowLeft size={16} />
+            Back to dashboard
+          </button>
+        )}
 
-        <section>
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary">
-            My Orders
-          </p>
-          <h1 className="mt-2 text-3xl font-bold">
-            Completed Purchases, Sales & Trades
-          </h1>
-        </section>
+        {!compact && (
+          <section>
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary">
+              My Orders
+            </p>
+            <h1 className="mt-2 text-3xl font-bold">
+              Completed Purchases, Sales & Trades
+            </h1>
+          </section>
+        )}
 
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {tabs.map((tab) => {
@@ -224,25 +226,25 @@ export default function Transactions({ user, onBack }) {
           })}
         </section>
 
-        <section className="rounded-3xl bg-white p-5 shadow-sm border border-gray-100">
+        <section className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
           <section className="flex items-center gap-3 rounded-full bg-gray-50 px-4 py-3">
             <Search size={18} className="text-gray-400" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search completed item, status, user, or transaction ID"
+              placeholder="Search completed transactions"
               className="w-full bg-transparent text-sm outline-none"
             />
           </section>
         </section>
 
-        <section className="rounded-3xl bg-white shadow-sm border border-gray-100 overflow-hidden">
+        <section className="rounded-2xl bg-white shadow-sm border border-gray-100 overflow-hidden">
           {loading ? (
-            <section className="p-8 text-center text-gray-500">
+            <section className="p-6 text-center text-gray-500">
               Loading completed transactions...
             </section>
           ) : activeItems.length === 0 ? (
-            <section className="p-8 text-center text-gray-500">
+            <section className="p-6 text-center text-gray-500">
               No completed {activeTab} found.
             </section>
           ) : activeTab === 'trades' ? (
@@ -326,10 +328,10 @@ export default function Transactions({ user, onBack }) {
 
                   <section>
                     <p className="text-sm">
-                       {activeTab === 'purchases'
-                         ? `Seller: ${listing?.seller?.username || listing?.seller?.email || 'Unknown'}`
-                         : 'Completed sale'}
-                   </p>
+                      {activeTab === 'purchases'
+                        ? `Seller: ${listing?.seller?.username || listing?.seller?.email || 'Unknown'}`
+                        : 'Completed sale'}
+                    </p>
                     <p className="text-xs text-gray-500">
                       {new Date(order.created_at).toLocaleDateString('en-ZA')}
                     </p>

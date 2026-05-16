@@ -411,17 +411,9 @@ const filteredProducts = useMemo(() => {
   }
 
   if (currentView === 'orders') {
-    return (
-      <Transactions
-      user={user}
-      onBack ={() => setCurrentView('home') }
-      />
-    
-    //return <MyOrders user={user} onBack={() => setCurrentView('home')} />;
-    );
+   return <MyOrders user={user} onBack={() => setCurrentView('home')} />;
+   
   }
-  
-//}
 
   return (
     <section className="min-h-screen bg-offwhite font-main text-dark pb-20">
