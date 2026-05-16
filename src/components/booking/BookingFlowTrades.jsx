@@ -1,6 +1,6 @@
 // src/components/booking/BookingFlowTrades.jsx
 // 3-step flow: Choose date → Pick slot → Confirm
-// All DB calls happen in the parent via createTradeBooking()
+// All DB calls happen in the parent via createBooking()
 // Both parties can book independently
 
 import React, { useState } from 'react';

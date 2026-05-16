@@ -282,9 +282,144 @@ const merged = baseSlots
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// createBooking — insert a new booking row
+// useEligibleTrades — accepted trades awaiting this user's drop-off booking
+// Each party books independently (one row per user per trade)
 // ─────────────────────────────────────────────────────────────────────────────
-export async function createBooking({ orderId, buyerId, sellerId, listingId, date, timeSlot, notes }) {
+export function useEligibleTrades(userId) {
+  const [trades, setTrades]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetch = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { data: acceptedTrades, error: tradesError } = await supabase
+          .from('trades')
+          .select(`
+            id,
+            status,
+            initiator_id,
+            receiver_id,
+            offered_listing:listings!trades_offered_listing_id_fkey(id, title),
+            requested_listing:listings!trades_requested_listing_id_fkey(id, title)
+          `)
+          .eq('status', 'accepted')
+          .or(`initiator_id.eq.${userId},receiver_id.eq.${userId}`);
+
+        if (tradesError) throw tradesError;
+
+        const tradeList = acceptedTrades || [];
+        if (tradeList.length === 0) {
+          setTrades([]);
+          return;
+        }
+
+        const tradeIds = tradeList.map(t => t.id);
+        const { data: existingBookings } = await supabase
+          .from('bookings')
+          .select('trade_id, booked_by, status')
+          .in('trade_id', tradeIds)
+          .eq('booked_by', userId)
+          .neq('status', 'cancelled');
+
+        const bookedTradeIds = new Set((existingBookings || []).map(b => b.trade_id));
+        const eligible = tradeList.filter(t => !bookedTradeIds.has(t.id));
+
+        const partnerIds = eligible.map(t =>
+          t.initiator_id === userId ? t.receiver_id : t.initiator_id
+        );
+        let partnerMap = {};
+        if (partnerIds.length > 0) {
+          const { data: partners } = await supabase
+            .from('users')
+            .select('id, username, email')
+            .in('id', [...new Set(partnerIds)]);
+
+          if (partners) {
+            partnerMap = partners.reduce((acc, u) => {
+              acc[u.id] = u.username || u.email?.split('@')[0] || 'Partner';
+              return acc;
+            }, {});
+          }
+        }
+
+        const formatted = eligible.map(t => {
+          const isInitiator = t.initiator_id === userId;
+          const partnerId   = isInitiator ? t.receiver_id : t.initiator_id;
+          return {
+            tradeId:             t.id,
+            initiatorId:         t.initiator_id,
+            receiverId:          t.receiver_id,
+            myListingTitle:      isInitiator
+              ? (t.offered_listing?.title || 'Your item')
+              : (t.requested_listing?.title || 'Your item'),
+            partnerListingTitle: isInitiator
+              ? (t.requested_listing?.title || 'Partner item')
+              : (t.offered_listing?.title || 'Partner item'),
+            partnerName:         partnerMap[partnerId] || 'Partner',
+            role:                isInitiator ? 'initiator' : 'receiver',
+          };
+        });
+
+        setTrades(formatted);
+      } catch (err) {
+        console.error('[useEligibleTrades] error:', err);
+        setError('Failed to load eligible trades.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetch();
+  }, [userId]);
+
+  return { trades, loading, error };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// createBooking — insert a new booking row (order sale or trade exchange)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function createBooking({
+  orderId,
+  buyerId,
+  sellerId,
+  listingId,
+  tradeId,
+  bookingType,
+  bookedBy,
+  date,
+  timeSlot,
+  notes,
+}) {
+  const isTrade = bookingType === 'trade' || Boolean(tradeId);
+
+  if (isTrade) {
+    const { data, error } = await supabase
+      .from('bookings')
+      .insert([{
+        booking_type: 'trade',
+        trade_id:     tradeId,
+        booked_by:    bookedBy || buyerId,
+        buyer_id:     buyerId,
+        seller_id:    sellerId,
+        date,
+        time_slot:    timeSlot,
+        location:     FACILITY_LOCATION,
+        status:       'pending',
+        notes:        notes?.trim().slice(0, 500) || null,
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
   const { data, error } = await supabase
     .from('bookings')
     .insert([{
@@ -303,13 +438,17 @@ export async function createBooking({ orderId, buyerId, sellerId, listingId, dat
 
   if (error) throw error;
 
-  // Mark order as booked so it no longer appears in eligible orders
   await supabase
     .from('orders')
     .update({ status: 'booked' })
     .eq('id', orderId);
 
   return data;
+}
+
+/** @deprecated Use createBooking with bookingType: 'trade' */
+export async function createTradeBooking(args) {
+  return createBooking({ ...args, bookingType: 'trade', tradeId: args.tradeId });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
