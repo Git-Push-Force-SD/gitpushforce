@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Edit2, Plus, Trash2, Camera, X, Loader, Check, Heart, ArrowLeftRight, CheckCircle, XCircle, CircleDot } from 'lucide-react';
 import { supabase } from './utils/supabase';
-import Transactions from './components/Transactions';
+
 
 const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) => {
   const [profileImage, setProfileImage] = useState(null);
@@ -693,18 +693,7 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) 
               </span>
             </button>
           </section>
-
-          <section className="mb-10">
-            <section className="flex justify-between items-end mb-4">
-              <h2 className="text-xl font-bold text-dark">Completed Transactions</h2>
-              </section>
-              <Transactions
-              user = {user}
-              compact = {true}
-              />
-              </section>
-          
-             
+ 
             <section className="flex justify-between items-end mb-4">
               <h2 className="text-xl font-bold text-dark">My Reviews</h2>
               {!isLoadingReviews && avgRating && (
