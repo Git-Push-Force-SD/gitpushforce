@@ -42,18 +42,30 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
     const fetchPendingReviewsCount = async () => {
       if (!user?.id) return;
       try {
-        // Completed orders (buyer, collected)
-        const { data: orders, error: ordersError } = await supabase
+        // Completed orders — buyer and seller can each leave a review
+        const { data: buyerOrders, error: buyerOrdersError } = await supabase
           .from('orders')
           .select('id')
           .eq('buyer_id', user.id)
           .eq('status', 'completed')
           .eq('buyer_status', 'collected');
 
-        if (ordersError) {
+        const { data: sellerOrders, error: sellerOrdersError } = await supabase
+          .from('orders')
+          .select('id, listings!inner ( seller_id )')
+          .eq('listings.seller_id', user.id)
+          .eq('status', 'completed')
+          .eq('buyer_status', 'collected');
+
+        if (buyerOrdersError || sellerOrdersError) {
           setPendingReviewsCount(0);
         } else {
-          const orderIds = (orders || []).map(o => o.id);
+          const orderIds = [
+            ...new Set([
+              ...(buyerOrders || []).map(o => o.id),
+              ...(sellerOrders || []).map(o => o.id),
+            ]),
+          ];
           if (orderIds.length === 0) {
             setPendingReviewsCount(0);
           } else {
