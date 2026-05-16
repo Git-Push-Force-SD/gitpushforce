@@ -4,6 +4,7 @@ import { useMessages } from "./hooks/useMessages";
 import { useAuth } from "./AuthContext";
 import { ChevronLeft, MoreVertical, User, Star, X } from "lucide-react";
 import { supabase } from "./utils/supabase";
+import UserProfileModal from "../src/components/UserProfileModal";
 
 export default function MessagesPage() {
   const { conversationId } = useParams();
@@ -14,7 +15,7 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isBuyer, setIsBuyer] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileModal, setProfileModal] = useState({ open: false, userId: null });
   const [receiverProfile, setReceiverProfile] = useState(null);
   const [negotiatedItem, setNegotiatedItem] = useState(null);
   const messagesEndRef = useRef(null);
@@ -235,7 +236,7 @@ export default function MessagesPage() {
             </button>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setProfileOpen(true)}
+                onClick={() => setProfileModal({ open: true, userId: receiverId })}
                 className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-light transition-colors"
               >
                 {receiverProfile?.avatar_url ? (
@@ -420,63 +421,11 @@ export default function MessagesPage() {
       </section>
 
       {/* Profile Modal */}
-      {profileOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 md:rounded-3xl md:mb-10 animate-slide-up mx-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-dark">User Profile</h2>
-              <button
-                onClick={() => setProfileOpen(false)}
-                className="text-text-muted hover:text-dark p-2"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {/* Profile Picture */}
-              <div className="flex justify-center">
-                {receiverProfile?.avatar_url ? (
-                  <img
-                    src={receiverProfile.avatar_url}
-                    alt={receiverProfile.username}
-                    className="w-24 h-24 rounded-full object-cover border-4 border-primary"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-light border-4 border-primary flex items-center justify-center">
-                    <User size={48} className="text-text-muted" />
-                  </div>
-                )}
-              </div>
-
-              {/* Name */}
-              <div className="text-center">
-                <p className="text-lg font-bold text-dark">{receiverProfile?.username || receiverName || "User"}</p>
-                <p className="text-sm text-text-muted">{receiverProfile?.email}</p>
-              </div>
-
-              {/* Ratings */}
-              <div className="bg-light rounded-2xl p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-dark font-semibold">Rating</span>
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          size={18}
-                          className={i < 4 ? "fill-yellow-400 text-yellow-400" : "text-text-muted"}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-dark font-bold">4.0</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <UserProfileModal
+        isOpen={profileModal.open}
+        userId={profileModal.userId}
+        onClose={() => setProfileModal({ open: false, userId: null })}
+      />
     </section>
   );
 }

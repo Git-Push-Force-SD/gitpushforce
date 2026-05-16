@@ -15,6 +15,7 @@ import {
   createBooking, 
      cancelBooking 
     } from '../../hooks/useBookings';
+import BookingFlowTrades from './BookingFlowTrades';
 
 
 
@@ -65,6 +66,7 @@ const StudentBookingDashboard = ({ onClose }) => {
   const [successInfo,  setSuccessInfo]  = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelling,   setCancelling]   = useState(false);
+  const [showTradeBooking, setShowTradeBooking] = useState(false);
 
   const { 
     bookings, 

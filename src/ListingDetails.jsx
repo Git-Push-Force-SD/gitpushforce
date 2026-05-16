@@ -4,6 +4,7 @@ import { ChevronLeft, Heart, ShieldCheck, Clock, MessageCircle, ShoppingBag, Che
 import { supabase } from './utils/supabase';
 import { useAuth } from './AuthContext';
 import { useConversation } from './hooks/useConversation';
+import UserProfileModal from './components/UserProfileModal';
 
 const ListingDetails = ({ user }) => {
   const { id } = useParams();
@@ -27,6 +28,8 @@ const ListingDetails = ({ user }) => {
     category: '',
     condition: '',
   });
+  const [profileModal, setProfileModal] = useState({ open: false, userId: null });
+  const [sellerRating, setSellerRating] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -66,6 +69,40 @@ const ListingDetails = ({ user }) => {
 
     fetchListing();
   }, [id]);
+
+  // Fetch seller's rating summary
+  useEffect(() => {
+    if (!seller?.id) {
+      setSellerRating(null);
+      return;
+    }
+
+    const fetchSellerRating = async () => {
+      try {
+        const { data: reviews, error } = await supabase
+          .from('reviews')
+          .select('rating')
+          .eq('reviewee_id', seller.id);
+
+        if (error || !reviews || reviews.length === 0) {
+          setSellerRating(null);
+          return;
+        }
+
+        const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+        const averageRating = (totalRating / reviews.length).toFixed(1);
+        setSellerRating({
+          avg: averageRating,
+          count: reviews.length,
+        });
+      } catch (err) {
+        console.error('Error fetching seller rating:', err);
+        setSellerRating(null);
+      }
+    };
+
+    fetchSellerRating();
+  }, [seller?.id]);
 
   const calculateTimeAgo = (createdAt) => {
     if (!createdAt) return 'unknown';
@@ -367,7 +404,10 @@ const ListingDetails = ({ user }) => {
             </section>
 
             {/* Seller Card */}
-            <section className="bg-white rounded-2xl p-4 flex items-center justify-between border border-gray-200 shadow-sm mb-6 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group">
+            <button 
+              onClick={() => setProfileModal({ open: true, userId: seller?.id })}
+              className="w-full bg-white rounded-2xl p-4 flex items-center justify-between border border-gray-200 shadow-sm mb-6 hover:shadow-md hover:border-gray-300 transition-all group"
+            >
               <section className="flex items-center gap-4">
                 <section className={`w-12 h-12 rounded-full border border-light overflow-hidden ${loading ? 'bg-gray-200 animate-pulse' : 'bg-white'}`}>
                   <img
@@ -378,11 +418,13 @@ const ListingDetails = ({ user }) => {
                 </section>
                 <section>
                   <h3 className={`font-bold text-dark ${loading ? 'text-transparent bg-gray-200 animate-pulse rounded' : ''}`}>{sellerDisplayName}</h3>
-                  <p className={`text-sm text-text-muted ${loading ? 'opacity-0' : 'opacity-100'}`}>Student • 4.9 ★ (12 reviews)</p>
+                  <p className={`text-sm text-text-muted ${loading ? 'opacity-0' : 'opacity-100'}`}>
+                    Student • {sellerRating ? `${sellerRating.avg} ★ (${sellerRating.count} ${sellerRating.count === 1 ? 'review' : 'reviews'})` : 'No reviews yet'}
+                  </p>
                 </section>
               </section>
               <ChevronRight className="text-gray-400 group-hover:text-dark transition-colors" />
-            </section>
+            </button>
 
             {/* Action Buttons */}
             <section className="flex flex-col gap-3 mb-4">
@@ -611,6 +653,13 @@ const ListingDetails = ({ user }) => {
           </section>
         </section>
       )}
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={profileModal.open}
+        userId={profileModal.userId}
+        onClose={() => setProfileModal({ open: false, userId: null })}
+      />
     </section>
   );
 };

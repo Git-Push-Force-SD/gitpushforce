@@ -4,7 +4,6 @@ import { Loader, ChevronRight } from 'lucide-react';
 import { supabase } from '../../utils/supabase';
 import { badgeClasses, formatDate, formatTime } from './facilUtils';
 import { getImageUrl } from './imageUtils';
-import { useNavigate } from 'react-router-dom';
 // ─────────────────────────────────────────────────────────────────────────────
 // COLLECTIONS VIEW
 // Shows confirmed bookings where item is held by staff and buyer is ready
@@ -230,7 +229,6 @@ const handleReleaseItem = async (booking) => {
       }
 
       setBookings(prev => prev.filter(b => b.id !== booking.id));
-      navigate(`/review/${booking.order_id}`);
     } catch (err) {
       console.error('Release item error:', err);
       alert('Failed to release item. Please try again.');
@@ -444,7 +442,7 @@ const handleReleaseItem = async (booking) => {
         const payment = selectedBooking.payment;
         const isPaymentClear = !payment || (payment.cash_shortfall <= 0 || payment.cash_settled);
         const hasCashOutstanding = payment && payment.cash_shortfall > 0 && !payment.cash_settled;
-        const canRelease = isPaymentClear || !hasCashOutstanding;
+        const canRelease = selectedBooking.type === 'Trade' || isPaymentClear || !hasCashOutstanding;
         return (
           <>
             <div

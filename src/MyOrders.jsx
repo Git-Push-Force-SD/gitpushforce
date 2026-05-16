@@ -1,12 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './utils/supabase';
 import { ArrowLeft, Clock, ShoppingBag } from 'lucide-react';
+import LeaveReviewModal from './components/LeaveReviewModal';
+import UserProfileModal from './components/UserProfileModal';
 
 const MyOrders = ({ user, onBack }) => {
   const [activeTab, setActiveTab] = useState('buying');
   const [buyingOrders, setBuyingOrders] = useState([]);
   const [sellingOrders, setSellingOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [profileModal, setProfileModal] = useState({ open: false, userId: null });
+  const [reviewModal, setReviewModal] = useState({
+    open: false,
+    order: null,
+    transactionType: null,
+    onReviewSuccess: null,
+  });
 
   useEffect(() => {
     fetchOrders();
@@ -62,7 +71,28 @@ const MyOrders = ({ user, onBack }) => {
         buyerName: buyerMap[o.buyer_id] || 'Buyer'
       }));
 
-      setBuyingOrders(bData || []);
+      // Fetch seller names for buying orders
+      const sellerIds = [...new Set((bData || []).map(o => o.listings.seller_id))];
+      let sellerMap = {};
+      if (sellerIds.length > 0) {
+        const { data: sellers } = await supabase
+          .from('users')
+          .select('id, username, email')
+          .in('id', sellerIds);
+        if (sellers) {
+          sellerMap = sellers.reduce((acc, s) => {
+            acc[s.id] = s.username || s.email?.split('@')[0] || 'Seller';
+            return acc;
+          }, {});
+        }
+      }
+
+      const formattedBuying = (bData || []).map(o => ({
+        ...o,
+        sellerName: sellerMap[o.listings.seller_id] || 'Seller'
+      }));
+
+      setBuyingOrders(formattedBuying);
       setSellingOrders(formattedSelling);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -72,8 +102,19 @@ const MyOrders = ({ user, onBack }) => {
   };
 
   const getStatusBadge = (status, type = null) => {
-    const s = (status || 'awaiting_confirmation').toLowerCase();
-    let base = "px-3 py-1 rounded-full text-[0.7rem] font-bold uppercase tracking-wider border whitespace-nowrap ";
+    const base = "px-3 py-1 rounded-full text-[0.7rem] font-bold uppercase tracking-wider border whitespace-nowrap ";
+    
+    // Handle null/undefined per type
+    if (!status) {
+      if (type === 'buyer') {
+        return base + "bg-yellow-50 text-yellow-700 border-yellow-200";
+      }
+      if (type === 'seller') {
+        return base + "bg-yellow-50 text-yellow-700 border-yellow-200";
+      }
+    }
+    
+    const s = status.toLowerCase();
     
     // Handle buyer status values
     if (type === 'buyer') {
@@ -92,12 +133,22 @@ const MyOrders = ({ user, onBack }) => {
     // Default/payment status
     if (s.includes('pending')) return base + "bg-yellow-50 text-yellow-700 border-yellow-200";
     if (s.includes('paid') || s.includes('succeeded')) return base + "bg-green-50 text-green-700 border-green-200";
+    if (s === 'confirmed') return base + "bg-blue-50 text-blue-700 border-blue-200";
+    if (s === 'completed') return base + "bg-green-50 text-green-700 border-green-200";
+    if (s === 'booked') return base + "bg-blue-50 text-blue-700 border-blue-200";
     if (s.includes('cancelled') || s.includes('failed')) return base + "bg-red-50 text-red-700 border-red-200";
     return base + "bg-gray-50 text-gray-700 border-gray-200";
   };
 
   const getStatusLabel = (status, type = null) => {
-    const s = (status || '').toLowerCase();
+    // Handle null per type
+    if (!status) {
+      if (type === 'buyer') return 'Awaiting Confirmation';
+      if (type === 'seller') return 'Awaiting Booking';
+      return 'Unknown';
+    }
+    
+    const s = status.toLowerCase();
     
     if (type === 'buyer') {
       if (s === 'awaiting_confirmation') return 'Awaiting Confirmation';
@@ -111,13 +162,53 @@ const MyOrders = ({ user, onBack }) => {
       if (s === 'dropped_off') return 'Dropped Off';
     }
     
-    return status || 'Unknown';
+    return status;
   };
 
   const OrderCard = ({ order, isSelling }) => {
+    const [hasReviewed, setHasReviewed] = useState(false);
     const listing = order.listings || {};
     const booking = order.bookings ? (Array.isArray(order.bookings) ? order.bookings.find(b => b.status !== 'cancelled') || order.bookings[0] : order.bookings) : null;
     const imageUrl = listing.image_path ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${listing.image_path}` : 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80';
+
+    useEffect(() => {
+      checkExistingReview();
+    }, [order.id]);
+
+    const checkExistingReview = async () => {
+      try {
+        const isCompleted =
+          order.status === 'completed' &&
+          order.buyer_status === 'collected';
+
+        if (!isCompleted) {
+          setHasReviewed(false);
+          return;
+        }
+
+        const { data } = await supabase
+          .from('reviews')
+          .select('id')
+          .eq('reviewer_id', user.id)
+          .eq('order_id', order.id)
+          .maybeSingle();
+
+        setHasReviewed(!!data);
+      } catch (error) {
+        console.error('Error checking review:', error);
+      }
+    };
+
+    const handleSubmitReview = async (reviewData) => {
+      const { error } = await supabase.from('reviews').insert([reviewData]);
+      if (error) throw error;
+      setHasReviewed(true);
+    };
+
+    const canReview =
+      order.status === 'completed' &&
+      order.buyer_status === 'collected' &&
+      !hasReviewed;
 
     return (
       <div className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-6 hover:shadow-md transition-all duration-300">
@@ -136,18 +227,52 @@ const MyOrders = ({ user, onBack }) => {
             
             {isSelling && (
               <p className="text-sm text-gray-500 mb-4">
-                Buyer: <span className="font-semibold text-dark">{order.buyerName}</span>
+                Buyer:{' '}
+                <button
+                  onClick={() => setProfileModal({ open: true, userId: order.buyer_id })}
+                  className="font-semibold text-dark hover:text-blue-600 hover:underline transition-colors"
+                >
+                  {order.buyerName}
+                </button>
+              </p>
+            )}
+            
+            {!isSelling && listing.seller_id && (
+              <p className="text-sm text-gray-500 mb-4">
+                Seller:{' '}
+                <button
+                  onClick={() => setProfileModal({ open: true, userId: listing.seller_id })}
+                  className="font-semibold text-dark hover:text-blue-600 hover:underline transition-colors"
+                >
+                  {order.sellerName}
+                </button>
               </p>
             )}
             
             <div className="flex flex-wrap gap-2 mt-3">
                <span className={getStatusBadge(order.status)}>
-                 Payment: {order.status}
+                 status: {order.status}
                </span>
                <span className={getStatusBadge(isSelling ? order.seller_status : order.buyer_status, isSelling ? 'seller' : 'buyer')}>
                  {isSelling ? 'Drop-off' : 'Collection'}: {getStatusLabel(isSelling ? order.seller_status : order.buyer_status, isSelling ? 'seller' : 'buyer')}
                </span>
             </div>
+
+            {canReview && (
+              <button
+                onClick={() =>
+                  setReviewModal({
+                    open: true,
+                    order,
+                    transactionType: 'order',
+                    onReviewSuccess: () => setHasReviewed(true),
+                  })
+                }
+                className="mt-4 px-4 py-2 bg-blue-50 text-blue-600 font-semibold rounded-lg hover:bg-blue-100 transition-colors text-sm"
+              >
+                Leave a Review
+              </button>
+            )}
           </div>
           
           {booking && booking.status !== 'cancelled' && (
@@ -197,9 +322,10 @@ const MyOrders = ({ user, onBack }) => {
         <div className="flex bg-gray-100 p-1 rounded-2xl mb-8">
           <button
             onClick={() => setActiveTab('buying')}
+            role="tab"
             className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 ${
               activeTab === 'buying' 
-                ? 'bg-white text-dark shadow-sm' 
+                ? 'bg-white text-dark shadow-sm border-primary' 
                 : 'text-gray-500 hover:text-dark'
             }`}
           >
@@ -207,9 +333,10 @@ const MyOrders = ({ user, onBack }) => {
           </button>
           <button
             onClick={() => setActiveTab('selling')}
+            role="tab"
             className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 ${
               activeTab === 'selling' 
-                ? 'bg-white text-dark shadow-sm' 
+                ? 'bg-white text-dark shadow-sm border-primary' 
                 : 'text-gray-500 hover:text-dark'
             }`}
           >
@@ -251,6 +378,49 @@ const MyOrders = ({ user, onBack }) => {
           </div>
         )}
       </div>
+
+      <LeaveReviewModal
+        isOpen={reviewModal.open}
+        onClose={() =>
+          setReviewModal({
+            open: false,
+            order: null,
+            transactionType: null,
+            onReviewSuccess: null,
+          })
+        }
+        transactionType={reviewModal.transactionType}
+        transactionId={reviewModal.order?.id}
+        listingId={reviewModal.order?.listings?.id}
+        revieweeId={
+          activeTab === 'buying'
+            ? reviewModal.order?.listings?.seller_id
+            : reviewModal.order?.buyer_id
+        }
+        revieweeName={
+          activeTab === 'buying'
+            ? reviewModal.order?.sellerName || 'Seller'
+            : reviewModal.order?.buyerName
+        }
+        reviewerId={user.id}
+        submitReview={async (reviewData) => {
+          const { error } = await supabase.from('reviews').insert([reviewData]);
+          if (error) throw error;
+          reviewModal.onReviewSuccess?.();
+          setReviewModal({
+            open: false,
+            order: null,
+            transactionType: null,
+            onReviewSuccess: null,
+          });
+        }}
+      />
+
+      <UserProfileModal
+        isOpen={profileModal.open}
+        userId={profileModal.userId}
+        onClose={() => setProfileModal({ open: false, userId: null })}
+      />
     </div>
   );
 };

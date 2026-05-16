@@ -14,7 +14,6 @@ import ConversationsList from './ConversationsList';
 import PaymentSuccess from './PaymentSuccess';
 import PaymentCancel from './PaymentCancel';
 
-
 const RevealOnScroll = ({ children, className = "", style = {}, delay = 0 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const ref = useRef(null);

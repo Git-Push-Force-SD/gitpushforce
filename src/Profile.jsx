@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Edit2, Plus, Trash2, Camera, X, Loader, Check, Heart, ArrowLeftRight, CheckCircle, XCircle, CircleDot } from 'lucide-react';
-import { useAuth } from './AuthContext';
 import { supabase } from './utils/supabase';
 
-const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
-  const { user } = useAuth();
+const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [imageError, setImageError] = useState(null);
   
@@ -28,6 +26,10 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
   });
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState(null);
+  const [myReviews, setMyReviews] = useState([]);
+  const [avgRating, setAvgRating] = useState(null);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
+  const [fetchedUsername, setFetchedUsername] = useState(null);
   
   const fileInputRef = useRef(null);
 
@@ -36,9 +38,11 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
     if (user?.user_metadata?.avatar_url) {
       setProfileImage(user.user_metadata.avatar_url);
     } else {
-      setProfileImage(null);
+      if (!profileImage) setProfileImage(null);
     }
   }, [user]);
+
+  // Fetch listings from database (unchanged)
 
   // Fetch listings from database (unchanged)
   useEffect(() => {
@@ -165,6 +169,123 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
     fetchTrades();
   }, [user?.id]);
 
+  // Fetch username from users table as displayName fallback
+  useEffect(() => {
+    const fetchUsername = async () => {
+      if (!user?.id) {
+        setFetchedUsername(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('username, profile_picture_url')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching username:', error);
+          setFetchedUsername(null);
+          return;
+        }
+
+        setFetchedUsername(data?.username || null);
+        setProfileImage(data?.profile_picture_url || null);
+      } catch (err) {
+        console.error('Error fetching username:', err);
+        setFetchedUsername(null);
+      }
+    };
+
+    fetchUsername();
+  }, [user?.id]);
+
+  // Fetch reviews where user is the reviewee
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!user?.id) {
+        setIsLoadingReviews(false);
+        return;
+      }
+
+      try {
+        setIsLoadingReviews(true);
+
+        const { data: reviews, error } = await supabase
+          .from('reviews')
+          .select(`
+            id,
+            rating,
+            comment,
+            created_at,
+            listing:listing_id(title),
+            reviewer:reviewer_id(username, profile_picture_url)
+          `)
+          .eq('reviewee_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        setMyReviews(reviews || []);
+
+        if (reviews && reviews.length > 0) {
+          const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+          const avg = (totalRating / reviews.length).toFixed(1);
+          setAvgRating(avg);
+        } else {
+          setAvgRating(null);
+        }
+      } catch (err) {
+        console.error('Error fetching reviews:', err);
+        setMyReviews([]);
+        setAvgRating(null);
+      } finally {
+        setIsLoadingReviews(false);
+      }
+    };
+
+    fetchReviews();
+  }, [user?.id]);
+
+  // Helper function for relative date formatting
+  const getRelativeDate = (dateString) => {
+    if (!dateString) return 'unknown';
+    const now = new Date();
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'unknown';
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-ZA');
+  };
+
+  // Helper function for getting initials from username
+  const getInitials = (username) => {
+    if (!username) return '?';
+    const parts = username.split(' ');
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return username.substring(0, 2).toUpperCase();
+  };
+
+  // Helper function for rendering star ratings
+  const renderStars = (rating) => {
+    return (
+      <span className="text-yellow-500 text-sm">
+        {[...Array(5)].map((_, i) => (
+          <span key={i}>{i < rating ? '★' : '☆'}</span>
+        ))}
+      </span>
+    );
+  };
+
   const formatTradeStatus = (status) => {
     const s = String(status || '').toLowerCase();
     const statusStyles = {
@@ -286,6 +407,7 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
   // ── Derived user data ─────────────────────────────────────────────────
   const displayName = user?.user_metadata?.full_name || 
                       user?.user_metadata?.name || 
+                      fetchedUsername ||
                       user?.email?.split('@')[0] || 
                       'Student';
   const displayEmail = user?.email || '';
@@ -310,26 +432,46 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const dataUrl = e.target.result;
-      setProfileImage(dataUrl);
-      setImageError(null);
+    try {
+      // Generate file path with timestamp
+      const ext = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar_${Date.now()}.${ext}`;
 
-      // Save to Supabase Auth metadata
-      try {
-        const { error } = await supabase.auth.updateUser({
-          data: { avatar_url: dataUrl }
-        });
-        if (error) throw error;
-      } catch (err) {
-        console.error('Failed to save avatar:', err.message);
-        setImageError('Failed to save profile picture. Please try again.');
-      }
-    };
-    reader.onerror = () => setImageError('Failed to load image. Please try again.');
-    reader.readAsDataURL(file);
-    event.target.value = '';
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const publicUrl = data.publicUrl;
+
+      if (!publicUrl) throw new Error('Failed to get public URL');
+
+      // Update Supabase Auth metadata
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+      if (authError) throw authError;
+
+      // Update users table
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({ profile_picture_url: publicUrl })
+        .eq('id', user.id);
+      if (dbError) throw dbError;
+
+      // Update local state with public URL
+      setProfileImage(publicUrl);
+      setImageError(null);
+    } catch (err) {
+      console.error('Failed to upload avatar:', err.message);
+      setImageError('Failed to save profile picture. Please try again.');
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const triggerFileInput = () => {
@@ -341,16 +483,24 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
   };
 
   const handleRemoveImage = async () => {
-    setProfileImage(null);
-    setImageError(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-
-    // Remove avatar from Supabase Auth metadata
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Clear avatar from Supabase Auth metadata
+      const { error: authError } = await supabase.auth.updateUser({
         data: { avatar_url: null }
       });
-      if (error) throw error;
+      if (authError) throw authError;
+
+      // Clear profile_picture_url from users table
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({ profile_picture_url: null })
+        .eq('id', user.id);
+      if (dbError) throw dbError;
+
+      // Update local state
+      setProfileImage(null);
+      setImageError(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       console.error('Failed to remove avatar:', err.message);
     }
@@ -453,6 +603,7 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
       <section className="pt-8 px-8 max-w-3xl mx-auto flex items-center">
         <button
           onClick={onBack}
+          aria-label="Go back"
           className="flex items-center gap-3 text-dark hover:text-gray-500 transition-colors font-medium text-lg"
         >
           <ArrowLeft size={20} />
@@ -540,6 +691,71 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0 }) => {
                 {wishlistCount} item{wishlistCount === 1 ? '' : 's'}
               </span>
             </button>
+          </section>
+
+          <section className="mb-10">
+            <section className="flex justify-between items-end mb-4">
+              <h2 className="text-xl font-bold text-dark">My Reviews</h2>
+              {!isLoadingReviews && avgRating && (
+                <span className="text-primary text-sm font-semibold">
+                  {avgRating} ★ · {myReviews.length} {myReviews.length === 1 ? 'review' : 'reviews'}
+                </span>
+              )}
+            </section>
+
+            {isLoadingReviews ? (
+              <section className="flex items-center justify-center py-8">
+                <Loader size={28} className="animate-spin text-primary" />
+              </section>
+            ) : myReviews.length === 0 ? (
+              <section className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+                <p className="text-gray-500 text-sm">No reviews yet. Complete a transaction to receive reviews!</p>
+              </section>
+            ) : (
+              <section className="space-y-3">
+                {myReviews.map((review) => {
+                  const reviewerInitials = getInitials(review.reviewer?.username || 'User');
+                  const listingTitle = review.listing?.title || 'Item';
+
+                  return (
+                    <section
+                      key={review.id}
+                      className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)]"
+                    >
+                      {/* Reviewer Info */}
+                      <section className="flex items-start gap-3 mb-3">
+                        {review.reviewer?.profile_picture_url ? (
+                          <img
+                            src={review.reviewer.profile_picture_url}
+                            alt={review.reviewer?.username}
+                            className="w-10 h-10 rounded-full object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-dark flex items-center justify-center text-white text-xs font-bold shrink-0">
+                            {reviewerInitials}
+                          </div>
+                        )}
+                        <section className="flex-1">
+                          <p className="font-semibold text-dark text-sm">{review.reviewer?.username || 'Anonymous'}</p>
+                          <p className="text-gray-500 text-xs">for <span className="font-medium text-dark">{listingTitle}</span></p>
+                        </section>
+                        <span className="text-gray-400 text-xs whitespace-nowrap">{getRelativeDate(review.created_at)}</span>
+                      </section>
+
+                      {/* Rating */}
+                      <section className="mb-2">
+                        {renderStars(review.rating)}
+                      </section>
+
+                      {/* Comment */}
+                      {review.comment && (
+                        <p className="text-gray-700 text-sm leading-relaxed">{review.comment}</p>
+                      )}
+                    </section>
+                  );
+                })}
+              </section>
+            )}
           </section>
 
           <section className="mb-10">

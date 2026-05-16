@@ -9,6 +9,7 @@ import { supabase } from './utils/supabase';
 import { useUnreadMessages } from './hooks/useUnreadMessages';
 import StudentBookingDashboard from './components/booking/StudentBookingDashboard';
 import { useSellerPendingOrders } from './hooks/useBookings';
+import UserProfileModal from './components/UserProfileModal'
 
 const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const navigate = useNavigate();
@@ -27,11 +28,52 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const [maxPrice, setMaxPrice] = useState('');
   const[filterCondition, setFilterCondition] = useState('');
   const [wishlistIds, setWishlistIds] = useState(new Set());
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);  const [profileModal, setProfileModal] = useState({ open: false, userId: null });  
   // Use unread messages hook
   const { unreadCount } = useUnreadMessages(user?.id);
   const { pendingOrders } = useSellerPendingOrders(user?.id);
+
+  // Fetch pending reviews count
+  const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
+  useEffect(() => {
+    const fetchPendingReviewsCount = async () => {
+      if (!user?.id) return;
+      try {
+        // Get completed orders from the user as buyer
+        const { data: orders, error: ordersError } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('buyer_id', user.id)
+          .eq('status', 'completed')
+          .eq('buyer_status', 'collected');
+
+        if (ordersError || !orders) return;
+
+        // Check which orders don't have reviews yet
+        const orderIds = orders.map(o => o.id);
+        if (orderIds.length === 0) {
+          setPendingReviewsCount(0);
+          return;
+        }
+
+        const { data: reviews, error: reviewsError } = await supabase
+          .from('reviews')
+          .select('order_id')
+          .in('order_id', orderIds)
+          .eq('reviewer_id', user.id);
+
+        if (reviewsError) return;
+        
+        const reviewedOrderIds = new Set((reviews || []).map(r => r.order_id));
+        const unreviewedCount = orderIds.filter(id => !reviewedOrderIds.has(id)).length;
+        setPendingReviewsCount(unreviewedCount);
+      } catch (err) {
+        console.error('Error fetching pending reviews:', err);
+      }
+    };
+
+    fetchPendingReviewsCount();
+  }, [user?.id]);
 
   useEffect(() => {
   const params = new URLSearchParams(location.search);
@@ -306,6 +348,7 @@ const filteredProducts = useMemo(() => {
           onAddNew={() => setShowSellModal(true)}
           onOpenWishlist={() => setCurrentView('wishlist')}
           wishlistCount={wishlistIds.size}
+          user={user}
         />
         {showSellModal && <SellItemModal onClose={() => setShowSellModal(false)} />}
       </>
@@ -494,6 +537,25 @@ const filteredProducts = useMemo(() => {
               </p>
             </section>
         )}
+
+        {/* Pending Reviews Banner */}
+        {pendingReviewsCount > 0 && currentView === 'home' && (
+          <section className="mt-6 mb-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-amber-600 font-bold text-lg">⭐</div>
+              <div>
+                <p className="font-semibold text-amber-900">You have {pendingReviewsCount} pending review{pendingReviewsCount > 1 ? 's' : ''}</p>
+                <p className="text-sm text-amber-700">Help build the UniMart community by reviewing completed orders</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setCurrentView('orders')}
+              className="text-amber-600 hover:text-amber-800 font-semibold text-sm px-4 py-2 bg-amber-100 rounded-lg transition-colors whitespace-nowrap ml-4"
+            >
+              View Orders
+            </button>
+          </section>
+        )}
         
         {/* Categories & Filter Bar */}
         <section className="mt-8 flex flex-col gap-6 mb-8">
@@ -624,10 +686,16 @@ const filteredProducts = useMemo(() => {
 
                 {/* Seller Info & Action (Border Top) */}
                 <section className="border-t border-gray-100 pt-4 flex items-center justify-between">
-                  <section className="flex items-center gap-2.5">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProfileModal({ open: true, userId: product.seller_id });
+                    }}
+                    className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+                  >
                     <img src={product.sellerAvatar} alt={product.sellerName} className="w-8 h-8 rounded-full object-cover shadow-sm" />
                     <span className="text-sm font-medium text-gray-700">{product.sellerName}</span>
-                  </section>
+                  </button>
                   <button className="text-gray-400 hover:text-red-500 transition-colors p-1 relative z-10" onClick={(e) => {
                       e.stopPropagation();
                       toggleWishlist(product.id);
@@ -662,6 +730,13 @@ const filteredProducts = useMemo(() => {
         onSellItem={() => setShowSellModal(true)}
         onLogout={handleLogout}
         user={user}
+      />
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={profileModal.open}
+        userId={profileModal.userId}
+        onClose={() => setProfileModal({ open: false, userId: null })}
       />
     </section>
   );

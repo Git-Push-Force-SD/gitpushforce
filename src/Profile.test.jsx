@@ -1,9 +1,10 @@
-// All jest.mock() calls must come before imports — Jest hoists them automatically
+// All jest.mock() calls must come before imports
 
 jest.mock('./config', () => ({
   __esModule: true,
-  default: 'https://test.supabase.co'
+  default: 'https://test.supabase.co',
 }));
+
 jest.mock('./AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'user123', email: 'test@test.com' },
@@ -11,512 +12,518 @@ jest.mock('./AuthContext', () => ({
   }),
   AuthProvider: ({ children }) => children,
 }));
+
 jest.mock('./utils/supabase', () => ({
   supabase: {
-    from: jest.fn((table) => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            order: jest.fn(() =>
-              Promise.resolve({
-                data: [
-                  {
-                    id: '1',
-                    title: 'Test Textbook',
-                    price: '200.00',
-                    category: 'textbooks',
-                    condition: 'good',
-                    description: 'A test book',
-                    image_path: 'test/image1.jpg',
-                    seller_id: 'user123',
-                    status: 'active',
-                    created_at: '2026-04-17T00:00:00Z'
-                  }
-                ],
-                error: null
-              })
-            )
-          }))
-        }))
-      })),
-      single: jest.fn(() => Promise.resolve({ data: { role: 'student' }, error: null })),
-      insert: jest.fn(() => Promise.resolve({ data: null, error: null })),
-      update: jest.fn(() => ({
-        eq: jest.fn(() => Promise.resolve({ data: null, error: null }))
-      }))
-    })),
+    from: jest.fn(),
     auth: {
-      getSession: jest.fn(() => Promise.resolve({ data: { session: null }, error: null })),
-      onAuthStateChange: jest.fn((callback) => {
-        return {
-          data: {
-            subscription: {
-              unsubscribe: jest.fn()
-            }
-          }
-        };
-      })
+      getSession: jest.fn(() =>
+        Promise.resolve({ data: { session: null }, error: null })
+      ),
+      onAuthStateChange: jest.fn(() => ({
+        data: {
+          subscription: {
+            unsubscribe: jest.fn(),
+          },
+        },
+      })),
+      updateUser: jest.fn(() =>
+        Promise.resolve({ data: {}, error: null })
+      ),
     },
     storage: {
       from: jest.fn(() => ({
-        upload: jest.fn(() => Promise.resolve({ data: null, error: null }))
-      }))
-    }
-  }
+        upload: jest.fn(() =>
+          Promise.resolve({ data: null, error: null })
+        ),
+        getPublicUrl: jest.fn(() => ({
+          data: {
+            publicUrl: 'https://test.supabase.co/avatar.jpg',
+          },
+        })),
+      })),
+    },
+  },
 }));
 
-// Imports come AFTER jest.mock() calls
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { AuthProvider, useAuth } from './AuthContext';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
+
 import Profile from './Profile';
 
-// Mock window methods — these run at module level, before each test
+// ─────────────────────────────────────────────────────────────
+
 global.confirm = jest.fn(() => true);
 global.alert = jest.fn();
+
+// ─────────────────────────────────────────────────────────────
+
+const mockUser = {
+  id: 'user123',
+  email: 'test@test.com',
+  user_metadata: {
+    full_name: 'Test User',
+    role: 'user',
+  },
+};
+
+const mockListing = {
+  id: '1',
+  title: 'Test Textbook',
+  price: '200.00',
+  category: 'textbooks',
+  condition: 'good',
+  description: 'A test book',
+  image_path: 'test/image1.jpg',
+  seller_id: 'user123',
+  status: 'active',
+  created_at: '2026-04-17T00:00:00Z',
+};
+
+// ─────────────────────────────────────────────────────────────
+
+const makeChain = (resolveValue = { data: [], error: null }) => ({
+  select: jest.fn().mockReturnThis(),
+  eq: jest.fn().mockReturnThis(),
+  or: jest.fn().mockReturnThis(),
+  order: jest.fn().mockResolvedValue(resolveValue),
+
+  single: jest.fn().mockResolvedValue({
+    data: {
+      username: 'Test User',
+      profile_picture_url: null,
+    },
+    error: null,
+  }),
+
+  update: jest.fn().mockReturnValue({
+    eq: jest.fn().mockResolvedValue({
+      data: null,
+      error: null,
+    }),
+  }),
+
+  insert: jest.fn().mockResolvedValue({
+    data: null,
+    error: null,
+  }),
+});
+
+// ─────────────────────────────────────────────────────────────
+
+const applyMocks = (
+  listingsData = [mockListing],
+  listingsError = null
+) => {
+  const { supabase } = require('./utils/supabase');
+
+  supabase.from.mockImplementation((table) => {
+    if (table === 'listings') {
+      return makeChain({
+        data: listingsData,
+        error: listingsError,
+      });
+    }
+
+    if (table === 'users') {
+      return makeChain({
+        data: {
+          username: 'Test User',
+          profile_picture_url: null,
+        },
+        error: null,
+      });
+    }
+
+    if (table === 'reviews') {
+      return makeChain({
+        data: [],
+        error: null,
+      });
+    }
+
+    if (table === 'trades') {
+      return makeChain({
+        data: [],
+        error: null,
+      });
+    }
+
+    return makeChain({
+      data: [],
+      error: null,
+    });
+  });
+};
+
+// ─────────────────────────────────────────────────────────────
+
+const renderProfile = (props = {}) =>
+  render(
+    <Profile
+      user={mockUser}
+      onBack={jest.fn()}
+      onAddNew={jest.fn()}
+      onOpenWishlist={jest.fn()}
+      {...props}
+    />
+  );
+
+// ─────────────────────────────────────────────────────────────
 
 describe('Profile Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset confirm to default true before each test
     global.confirm.mockReturnValue(true);
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
+    applyMocks();
   });
 
   test('Profile renders with user data displayed', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
-
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-    });
+    renderProfile();
 
     expect(screen.getByText(/Profile/i)).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(screen.getByText('Test Textbook')).toBeInTheDocument()
+    );
+
     expect(screen.getByText(/My Listings/i)).toBeInTheDocument();
   });
 
   test('renders user listings from database', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    await waitFor(() =>
+      expect(screen.getByText('Test Textbook')).toBeInTheDocument()
+    );
 
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/R200.00/i)).toBeInTheDocument();
+    expect(screen.getByText(/R200\.00/i)).toBeInTheDocument();
   });
 
   test('calls onAddNew when add listing button is clicked', async () => {
-    const handleBack = jest.fn();
     const handleAddNew = jest.fn();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+    renderProfile({
+      onAddNew: handleAddNew,
     });
 
-    const addButton = screen.getByRole('button', { name: /Add New Listing/i });
-    fireEvent.click(addButton);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Add New Listing/i,
+      })
+    );
 
     expect(handleAddNew).toHaveBeenCalledTimes(1);
   });
 
-  test('calls onBack when back button is clicked', async () => {
+  test('calls onBack when back button is clicked', () => {
     const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+    renderProfile({
+      onBack: handleBack,
     });
 
-    const allButtons = screen.getAllByRole('button', { name: /Profile/i });
-    const backButton = allButtons[0];
-    fireEvent.click(backButton);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Profile/i,
+      })
+    );
 
     expect(handleBack).toHaveBeenCalledTimes(1);
   });
 
   test('displays edit button for each listing', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
-
-    const editButtons = screen.getAllByLabelText(/Edit listing/i);
-    expect(editButtons.length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(
+        screen.getAllByLabelText(/Edit listing/i).length
+      ).toBeGreaterThan(0)
+    );
   });
 
   test('displays delete button for each listing', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
-
-    const deleteButtons = screen.getAllByLabelText(/Delete listing/i);
-    expect(deleteButtons.length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(
+        screen.getAllByLabelText(/Delete listing/i).length
+      ).toBeGreaterThan(0)
+    );
   });
 
   test('opens edit form when edit button is clicked', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    await waitFor(() =>
+      expect(
+        screen.getAllByLabelText(/Edit listing/i)[0]
+      ).toBeInTheDocument()
+    );
 
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
+    fireEvent.click(
+      screen.getAllByLabelText(/Edit listing/i)[0]
+    );
 
-    const editButtons = screen.getAllByLabelText(/Edit listing/i);
-    fireEvent.click(editButtons[0]);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
+    expect(
+      screen.getByText(/Edit Listing/i)
+    ).toBeInTheDocument();
   });
 
   test('delete button triggers confirmation dialog', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    await waitFor(() =>
+      expect(
+        screen.getAllByLabelText(/Delete listing/i)[0]
+      ).toBeInTheDocument()
+    );
 
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
+    fireEvent.click(
+      screen.getAllByLabelText(/Delete listing/i)[0]
+    );
 
-    const deleteButtons = screen.getAllByLabelText(/Delete listing/i);
-    fireEvent.click(deleteButtons[0]);
-
-    await waitFor(() => {
-      expect(global.confirm).toHaveBeenCalled();
-    });
+    expect(global.confirm).toHaveBeenCalled();
   });
 
   test('cancels delete when user declines confirmation', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
     global.confirm.mockReturnValueOnce(false);
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    renderProfile();
 
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
+    await waitFor(() =>
+      expect(screen.getByText('Test Textbook')).toBeInTheDocument()
+    );
 
-    const deleteButtons = screen.getAllByLabelText(/Delete listing/i);
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(
+      screen.getAllByLabelText(/Delete listing/i)[0]
+    );
 
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
+    expect(
+      screen.getByText('Test Textbook')
+    ).toBeInTheDocument();
   });
 
   test('calls Supabase delete API when delete is confirmed', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
-    const mockSupabase = require('./utils/supabase').supabase;
+    const { supabase } = require('./utils/supabase');
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    renderProfile();
 
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
+    await waitFor(() =>
+      expect(
+        screen.getAllByLabelText(/Delete listing/i)[0]
+      ).toBeInTheDocument()
+    );
 
-    const deleteButtons = screen.getAllByLabelText(/Delete listing/i);
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(
+      screen.getAllByLabelText(/Delete listing/i)[0]
+    );
 
-    await waitFor(() => {
-      expect(mockSupabase.from).toHaveBeenCalledWith('listings');
-    });
+    expect(supabase.from).toHaveBeenCalledWith('listings');
   });
 
-  test('upload profile picture button is present', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+  test('upload profile picture button is present', () => {
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-    });
-
-    const uploadButton = screen.getByLabelText(/Upload profile picture/i);
-    expect(uploadButton).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Upload profile picture/i)
+    ).toBeInTheDocument();
   });
 
-  test('file input accepts image types', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+  test('file input accepts image types', () => {
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    const fileInput = document.querySelector('input[type="file"]');
 
-    await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-    });
-
-    const fileInput = screen.getByLabelText(/Upload profile picture/i)
-      .closest('section')
-      .querySelector('input[type="file"]');
-
-    expect(fileInput).toBeInTheDocument();
-    expect(fileInput).toHaveAttribute('accept', expect.stringContaining('image'));
+    expect(fileInput).toHaveAttribute(
+      'accept',
+      expect.stringContaining('image')
+    );
   });
 
   test('fetches listings for current user only', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
-    const mockSupabase = require('./utils/supabase').supabase;
+    const { supabase } = require('./utils/supabase');
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    renderProfile();
 
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
+    await waitFor(() =>
+      expect(screen.getByText('Test Textbook')).toBeInTheDocument()
+    );
 
-    expect(mockSupabase.from).toHaveBeenCalledWith('listings');
+    expect(supabase.from).toHaveBeenCalledWith('listings');
   });
 
   test('displays formatted price for listings', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/R200\.00/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/R200\.00/i)).toBeInTheDocument()
+    );
   });
 
   test('displays listing count', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/1 active/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/1 active/i)).toBeInTheDocument()
+    );
   });
 
   test('handles file upload for profile picture', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    const fileInput = document.querySelector('input[type="file"]');
 
-    await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+    const file = new File(['test'], 'profile.jpg', {
+      type: 'image/jpeg',
     });
 
-    const fileInput = screen.getByLabelText(/Upload profile picture/i)
-      .closest('section')
-      .querySelector('input[type="file"]');
+    fireEvent.change(fileInput, {
+      target: {
+        files: [file],
+      },
+    });
 
-    expect(fileInput).toBeInTheDocument();
-
-    const file = new File(['test'], 'profile.jpg', { type: 'image/jpeg' });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    expect(fileInput).toHaveAttribute('accept', expect.stringContaining('image'));
+    await waitFor(() =>
+      expect(fileInput).toBeInTheDocument()
+    );
   });
 
   test('displays error for invalid profile picture file type', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    const fileInput = document.querySelector('input[type="file"]');
 
-    await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+    const file = new File(['test'], 'document.txt', {
+      type: 'text/plain',
     });
 
-    const fileInput = screen.getByLabelText(/Upload profile picture/i)
-      .closest('section')
-      .querySelector('input[type="file"]');
+    fireEvent.change(fileInput, {
+      target: {
+        files: [file],
+      },
+    });
 
-    const file = new File(['test'], 'document.txt', { type: 'text/plain' });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    expect(fileInput).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Please select a valid image file/i)
+      ).toBeInTheDocument()
+    );
   });
 
   test('displays error for oversized profile picture', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    const fileInput = document.querySelector('input[type="file"]');
 
-    await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+    const largeFile = new File(
+      ['x'.repeat(2 * 1024 * 1024)],
+      'large.jpg',
+      {
+        type: 'image/jpeg',
+      }
+    );
+
+    fireEvent.change(fileInput, {
+      target: {
+        files: [largeFile],
+      },
     });
 
-    const fileInput = screen.getByLabelText(/Upload profile picture/i)
-      .closest('section')
-      .querySelector('input[type="file"]');
-
-    const largeFile = new File(['x'.repeat(2 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
-    fireEvent.change(fileInput, { target: { files: [largeFile] } });
-
-    expect(fileInput).toBeInTheDocument();
-  });
-
-  test('Supabase update is called when delete is confirmed', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
-    const mockSupabase = require('./utils/supabase').supabase;
-
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
-
-    const deleteButtons = screen.getAllByLabelText(/Delete listing/i);
-    fireEvent.click(deleteButtons[0]);
-
-    await waitFor(() => {
-      expect(mockSupabase.from('listings').update).toBeDefined();
-    });
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Image size must be less than 1MB/i)
+      ).toBeInTheDocument()
+    );
   });
 
   test('edit form appears with listing data when edit clicked', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    await waitFor(() =>
+      expect(
+        screen.getAllByLabelText(/Edit listing/i)[0]
+      ).toBeInTheDocument()
+    );
 
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
+    fireEvent.click(
+      screen.getAllByLabelText(/Edit listing/i)[0]
+    );
 
-    const editButtons = screen.getAllByLabelText(/Edit listing/i);
-    fireEvent.click(editButtons[0]);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
+    expect(
+      screen.getByDisplayValue('Test Textbook')
+    ).toBeInTheDocument();
   });
 
   test('profile renders category badges for listings', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/Textbooks/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/Textbooks/i)).toBeInTheDocument()
+    );
   });
 
   test('displays image for each listing', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
+    await waitFor(() =>
+      expect(
+        screen.getByAltText('Test Textbook')
+      ).toBeInTheDocument()
+    );
 
-    await waitFor(() => {
-      expect(screen.getByAltText(/Test Textbook/i)).toBeInTheDocument();
-    });
-
-    const image = screen.getByAltText(/Test Textbook/i);
-    expect(image).toHaveAttribute('src', expect.stringContaining('supabase'));
+    expect(
+      screen.getByAltText('Test Textbook')
+    ).toHaveAttribute(
+      'src',
+      expect.stringContaining('supabase')
+    );
   });
 
   test('handles API error when fetching listings', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
-    const mockSupabase = require('./utils/supabase').supabase;
+    applyMocks(null, { message: 'API Error' });
 
-    mockSupabase.from.mockReturnValueOnce({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            order: jest.fn(() =>
-              Promise.resolve({
-                data: null,
-                error: { message: 'API Error' }
-              })
-            )
-          }))
-        }))
-      }))
-    });
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/My Listings/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Failed to load listings/i)
+      ).toBeInTheDocument()
+    );
   });
 
   test('displays no listings message when list is empty', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
-    const mockSupabase = require('./utils/supabase').supabase;
+    applyMocks([]);
 
-    mockSupabase.from.mockReturnValueOnce({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          eq: jest.fn(() => ({
-            order: jest.fn(() =>
-              Promise.resolve({
-                data: [],
-                error: null
-              })
-            )
-          }))
-        }))
-      }))
-    });
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/My Listings/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /No active listings yet/i
+        )
+      ).toBeInTheDocument()
+    );
   });
 
   test('displays listing card with all key information', async () => {
-    const handleBack = jest.fn();
-    const handleAddNew = jest.fn();
+    renderProfile();
 
-    render(<Profile onBack={handleBack} onAddNew={handleAddNew} />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Test Textbook/i)).toBeInTheDocument();
-    });
+    await waitFor(() =>
+      expect(screen.getByText('Test Textbook')).toBeInTheDocument()
+    );
 
     expect(screen.getByText(/Textbooks/i)).toBeInTheDocument();
-    expect(screen.getByText(/R200.00/i)).toBeInTheDocument();
-    expect(screen.getByAltText(/Test Textbook/i)).toBeInTheDocument();
+
+    expect(screen.getByText(/R200\.00/i)).toBeInTheDocument();
+
+    expect(
+      screen.getByAltText('Test Textbook')
+    ).toBeInTheDocument();
   });
 });

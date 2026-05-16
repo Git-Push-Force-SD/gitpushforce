@@ -42,7 +42,7 @@ const mockListing = {
   category: 'Electronics',
   image_path: 'user1/image.jpg',
   seller_id: 'seller-1',
-  created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+  created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   listing_type: 'sale',
 };
 
@@ -59,7 +59,12 @@ const mockAuthUser = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const setupSupabaseMocks = ({ listing = mockListing, seller = mockSeller, listingError = null, sellerError = null } = {}) => {
+const setupSupabaseMocks = ({
+  listing = mockListing,
+  seller = mockSeller,
+  listingError = null,
+  sellerError = null,
+} = {}) => {
   mockSupabase.from.mockImplementation((table) => {
     if (table === 'listings') {
       return {
@@ -110,6 +115,13 @@ const setupSupabaseMocks = ({ listing = mockListing, seller = mockSeller, listin
         insert: jest.fn().mockResolvedValue({ error: null }),
       };
     }
+    if (table === 'reviews') {
+      return {
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      };
+    }
     return {};
   });
 };
@@ -129,7 +141,7 @@ const renderComponent = (listingId = 'listing-1') => {
 describe('ListingDetails', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    window.scrollTo = jest.fn(); // jsdom does not implement scrollTo
+    window.scrollTo = jest.fn();
     AuthContext.useAuth.mockReturnValue({ user: mockAuthUser });
     useConversationModule.useConversation.mockReturnValue({
       getOrCreateConversation: jest.fn().mockResolvedValue('conv-1'),
@@ -285,8 +297,8 @@ describe('ListingDetails', () => {
       });
     });
 
-    test('renders Trade button for both listing type', async () => {
-      setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'both' } });
+    test('renders Trade button for "either" listing type', async () => {
+      setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'either' } });
       renderComponent();
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /Trade/i })).toBeInTheDocument();
@@ -361,7 +373,6 @@ describe('ListingDetails', () => {
       renderComponent();
       await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
       fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
-      // X button is the close icon button in the modal header
       const closeBtn = screen.getAllByRole('button').find(
         (btn) => btn.querySelector('svg') && btn.className.includes('rounded-full') && btn.className.includes('bg-gray-100')
       );
@@ -375,10 +386,8 @@ describe('ListingDetails', () => {
       await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
       fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
       expect(screen.getByPlaceholderText(/Nintendo Switch Lite/i)).toBeInTheDocument();
-      // Use getAllByText since "Category" and "Condition" also appear in the specs section
       expect(screen.getAllByText('Category').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Condition').length).toBeGreaterThan(0);
-      // Verify the modal select dropdowns are present
       const selects = screen.getAllByRole('combobox');
       expect(selects.length).toBeGreaterThanOrEqual(2);
     });
@@ -418,24 +427,3 @@ describe('ListingDetails', () => {
     });
   });
 });
-// In ListingDetails.test.jsx, find the orders mock in setupSupabaseMocks and replace with:
-
-    if (table === 'orders') {
-      return {
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                // Updated: uses .limit(1) instead of .single()
-                limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          }),
-        }),
-        insert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: { id: 'order-1' }, error: null }),
-          }),
-        }),
-      };
-    }
