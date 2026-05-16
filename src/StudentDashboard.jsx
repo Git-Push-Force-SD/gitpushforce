@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, LogOut, Menu } from 'lucide-react';
-import Transactions from './components/Transactions';
+import Transactions from './Transactions';
 import Profile from './Profile';
 import SellItemModal from './SellItemModal';
 import MyOrders from './MyOrders';

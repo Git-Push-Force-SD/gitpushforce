@@ -206,12 +206,23 @@ const handleReleaseItem = async (booking) => {
 
         if (bookingsError) throw bookingsError;
 
-        const { error: tradeError } = await supabase
-          .from('trades')
-          .update({ status: 'completed' })
-          .eq('id', booking.trade_id);
+        // Check if all bookings for this trade are now collected
+        const { data: allTradeBookings, error: fetchError } = await supabase
+          .from('bookings')
+          .select('id, status')
+          .eq('trade_id', booking.trade_id);
 
-        if (tradeError) throw tradeError;
+        if (fetchError) throw fetchError;
+
+        // Only mark trade as completed if all bookings are collected
+        if (allTradeBookings && allTradeBookings.every(b => b.status === 'collected')) {
+          const { error: tradeError } = await supabase
+            .from('trades')
+            .update({ status: 'completed' })
+            .eq('id', booking.trade_id);
+
+          if (tradeError) throw tradeError;
+        }
       } else {
         const { error: orderError } = await supabase
           .from('orders')

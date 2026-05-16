@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Search, Package, ShoppingBag, Store, Repeat2 } from 'lucide-react';
-import { supabase } from '../utils/supabase';
+import { supabase } from './utils/supabase';
 
 const formatPrice = (price) =>
   `R${Number(price || 0).toLocaleString('en-ZA', {
@@ -24,7 +24,8 @@ export default function Transactions({ user, onBack, compact = false }) {
 
       setLoading(true);
 
-      const { data: orderData, error: orderError } = await supabase
+      // Query 1: Orders where user is buyer
+      const buyerOrdersPromise = supabase
         .from('orders')
         .select(`
           id,
@@ -32,7 +33,7 @@ export default function Transactions({ user, onBack, compact = false }) {
           listing_id,
           status,
           buyer_status,
-          created_at,
+          placed_at,
           listings (
             id,
             title,
@@ -48,10 +49,17 @@ export default function Transactions({ user, onBack, compact = false }) {
             )
           )
         `)
-        .or(`buyer_id.eq.${user.id},listings.seller_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
+        .eq('buyer_id', user.id)
+        .order('placed_at', { ascending: false });
 
-      const { data: tradeData, error: tradeError } = await supabase
+      // Query 2: Get listing IDs where user is seller
+      const sellerListingsPromise = supabase
+        .from('listings')
+        .select('id')
+        .eq('seller_id', user.id);
+
+      // Query 3: Trades
+      const tradesPromise = supabase
         .from('trades')
         .select(`
           id,
@@ -68,38 +76,82 @@ export default function Transactions({ user, onBack, compact = false }) {
             id,
             username,
             email
-          ),
-          bookings (
-            id,
-            status,
-            date,
-            time_slot,
-            location,
-            listing:listing_id (
-              id,
-              title,
-              price,
-              category,
-              condition,
-              image_path
-            )
           )
         `)
         .or(`initiator_id.eq.${user.id},receiver_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
-      if (orderError) {
-        console.error('Error fetching orders:', orderError);
-        setOrders([]);
-      } else {
-        setOrders(orderData || []);
+      // Execute all queries in parallel
+      const [buyerOrdersResult, sellerListingsResult, tradesResult] = await Promise.all([
+        buyerOrdersPromise,
+        sellerListingsPromise,
+        tradesPromise,
+      ]);
+
+      // Handle buyer orders
+      if (buyerOrdersResult.error) {
+        console.error('Error fetching buyer orders:', buyerOrdersResult.error);
       }
 
-      if (tradeError) {
-        console.error('Error fetching trades:', tradeError);
+      // Handle seller listings and fetch orders for those listings
+      if (sellerListingsResult.error) {
+        console.error('Error fetching seller listings:', sellerListingsResult.error);
+      }
+
+      let sellerOrders = [];
+      if (sellerListingsResult.data && sellerListingsResult.data.length > 0) {
+        const listingIds = sellerListingsResult.data.map((l) => l.id);
+        const { data: sellerOrdersData, error: sellerOrdersError } = await supabase
+          .from('orders')
+          .select(`
+            id,
+            buyer_id,
+            listing_id,
+            status,
+            buyer_status,
+            placed_at,
+            listings (
+              id,
+              title,
+              price,
+              category,
+              condition,
+              seller_id,
+              image_path,
+              seller:users!listings_seller_id_fkey (
+                id,
+                username,
+                email
+              )
+            )
+          `)
+          .in('listing_id', listingIds)
+          .order('placed_at', { ascending: false });
+
+        if (sellerOrdersError) {
+          console.error('Error fetching seller orders:', sellerOrdersError);
+        } else {
+          sellerOrders = sellerOrdersData || [];
+        }
+      }
+
+      // Merge and deduplicate orders
+      const seen = new Set();
+      const buyerOrders = buyerOrdersResult.data || [];
+      const mergedOrders = [...buyerOrders, ...sellerOrders].filter((o) => {
+        if (seen.has(o.id)) return false;
+        seen.add(o.id);
+        return true;
+      });
+
+      setOrders(mergedOrders);
+
+      // Handle trades
+      if (tradesResult.error) {
+        console.error('Error fetching trades:', tradesResult.error);
         setTrades([]);
       } else {
-        setTrades(tradeData || []);
+        setTrades(tradesResult.data || []);
       }
 
       setLoading(false);
@@ -125,14 +177,7 @@ export default function Transactions({ user, onBack, compact = false }) {
   }, [orders, user?.id]);
 
   const completedTrades = useMemo(() => {
-    return trades.filter((trade) => {
-      const bookings = trade.bookings || [];
-
-      return (
-        bookings.length > 0 &&
-        bookings.every((booking) => booking.status === 'collected')
-      );
-    });
+    return trades.filter((trade) => trade.status === 'completed');
   }, [trades]);
 
   const activeItems = useMemo(() => {
@@ -153,10 +198,7 @@ export default function Transactions({ user, onBack, compact = false }) {
           item.id?.toLowerCase().includes(q) ||
           item.status?.toLowerCase().includes(q) ||
           item.initiator?.username?.toLowerCase().includes(q) ||
-          item.receiver?.username?.toLowerCase().includes(q) ||
-          item.bookings?.some((booking) =>
-            booking.listing?.title?.toLowerCase().includes(q)
-          )
+          item.receiver?.username?.toLowerCase().includes(q)
         );
       }
 
@@ -262,9 +304,12 @@ export default function Transactions({ user, onBack, compact = false }) {
 
                       <section>
                         <p className="font-semibold">Completed Trade</p>
-                        <p className="text-xs text-gray-500">Trade ID: {trade.id}</p>
+                        <p className="text-xs text-gray-500">Ref: #{trade.id.slice(0, 8).toUpperCase()}</p>
                         <p className="text-xs text-gray-500">
                           With: {otherUser?.username || otherUser?.email || 'Unknown'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(trade.created_at).toLocaleDateString('en-ZA')}
                         </p>
                       </section>
                     </section>
@@ -272,29 +317,6 @@ export default function Transactions({ user, onBack, compact = false }) {
                     <span className="w-fit rounded-full border px-3 py-1 text-xs font-semibold bg-green-100 text-green-700 border-green-200">
                       Completed
                     </span>
-                  </section>
-
-                  <section className="mt-4 grid gap-3 md:grid-cols-2">
-                    {(trade.bookings || []).map((booking) => (
-                      <section
-                        key={booking.id}
-                        className="rounded-2xl border border-gray-100 bg-gray-50 p-4"
-                      >
-                        <p className="font-semibold">
-                          {booking.listing?.title || 'Unknown item'}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {formatPrice(booking.listing?.price)}
-                        </p>
-                        <p className="mt-2 text-xs text-gray-500">
-                          {booking.date} · {booking.time_slot}
-                        </p>
-                        <p className="text-xs text-gray-500">{booking.location}</p>
-                        <span className="mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold bg-green-100 text-green-700 border-green-200">
-                          Collected
-                        </span>
-                      </section>
-                    ))}
                   </section>
                 </section>
               );
@@ -318,7 +340,7 @@ export default function Transactions({ user, onBack, compact = false }) {
                         {listing?.title || 'Unknown item'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Order ID: {order.id}
+                        Ref: #{order.id.slice(0, 8).toUpperCase()}
                       </p>
                       <p className="text-xs text-gray-500">
                         {formatPrice(listing?.price)}
@@ -333,7 +355,7 @@ export default function Transactions({ user, onBack, compact = false }) {
                         : 'Completed sale'}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {new Date(order.created_at).toLocaleDateString('en-ZA')}
+                      {new Date(order.placed_at).toLocaleDateString('en-ZA')}
                     </p>
                   </section>
 
