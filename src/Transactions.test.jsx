@@ -11,54 +11,168 @@ jest.mock('../utils/supabase', () => ({
 
 const mockUser = { id: 'user-1' };
 
-const mockTransactions = [
+const mockOrders = [
   {
-    id: 'booking-1',
+    id: 'order-1',
     buyer_id: 'user-1',
-    seller_id: 'seller-1',
-    date: '2026-05-20',
-    time_slot: '10:00 - 11:00',
-    location: 'Trade Facility — Room 2B',
-    status: 'pending',
-    buyer: { id: 'user-1', username: 'buyerUser', email: 'buyer@test.com' },
-    seller: { id: 'seller-1', username: 'sellerUser', email: 'seller@test.com' },
-    listing: {
+    status: 'completed',
+    buyer_status: 'collected',
+    created_at: '2026-05-01T10:00:00Z',
+    listings: {
       id: 'listing-1',
       title: 'MacBook Air',
-      price: 8000,
+      price: 8500,
       category: 'Electronics',
       condition: 'Good',
+      seller_id: 'seller-1',
+      seller: {
+        id: 'seller-1',
+        username: 'Sarah',
+        email: 'sarah@test.com',
+      },
     },
   },
   {
-    id: 'booking-2',
+    id: 'order-2',
     buyer_id: 'buyer-2',
-    seller_id: 'user-1',
-    date: '2026-05-21',
-    time_slot: '12:00 - 13:00',
-    location: 'Library Exchange Point',
-    status: 'collected',
-    buyer: { id: 'buyer-2', username: 'anotherBuyer', email: 'buyer2@test.com' },
-    seller: { id: 'user-1', username: 'sellerMe', email: 'me@test.com' },
-    listing: {
+    status: 'completed',
+    buyer_status: 'collected',
+    created_at: '2026-05-02T10:00:00Z',
+    listings: {
       id: 'listing-2',
       title: 'Calculus Textbook',
-      price: 250,
+      price: 300,
       category: 'Textbooks',
       condition: 'Like New',
+      seller_id: 'user-1',
+      seller: {
+        id: 'user-1',
+        username: 'Me',
+        email: 'me@test.com',
+      },
+    },
+  },
+  {
+    id: 'order-3',
+    buyer_id: 'user-1',
+    status: 'pending',
+    buyer_status: 'pending',
+    created_at: '2026-05-03T10:00:00Z',
+    listings: {
+      id: 'listing-3',
+      title: 'Pending Headphones',
+      price: 900,
+      category: 'Electronics',
+      condition: 'New',
+      seller_id: 'seller-2',
+      seller: {
+        id: 'seller-2',
+        username: 'Neo',
+        email: 'neo@test.com',
+      },
     },
   },
 ];
 
-const setupSupabaseMock = (data = mockTransactions, error = null) => {
-  const query = {
-    select: jest.fn().mockReturnThis(),
-    or: jest.fn().mockReturnThis(),
-    order: jest.fn().mockResolvedValue({ data, error }),
-  };
+const mockTrades = [
+  {
+    id: 'trade-1',
+    initiator_id: 'user-1',
+    receiver_id: 'user-2',
+    status: 'completed',
+    created_at: '2026-05-04T10:00:00Z',
+    initiator: {
+      id: 'user-1',
+      username: 'Me',
+      email: 'me@test.com',
+    },
+    receiver: {
+      id: 'user-2',
+      username: 'Lebo',
+      email: 'lebo@test.com',
+    },
+    bookings: [
+      {
+        id: 'booking-1',
+        status: 'collected',
+        date: '2026-05-10',
+        time_slot: '10:00 - 11:00',
+        location: 'Trade Facility — Room 2B',
+        listing: {
+          id: 'listing-4',
+          title: 'Nike Dunks',
+          price: 1200,
+          category: 'Fashion',
+          condition: 'Good',
+        },
+      },
+      {
+        id: 'booking-2',
+        status: 'collected',
+        date: '2026-05-10',
+        time_slot: '10:00 - 11:00',
+        location: 'Trade Facility — Room 2B',
+        listing: {
+          id: 'listing-5',
+          title: 'Sony Headphones',
+          price: 1500,
+          category: 'Audio',
+          condition: 'Good',
+        },
+      },
+    ],
+  },
+  {
+    id: 'trade-2',
+    initiator_id: 'user-1',
+    receiver_id: 'user-3',
+    status: 'pending',
+    created_at: '2026-05-05T10:00:00Z',
+    initiator: {
+      id: 'user-1',
+      username: 'Me',
+      email: 'me@test.com',
+    },
+    receiver: {
+      id: 'user-3',
+      username: 'Ayesha',
+      email: 'ayesha@test.com',
+    },
+    bookings: [
+      {
+        id: 'booking-3',
+        status: 'pending',
+        date: '2026-05-12',
+        time_slot: '12:00 - 13:00',
+        location: 'Library',
+        listing: {
+          id: 'listing-6',
+          title: 'Pending Trade Item',
+          price: 500,
+        },
+      },
+    ],
+  },
+];
 
-  supabase.from.mockReturnValue(query);
-  return query;
+const mockSupabase = ({ orders = mockOrders, trades = mockTrades } = {}) => {
+  supabase.from.mockImplementation((table) => {
+    const query = {
+      select: jest.fn().mockReturnThis(),
+      or: jest.fn().mockReturnThis(),
+      order: jest.fn(),
+    };
+
+    if (table === 'orders') {
+      query.order.mockResolvedValue({ data: orders, error: null });
+    }
+
+    if (table === 'trades') {
+      query.order.mockResolvedValue({ data: trades, error: null });
+    }
+
+    return query;
+  });
 };
 
 describe('Transactions', () => {
@@ -66,40 +180,31 @@ describe('Transactions', () => {
     jest.clearAllMocks();
   });
 
-  it('loads transactions from Supabase', async () => {
-    setupSupabaseMock();
+  it('renders the page heading', async () => {
+    mockSupabase();
+
+    render(<Transactions user={mockUser} onBack={jest.fn()} />);
+
+    expect(screen.getByText(/Loading completed transactions/i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Completed Purchases, Sales & Trades/i)).toBeInTheDocument();
+    });
+  });
+
+  it('fetches orders and trades from Supabase', async () => {
+    mockSupabase();
 
     render(<Transactions user={mockUser} onBack={jest.fn()} />);
 
     await waitFor(() => {
-      expect(supabase.from).toHaveBeenCalledWith('bookings');
+      expect(supabase.from).toHaveBeenCalledWith('orders');
+      expect(supabase.from).toHaveBeenCalledWith('trades');
     });
-
-    expect(screen.getByText('MacBook Air')).toBeInTheDocument();
   });
 
-  it('shows loading state first', () => {
-    setupSupabaseMock();
-
-    render(<Transactions user={mockUser} onBack={jest.fn()} />);
-
-    expect(screen.getByText(/loading transactions/i)).toBeInTheDocument();
-  });
-
-  it('shows only incomplete transactions in queue view by default', async () => {
-    setupSupabaseMock();
-
-    render(<Transactions user={mockUser} onBack={jest.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('MacBook Air')).toBeInTheDocument();
-    });
-
-    expect(screen.queryByText('Calculus Textbook')).not.toBeInTheDocument();
-  });
-
-  it('shows all transactions in history view', async () => {
-    setupSupabaseMock();
+  it('shows only completed purchases in BUYING tab', async () => {
+    mockSupabase();
 
     render(<Transactions user={mockUser} onBack={jest.fn()} />);
 
@@ -107,14 +212,28 @@ describe('Transactions', () => {
       expect(screen.getByText('MacBook Air')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Transaction History'));
+    expect(screen.queryByText('Pending Headphones')).not.toBeInTheDocument();
+    expect(screen.getByText(/Seller: Sarah/i)).toBeInTheDocument();
+    expect(screen.getByText('Completed')).toBeInTheDocument();
+  });
 
-    expect(screen.getByText('MacBook Air')).toBeInTheDocument();
+  it('shows completed sales in SELLING tab', async () => {
+    mockSupabase();
+
+    render(<Transactions user={mockUser} onBack={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('MacBook Air')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('SELLING'));
+
     expect(screen.getByText('Calculus Textbook')).toBeInTheDocument();
+    expect(screen.getByText('Completed sale')).toBeInTheDocument();
   });
 
-  it('filters transactions by search text', async () => {
-    setupSupabaseMock();
+  it('shows only completed trades in TRADES tab', async () => {
+    mockSupabase();
 
     render(<Transactions user={mockUser} onBack={jest.fn()} />);
 
@@ -122,57 +241,66 @@ describe('Transactions', () => {
       expect(screen.getByText('MacBook Air')).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByPlaceholderText(/search/i), {
-      target: { value: 'macbook' },
-    });
+    fireEvent.click(screen.getByText('TRADES'));
 
-    expect(screen.getByText('MacBook Air')).toBeInTheDocument();
-    expect(screen.queryByText('Calculus Textbook')).not.toBeInTheDocument();
+    expect(screen.getByText('Completed Trade')).toBeInTheDocument();
+    expect(screen.getByText('Nike Dunks')).toBeInTheDocument();
+    expect(screen.getByText('Sony Headphones')).toBeInTheDocument();
+    expect(screen.queryByText('Pending Trade Item')).not.toBeInTheDocument();
   });
 
-  it('shows buyer or seller role correctly', async () => {
-    setupSupabaseMock();
+  it('filters purchases using search', async () => {
+    mockSupabase();
 
     render(<Transactions user={mockUser} onBack={jest.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/You are: Buyer/i)).toBeInTheDocument();
+      expect(screen.getByText('MacBook Air')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Transaction History'));
+    fireEvent.change(screen.getByPlaceholderText(/Search completed item/i), {
+      target: { value: 'nothing' },
+    });
 
-    expect(screen.getByText(/You are: Seller/i)).toBeInTheDocument();
+    expect(screen.queryByText('MacBook Air')).not.toBeInTheDocument();
+    expect(screen.getByText(/No completed purchases found/i)).toBeInTheDocument();
   });
 
-  it('shows empty message when no incomplete transactions exist', async () => {
-    setupSupabaseMock([
-      {
-        ...mockTransactions[1],
-        status: 'collected',
-      },
-    ]);
+  it('filters trades using search', async () => {
+    mockSupabase();
 
     render(<Transactions user={mockUser} onBack={jest.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No incomplete transactions found/i)).toBeInTheDocument();
+      expect(screen.getByText('MacBook Air')).toBeInTheDocument();
     });
+
+    fireEvent.click(screen.getByText('TRADES'));
+
+    fireEvent.change(screen.getByPlaceholderText(/Search completed item/i), {
+      target: { value: 'nike' },
+    });
+
+    expect(screen.getByText('Nike Dunks')).toBeInTheDocument();
+    expect(screen.queryByText('Pending Trade Item')).not.toBeInTheDocument();
   });
 
-  it('shows empty message when history is empty', async () => {
-    setupSupabaseMock([]);
+  it('shows empty state when there are no completed purchases', async () => {
+    mockSupabase({
+      orders: mockOrders.filter((order) => order.status !== 'completed'),
+      trades: [],
+    });
 
     render(<Transactions user={mockUser} onBack={jest.fn()} />);
 
-    fireEvent.click(screen.getByText('Transaction History'));
-
     await waitFor(() => {
-      expect(screen.getByText(/No transaction history found/i)).toBeInTheDocument();
+      expect(screen.getByText(/No completed purchases found/i)).toBeInTheDocument();
     });
   });
 
   it('calls onBack when back button is clicked', () => {
-    setupSupabaseMock();
+    mockSupabase();
+
     const onBack = jest.fn();
 
     render(<Transactions user={mockUser} onBack={onBack} />);
@@ -182,13 +310,24 @@ describe('Transactions', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('handles Supabase error safely', async () => {
-    setupSupabaseMock(null, { message: 'Database error' });
+  it('handles Supabase errors safely', async () => {
+    supabase.from.mockImplementation((table) => {
+      const query = {
+        select: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        order: jest.fn().mockResolvedValue({
+          data: null,
+          error: { message: `${table} error` },
+        }),
+      };
+
+      return query;
+    });
 
     render(<Transactions user={mockUser} onBack={jest.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No incomplete transactions found/i)).toBeInTheDocument();
+      expect(screen.getByText(/No completed purchases found/i)).toBeInTheDocument();
     });
   });
 });

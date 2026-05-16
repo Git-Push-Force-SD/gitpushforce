@@ -1,25 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Package, CheckCircle2, XCircle, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Search, Package, ShoppingBag, Store, Repeat2 } from 'lucide-react';
 import { supabase } from '../utils/supabase';
 
-const statusLabels = {
-  pending: 'Awaiting drop-off',
-  confirmed: 'Ready for collection',
-  collected: 'Completed',
-  cancelled: 'Cancelled',
+const statusClasses = {
+  completed: 'bg-green-100 text-green-700 border-green-200',
+  collected: 'bg-green-100 text-green-700 border-green-200',
 };
 
-const badgeClasses = (status) => {
-  if (status === 'pending') return 'bg-amber-100 text-amber-700 border-amber-200';
-  if (status === 'confirmed') return 'bg-blue-100 text-blue-700 border-blue-200';
-  if (status === 'collected') return 'bg-green-100 text-green-700 border-green-200';
-  if (status === 'cancelled') return 'bg-red-100 text-red-700 border-red-200';
-  return 'bg-gray-100 text-gray-700 border-gray-200';
-};
+const formatPrice = (price) =>
+  `R${Number(price || 0).toLocaleString('en-ZA', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 export default function Transactions({ user, onBack }) {
-  const [transactions, setTransactions] = useState([]);
-  const [activeView, setActiveView] = useState('queue');
+  const [activeTab, setActiveTab] = useState('purchases');
+  const [orders, setOrders] = useState([]);
+  const [trades, setTrades] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -29,32 +26,82 @@ export default function Transactions({ user, onBack }) {
 
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('bookings')
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
         .select(`
           id,
-          order_id,
           buyer_id,
-          seller_id,
           listing_id,
-          date,
-          time_slot,
-          location,
           status,
-          notes,
+          buyer_status,
           created_at,
-          buyer:buyer_id(id, username, email),
-          seller:seller_id(id, username, email),
-          listing:listing_id(id, title, price, category, condition, image_path)
+          listings (
+            id,
+            title,
+            price,
+            category,
+            condition,
+            seller_id,
+            image_path,
+            seller:users!listings_seller_id_fkey (
+              id,
+              username,
+              email
+            )
+          )
         `)
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .or(`buyer_id.eq.${user.id},listings.seller_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching transactions:', error);
-        setTransactions([]);
+      const { data: tradeData, error: tradeError } = await supabase
+        .from('trades')
+        .select(`
+          id,
+          initiator_id,
+          receiver_id,
+          status,
+          created_at,
+          initiator:initiator_id (
+            id,
+            username,
+            email
+          ),
+          receiver:receiver_id (
+            id,
+            username,
+            email
+          ),
+          bookings (
+            id,
+            status,
+            date,
+            time_slot,
+            location,
+            listing:listing_id (
+              id,
+              title,
+              price,
+              category,
+              condition,
+              image_path
+            )
+          )
+        `)
+        .or(`initiator_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .order('created_at', { ascending: false });
+
+      if (orderError) {
+        console.error('Error fetching orders:', orderError);
+        setOrders([]);
       } else {
-        setTransactions(data || []);
+        setOrders(orderData || []);
+      }
+
+      if (tradeError) {
+        console.error('Error fetching trades:', tradeError);
+        setTrades([]);
+      } else {
+        setTrades(tradeData || []);
       }
 
       setLoading(false);
@@ -63,74 +110,118 @@ export default function Transactions({ user, onBack }) {
     fetchTransactions();
   }, [user?.id]);
 
-  const filteredTransactions = useMemo(() => {
+  const purchases = useMemo(() => {
+    return orders.filter(
+      (order) =>
+        order.buyer_id === user?.id &&
+        order.status === 'completed'
+    );
+  }, [orders, user?.id]);
+
+  const sales = useMemo(() => {
+    return orders.filter(
+      (order) =>
+        order.listings?.seller_id === user?.id &&
+        order.status === 'completed'
+    );
+  }, [orders, user?.id]);
+
+  const completedTrades = useMemo(() => {
+    return trades.filter((trade) => {
+      const bookings = trade.bookings || [];
+
+      return (
+        bookings.length > 0 &&
+        bookings.every((booking) => booking.status === 'collected')
+      );
+    });
+  }, [trades]);
+
+  const activeItems = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return transactions.filter((transaction) => {
-      const isIncomplete =
-        transaction.status !== 'collected' &&
-        transaction.status !== 'cancelled';
+    const base =
+      activeTab === 'purchases'
+        ? purchases
+        : activeTab === 'sales'
+          ? sales
+          : completedTrades;
 
-      const matchesView = activeView === 'queue' ? isIncomplete : true;
+    return base.filter((item) => {
+      if (!q) return true;
 
-      const matchesSearch =
-        q === '' ||
-        transaction.id?.toLowerCase().includes(q) ||
-        transaction.listing?.title?.toLowerCase().includes(q) ||
-        transaction.buyer?.username?.toLowerCase().includes(q) ||
-        transaction.buyer?.email?.toLowerCase().includes(q) ||
-        transaction.seller?.username?.toLowerCase().includes(q) ||
-        transaction.seller?.email?.toLowerCase().includes(q) ||
-        transaction.status?.toLowerCase().includes(q);
+      if (activeTab === 'trades') {
+        return (
+          item.id?.toLowerCase().includes(q) ||
+          item.status?.toLowerCase().includes(q) ||
+          item.initiator?.username?.toLowerCase().includes(q) ||
+          item.receiver?.username?.toLowerCase().includes(q) ||
+          item.bookings?.some((booking) =>
+            booking.listing?.title?.toLowerCase().includes(q)
+          )
+        );
+      }
 
-      return matchesView && matchesSearch;
+      return (
+        item.id?.toLowerCase().includes(q) ||
+        item.status?.toLowerCase().includes(q) ||
+        item.buyer_status?.toLowerCase().includes(q) ||
+        item.listings?.title?.toLowerCase().includes(q) ||
+        item.listings?.category?.toLowerCase().includes(q) ||
+        item.listings?.condition?.toLowerCase().includes(q) ||
+        item.listings?.seller?.username?.toLowerCase().includes(q)
+      );
     });
-  }, [transactions, activeView, search]);
+  }, [activeTab, purchases, sales, completedTrades, search]);
+
+  const tabs = [
+    { id: 'purchases', label: 'BUYING', icon: ShoppingBag, count: purchases.length },
+    { id: 'sales', label: 'SELLING', icon: Store, count: sales.length },
+    { id: 'trades', label: 'TRADES', icon: Repeat2, count: completedTrades.length },
+  ];
 
   return (
     <section className="min-h-screen bg-offwhite p-4 sm:p-8 text-dark">
       <section className="mx-auto max-w-7xl space-y-6">
-        <section className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <section>
-            <button
-              onClick={onBack}
-              className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-dark"
-            >
-              <ArrowLeft size={16} />
-              Back to dashboard
-            </button>
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-dark"
+        >
+          <ArrowLeft size={16} />
+          Back to dashboard
+        </button>
 
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary">
-              My Transactions
-            </p>
-            <h1 className="mt-2 text-3xl font-bold">
-              Transaction Dashboard
-            </h1>
-          </section>
+        <section>
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary">
+            My Orders
+          </p>
+          <h1 className="mt-2 text-3xl font-bold">
+            Completed Purchases, Sales & Trades
+          </h1>
+        </section>
 
-          <section className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setActiveView('queue')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                activeView === 'queue'
-                  ? 'bg-dark text-white'
-                  : 'bg-white text-dark border border-gray-200'
-              }`}
-            >
-              Incomplete Queue
-            </button>
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
 
-            <button
-              onClick={() => setActiveView('history')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                activeView === 'history'
-                  ? 'bg-dark text-white'
-                  : 'bg-white text-dark border border-gray-200'
-              }`}
-            >
-              Transaction History
-            </button>
-          </section>
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  activeTab === tab.id
+                    ? 'bg-dark text-white border-dark'
+                    : 'bg-white text-dark border-gray-200 hover:border-dark'
+                }`}
+              >
+                <section className="flex items-center justify-between">
+                  <Icon size={20} />
+                  <span className="text-sm font-bold">{tab.count}</span>
+                </section>
+                <p className="mt-3 font-semibold">{tab.label}</p>
+              </button>
+            );
+          })}
         </section>
 
         <section className="rounded-3xl bg-white p-5 shadow-sm border border-gray-100">
@@ -139,7 +230,7 @@ export default function Transactions({ user, onBack }) {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search item, user, status, or transaction ID"
+              placeholder="Search completed item, status, user, or transaction ID"
               className="w-full bg-transparent text-sm outline-none"
             />
           </section>
@@ -148,23 +239,72 @@ export default function Transactions({ user, onBack }) {
         <section className="rounded-3xl bg-white shadow-sm border border-gray-100 overflow-hidden">
           {loading ? (
             <section className="p-8 text-center text-gray-500">
-              Loading transactions...
+              Loading completed transactions...
             </section>
-          ) : filteredTransactions.length === 0 ? (
+          ) : activeItems.length === 0 ? (
             <section className="p-8 text-center text-gray-500">
-              {activeView === 'queue'
-                ? 'No incomplete transactions found.'
-                : 'No transaction history found.'}
+              No completed {activeTab} found.
             </section>
+          ) : activeTab === 'trades' ? (
+            activeItems.map((trade) => {
+              const otherUser =
+                trade.initiator_id === user?.id ? trade.receiver : trade.initiator;
+
+              return (
+                <section key={trade.id} className="border-t border-gray-100 p-5">
+                  <section className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <section className="flex items-center gap-3">
+                      <section className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100">
+                        <Repeat2 size={20} />
+                      </section>
+
+                      <section>
+                        <p className="font-semibold">Completed Trade</p>
+                        <p className="text-xs text-gray-500">Trade ID: {trade.id}</p>
+                        <p className="text-xs text-gray-500">
+                          With: {otherUser?.username || otherUser?.email || 'Unknown'}
+                        </p>
+                      </section>
+                    </section>
+
+                    <span className="w-fit rounded-full border px-3 py-1 text-xs font-semibold bg-green-100 text-green-700 border-green-200">
+                      Completed
+                    </span>
+                  </section>
+
+                  <section className="mt-4 grid gap-3 md:grid-cols-2">
+                    {(trade.bookings || []).map((booking) => (
+                      <section
+                        key={booking.id}
+                        className="rounded-2xl border border-gray-100 bg-gray-50 p-4"
+                      >
+                        <p className="font-semibold">
+                          {booking.listing?.title || 'Unknown item'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {formatPrice(booking.listing?.price)}
+                        </p>
+                        <p className="mt-2 text-xs text-gray-500">
+                          {booking.date} · {booking.time_slot}
+                        </p>
+                        <p className="text-xs text-gray-500">{booking.location}</p>
+                        <span className="mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold bg-green-100 text-green-700 border-green-200">
+                          Collected
+                        </span>
+                      </section>
+                    ))}
+                  </section>
+                </section>
+              );
+            })
           ) : (
-            filteredTransactions.map((transaction) => {
-              const isBuyer = transaction.buyer_id === user?.id;
-              const otherUser = isBuyer ? transaction.seller : transaction.buyer;
+            activeItems.map((order) => {
+              const listing = order.listings;
 
               return (
                 <section
-                  key={transaction.id}
-                  className="grid grid-cols-1 gap-4 border-t border-gray-100 px-5 py-5 md:grid-cols-[1.2fr_1fr_1fr_0.8fr] md:items-center"
+                  key={order.id}
+                  className="grid grid-cols-1 gap-4 border-t border-gray-100 px-5 py-5 md:grid-cols-[1.2fr_1fr_0.8fr] md:items-center"
                 >
                   <section className="flex items-center gap-3">
                     <section className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100">
@@ -173,51 +313,37 @@ export default function Transactions({ user, onBack }) {
 
                     <section>
                       <p className="font-semibold">
-                        {transaction.listing?.title || 'Unknown item'}
+                        {listing?.title || 'Unknown item'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        You are: {isBuyer ? 'Buyer' : 'Seller'}
+                        Order ID: {order.id}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Transaction: {transaction.id}
+                        {formatPrice(listing?.price)}
                       </p>
                     </section>
                   </section>
 
                   <section>
                     <p className="text-sm">
-                      {isBuyer ? 'Seller' : 'Buyer'}:{' '}
-                      {otherUser?.username || otherUser?.email || 'Unknown'}
-                    </p>
+                       {activeTab === 'purchases'
+                         ? `Seller: ${listing?.seller?.username || listing?.seller?.email || 'Unknown'}`
+                         : 'Completed sale'}
+                   </p>
                     <p className="text-xs text-gray-500">
-                      Location: {transaction.location}
+                      {new Date(order.created_at).toLocaleDateString('en-ZA')}
                     </p>
-                  </section>
-
-                  <section>
-                    <p className="text-sm font-medium">{transaction.date}</p>
-                    <p className="text-sm text-gray-500">{transaction.time_slot}</p>
                   </section>
 
                   <section className="space-y-2">
-                    <span
-                      className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${badgeClasses(transaction.status)}`}
-                    >
-                      {statusLabels[transaction.status] || transaction.status}
+                    <span className="inline-flex rounded-full border px-3 py-1 text-xs font-semibold bg-green-100 text-green-700 border-green-200">
+                      Completed
                     </span>
 
-                    {transaction.status === 'collected' && (
-                      <section className="flex items-center gap-1 text-xs text-green-700">
-                        <CheckCircle2 size={14} />
-                        Completed
-                      </section>
-                    )}
-
-                    {transaction.status === 'cancelled' && (
-                      <section className="flex items-center gap-1 text-xs text-red-700">
-                        <XCircle size={14} />
-                        Cancelled
-                      </section>
+                    {order.buyer_status && (
+                      <p className="text-xs text-gray-500">
+                        Buyer status: {order.buyer_status}
+                      </p>
                     )}
                   </section>
                 </section>
