@@ -16,12 +16,34 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const app = express()
 const PORT = process.env.PORT || 3000
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY) 
-const FRONTEND_URL = process.env.FRONTEND_URL || `http://localhost:${PORT}`
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
 
-// replace your existing app.use(cors()) with this:
+function orderIdFromStripeSession(session) {
+  const md = session.metadata || {}
+  const id = (md.order_id || md.orderId || session.client_reference_id || '').trim()
+  return id || null
+}
+
+async function retrievePaidCheckoutSession(sessionId, maxAttempts = 8) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const session = await stripe.checkout.sessions.retrieve(sessionId)
+    if (session.payment_status === 'paid') return session
+    if (attempt < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)))
+    }
+  }
+  return stripe.checkout.sessions.retrieve(sessionId)
+}
+
+const corsOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  FRONTEND_URL,
+].filter(Boolean);
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: corsOrigins,
   methods: ['GET', 'POST'],
 }));
 app.use(express.json())
@@ -46,6 +68,11 @@ app.post('/create-checkout-session', async (req, res) => {
       return res.status(400).json({ error: 'Amount cannot exceed listing price' });
     }
 
+    const orderId = String(req.body.order_id || '').trim()
+    if (!orderId) {
+      return res.status(400).json({ error: 'Missing order_id' })
+    }
+
     const remaining = total - charged;
     const amountInCents = Math.round(charged * 100);
 
@@ -67,14 +94,14 @@ app.post('/create-checkout-session', async (req, res) => {
         quantity: 1,
       }],
       mode: 'payment',
-      //success_url: `${FRONTEND_URL}/success`,
+      client_reference_id: orderId,
       success_url: `${FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${FRONTEND_URL}/cancel`,
       metadata: {
         full_price: total.toFixed(2),
         amount_paid: charged.toFixed(2),
         remaining_balance: remaining.toFixed(2),
-        order_id:          req.body.order_id || '',
+        order_id: orderId,
       }
     });
 
@@ -98,64 +125,90 @@ app.get('/checkout-session', cors(), async (req, res) => {
   }
 });
 
-// Mark order as paid and listing as sold
-app.post('/mark-payment-complete', cors(), async (req, res) => {
-  try {
-    const { order_id } = req.body;
-    if (!order_id) return res.status(400).json({ error: 'Missing order_id' });
+async function completePaymentForOrder(orderId) {
+  const { data: order, error: fetchError } = await supabase
+    .from('orders')
+    .select('id, listing_id, status')
+    .eq('id', orderId)
+    .single();
 
-    console.log(`Processing payment completion for order: ${order_id}`);
+  if (fetchError || !order) {
+    throw new Error('Order not found');
+  }
 
-    // 1. Fetch the order to get listing_id
-    const { data: order, error: fetchError } = await supabase
-      .from('orders')
-      .select('id, listing_id, status')
-      .eq('id', order_id)
-      .single();
+  const listingId = order.listing_id;
+  const alreadyPaid = ['paid', 'booked', 'completed'].includes(order.status);
 
-    if (fetchError || !order) {
-      console.error('Failed to fetch order:', fetchError);
-      return res.status(400).json({ error: 'Order not found' });
-    }
-
-    const listingId = order.listing_id;
-    console.log(`Order ${order_id} has listing_id: ${listingId}, current status: ${order.status}`);
-
-    // 2. Update order status to 'paid'
+  if (!alreadyPaid) {
     const { error: orderError } = await supabase
       .from('orders')
-      .update({ status: 'paid' })
-      .eq('id', order_id);
+      .update({
+        status: 'paid',
+        buyer_status: 'awaiting_confirmation',
+        seller_status: 'awaiting_booking',
+      })
+      .eq('id', orderId);
 
     if (orderError) {
-      console.error('Failed to update order status:', orderError);
-      return res.status(500).json({ error: 'Failed to update order status', details: orderError.message });
+      throw new Error(orderError.message || 'Failed to update order status');
+    }
+  }
+
+  if (!listingId) {
+    throw new Error('Listing ID not found in order');
+  }
+
+  const { error: listingError } = await supabase.rpc('mark_listing_sold', {
+    p_listing_id: listingId,
+  });
+
+  if (listingError) {
+    throw new Error(listingError.message || 'Failed to mark listing as sold');
+  }
+
+  return { order_id: orderId, listing_id: listingId, already_paid: alreadyPaid };
+}
+
+// Mark order as paid and listing as sold (service role — idempotent)
+app.post('/mark-payment-complete', cors(), async (req, res) => {
+  try {
+    let orderId = req.body?.order_id;
+
+    if (req.body?.session_id) {
+      const session = await retrievePaidCheckoutSession(req.body.session_id);
+
+      if (session.payment_status !== 'paid') {
+        return res.status(400).json({ error: 'Payment not completed' });
+      }
+
+      orderId = orderIdFromStripeSession(session);
+      if (!orderId) {
+        console.error('Stripe session missing order_id:', {
+          session_id: req.body.session_id,
+          metadata: session.metadata,
+          client_reference_id: session.client_reference_id,
+        });
+        return res.status(400).json({
+          error:
+            'Missing order_id on this checkout session. Complete payment again from the listing page.',
+        });
+      }
     }
 
-    console.log(`Order ${order_id} status updated to 'paid'`);
-
-    // 3. Update listing status to 'sold' via RPC
-    if (!listingId) {
-      console.error('No listing_id found for order:', order_id);
-      return res.status(400).json({ error: 'Listing ID not found in order' });
+    if (!orderId) {
+      return res.status(400).json({ error: 'Missing session_id or order_id' });
     }
 
-    const { error: listingError } = await supabase.rpc('mark_listing_sold', { p_listing_id: listingId });
+    console.log(`Processing payment completion for order: ${orderId}`);
 
-    if (listingError) {
-      console.error('Failed to update listing status:', listingError);
-      return res.status(500).json({ error: 'Failed to update listing status', details: listingError.message });
-    }
+    const result = await completePaymentForOrder(orderId);
 
-    console.log(`Listing ${listingId} status updated to 'sold' via RPC`);
-
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Order marked as paid and listing marked as sold',
-      order_id,
-      listing_id: listingId,
+      ...result,
       order_updated: true,
-      listing_updated: true
+      listing_updated: true,
     });
   } catch (err) {
     console.error('mark-payment-complete error:', err);

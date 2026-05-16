@@ -11,14 +11,6 @@ jest.mock('react-router-dom', () => ({
   useNavigate: jest.fn(),
 }));
 
-jest.mock('./utils/supabase', () => ({
-  supabase: {
-    from: jest.fn(() => ({
-      update: jest.fn().mockReturnThis(),
-      eq:     jest.fn().mockResolvedValue({ error: null }),
-    })),
-  },
-}));
 
 const { useNavigate } = require('react-router-dom');
 const mockNavigate = jest.fn();
@@ -33,11 +25,11 @@ const renderComponent = () =>
 beforeEach(() => {
   jest.clearAllMocks();
   useNavigate.mockReturnValue(mockNavigate);
+  sessionStorage.clear();
   global.fetch = jest.fn().mockResolvedValue({
-    ok:   true,
-    text: jest.fn().mockResolvedValue(JSON.stringify({ metadata: { order_id: 'order-1' } })),
+    ok: true,
+    json: jest.fn().mockResolvedValue({ success: true }),
   });
-  // Reset location to no session_id by default
   delete window.location;
   window.location = new URL('http://localhost/success');
 });
@@ -136,12 +128,20 @@ describe('PaymentSuccess', () => {
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it('calls fetch with session_id when present in URL', async () => {
+    it('calls mark-payment-complete with session_id when present in URL', async () => {
       window.location = new URL('http://localhost/success?session_id=sess_123');
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ success: true }),
+      });
       renderComponent();
       await act(async () => await new Promise(r => setTimeout(r, 50)));
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('sess_123')
+        '/mark-payment-complete',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ session_id: 'sess_123' }),
+        })
       );
     });
 
@@ -155,11 +155,12 @@ describe('PaymentSuccess', () => {
       consoleSpy.mockRestore();
     });
 
-    it('handles missing order_id in metadata gracefully', async () => {
+    it('handles mark-payment-complete failure gracefully', async () => {
       window.location = new URL('http://localhost/success?session_id=sess_123');
       global.fetch = jest.fn().mockResolvedValue({
-        ok:   true,
-        text: jest.fn().mockResolvedValue(JSON.stringify({ metadata: {} })),
+        ok: false,
+        status: 500,
+        json: jest.fn().mockResolvedValue({ error: 'Order not found' }),
       });
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       renderComponent();

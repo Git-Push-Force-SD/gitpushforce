@@ -1,84 +1,60 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
-import { supabase } from './utils/supabase';
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-  const markOrderPaid = async () => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const sessionId = params.get('session_id');
-      if (!sessionId) return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    if (!sessionId) return;
 
-      // Get session metadata from Express
-      const res = await fetch(
-        `http://localhost:3000/checkout-session?session_id=${sessionId}`
-      );
+    const storageKey = `payment_complete_${sessionId}`;
+    if (sessionStorage.getItem(storageKey) === 'done') return;
+    if (sessionStorage.getItem(storageKey) === 'processing') return;
 
-      if (!res.ok) {
-        console.error('checkout-session failed:', res.status);
-        return;
+    sessionStorage.setItem(storageKey, 'processing');
+
+    const completePayment = async () => {
+      const maxAttempts = 4;
+      try {
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const res = await fetch('/mark-payment-complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId }),
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          if (res.ok) {
+            sessionStorage.setItem(storageKey, 'done');
+            return;
+          }
+
+          const retryable =
+            res.status === 400 &&
+            typeof data.error === 'string' &&
+            data.error.includes('Payment not completed');
+
+          if (retryable && attempt < maxAttempts - 1) {
+            await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+            continue;
+          }
+
+          console.error('mark-payment-complete failed:', data.error || res.status);
+          sessionStorage.removeItem(storageKey);
+          return;
+        }
+      } catch (err) {
+        console.error('markOrderPaid error:', err);
+        sessionStorage.removeItem(storageKey);
       }
+    };
 
-      const data = await res.json();
-      console.log('session data:', data);
-      const orderId = data?.metadata?.order_id;
-      if (!orderId) {
-        console.error('no order_id in metadata');
-        return;
-      }
-
-      // 1. Fetch listing_id from orders table
-      const { data: order, error: fetchError } = await supabase
-        .from('orders')
-        .select('listing_id')
-        .eq('id', orderId)
-        .single();
-
-      if (fetchError || !order) {
-        console.error('Failed to fetch order:', fetchError);
-        return;
-      }
-
-      const listingId = order.listing_id;
-
-      // 2. Update order: status='paid', buyer_status and seller_status
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({
-          status: 'paid',
-          buyer_status: 'awaiting_confirmation',
-          seller_status: 'awaiting_booking'
-        })
-        .eq('id', orderId);
-
-      if (updateError) {
-        console.error('Failed to update order:', updateError);
-        return;
-      }
-
-      console.log('Order updated successfully');
-
-      // 3. Call RPC to mark listing as sold
-      const { error: rpcError } = await supabase.rpc('mark_listing_sold', { p_listing_id: listingId });
-
-      if (rpcError) {
-        console.error('Failed to mark listing as sold:', rpcError);
-        return;
-      }
-
-      console.log('Payment completed and listing marked as sold');
-
-    } catch (err) {
-      console.error('markOrderPaid error:', err);
-    }
-  };
-
-  markOrderPaid();
-}, []);
+    completePayment();
+  }, []);
 
   return (
     <section className="min-h-screen bg-offwhite flex items-center justify-center px-5">
