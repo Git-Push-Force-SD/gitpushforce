@@ -3,19 +3,20 @@
 // Plugs into StudentDashboard.jsx when the student clicks "Trade Facility".
 
 import React, { useState } from 'react';
-import { X, CalendarDays, Package } from 'lucide-react';
+import { X, CalendarDays, Package, ArrowLeftRight } from 'lucide-react';
 import BookingFlow from './BookingFlow';
+import BookingFlowTrades from './BookingFlowTrades';
 import BookingList from './BookingList';
 import CancelModal from './CancelModal';
 import { useAuth } from '../../AuthContext';
 import {
   useBookings,
   useEligibleOrders,
+  useEligibleTrades,
   useSellerPendingOrders,
-  createBooking, 
-     cancelBooking 
-    } from '../../hooks/useBookings';
-import BookingFlowTrades from './BookingFlowTrades';
+  createBooking,
+  cancelBooking,
+} from '../../hooks/useBookings';
 
 
 
@@ -65,21 +66,37 @@ const StudentBookingDashboard = ({ onClose }) => {
   const [submitError,  setSubmitError]  = useState(null);
   const [successInfo,  setSuccessInfo]  = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
-  const [cancelling,   setCancelling]   = useState(false);
-  const [showTradeBooking, setShowTradeBooking] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
-  const { 
-    bookings, 
+  const {
+    bookings,
     loading: bookingsLoading,
     error: bookingsError,
     refetch,
-    cancelBooking
-    } = useBookings(user?.id);
-  const { orders,   loading: ordersLoading,   error: ordersError }            = useEligibleOrders(user?.id);
+  } = useBookings(user?.id);
+  const { orders, loading: ordersLoading } = useEligibleOrders(user?.id);
+  const { trades, loading: tradesLoading } = useEligibleTrades(user?.id);
   const { pendingOrders } = useSellerPendingOrders(user?.id);
-  
-  // ── Create booking ──────────────────────────
-  const handleConfirm = async ({ orderId, buyerId, sellerId, listingId, date, timeSlot, notes }) => {
+
+  const resolveTradeParties = (tradeId) => {
+    const trade = trades.find(t => t.tradeId === tradeId);
+    if (!trade) return null;
+    const partnerId = trade.initiatorId === user.id ? trade.receiverId : trade.initiatorId;
+    return { buyerId: user.id, sellerId: partnerId, bookedBy: user.id };
+  };
+
+  const handleBookingSuccess = (date, timeSlot) => {
+    setSuccessInfo({ date, timeSlot, sourceTab: activeTab });
+    refetch();
+  };
+
+  const handleBookingError = (err) => {
+    console.error('[StudentBookingDashboard] createBooking error:', err);
+    setSubmitError(err.message || 'Failed to create booking. Please try again.');
+  };
+
+  // ── Create order booking ────────────────────
+  const handleConfirmOrder = async ({ orderId, buyerId, sellerId, listingId, date, timeSlot, notes }) => {
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -92,11 +109,38 @@ const StudentBookingDashboard = ({ onClose }) => {
         timeSlot,
         notes,
       });
-      setSuccessInfo({ date, timeSlot });
-      refetch();
+      handleBookingSuccess(date, timeSlot);
     } catch (err) {
-      console.error('[StudentBookingDashboard] createBooking error:', err);
-      setSubmitError(err.message || 'Failed to create booking. Please try again.');
+      handleBookingError(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── Create trade booking ────────────────────
+  const handleConfirmTrade = async ({ tradeId, date, timeSlot, notes }) => {
+    const parties = resolveTradeParties(tradeId);
+    if (!parties) {
+      setSubmitError('Trade not found. Please refresh and try again.');
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await createBooking({
+        bookingType: 'trade',
+        tradeId,
+        buyerId:  parties.buyerId,
+        sellerId: parties.sellerId,
+        bookedBy: parties.bookedBy,
+        date,
+        timeSlot,
+        notes,
+      });
+      handleBookingSuccess(date, timeSlot);
+    } catch (err) {
+      handleBookingError(err);
     } finally {
       setSubmitting(false);
     }
@@ -142,12 +186,13 @@ const StudentBookingDashboard = ({ onClose }) => {
         {/* Tabs */}
         <div className="flex border-b border-gray-200 px-5 shrink-0">
           {[
-            { id: 'book',     label: 'Book a slot', icon: CalendarDays },
-            { id: 'bookings', label: 'My bookings', icon: Package },
+            { id: 'book',     label: 'Book a slot',      icon: CalendarDays },
+            { id: 'trades',   label: 'Trade exchanges', icon: ArrowLeftRight },
+            { id: 'bookings', label: 'My bookings',      icon: Package },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id)}
+              onClick={() => { setActiveTab(id); setSubmitError(null); }}
               className={`flex items-center gap-1.5 pb-2.5 mr-6 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === id
                   ? 'border-dark text-dark'
@@ -165,7 +210,7 @@ const StudentBookingDashboard = ({ onClose }) => {
 
           {activeTab === 'book' && (
             <>
-              {successInfo ? (
+              {successInfo?.sourceTab === 'book' ? (
                 <SuccessBanner
                   info={successInfo}
                   onDismiss={() => setSuccessInfo(null)}
@@ -201,7 +246,38 @@ const StudentBookingDashboard = ({ onClose }) => {
                   ) : (
                     <BookingFlow
                       eligibleOrders={orders}
-                      onConfirm={handleConfirm}
+                      onConfirm={handleConfirmOrder}
+                      submitting={submitting}
+                    />
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {activeTab === 'trades' && (
+            <>
+              {successInfo?.sourceTab === 'trades' ? (
+                <SuccessBanner
+                  info={successInfo}
+                  onDismiss={() => setSuccessInfo(null)}
+                  onViewBookings={() => { setSuccessInfo(null); setActiveTab('bookings'); }}
+                />
+              ) : (
+                <>
+                  {submitError && (
+                    <p className="text-sm text-red-500 bg-red-50 rounded-xl px-3 py-2 mb-3">
+                      {submitError}
+                    </p>
+                  )}
+                  {tradesLoading ? (
+                    <div className="h-64 flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-dark border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <BookingFlowTrades
+                      eligibleTrades={trades}
+                      onConfirm={handleConfirmTrade}
                       submitting={submitting}
                     />
                   )}

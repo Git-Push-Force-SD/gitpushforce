@@ -33,13 +33,16 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const { unreadCount } = useUnreadMessages(user?.id);
   const { pendingOrders } = useSellerPendingOrders(user?.id);
 
-  // Fetch pending reviews count
+  // Fetch pending reviews count (orders + completed trades)
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
+  const [pendingTradeReviewsCount, setPendingTradeReviewsCount] = useState(0);
+  const totalPendingReviews = pendingReviewsCount + pendingTradeReviewsCount;
+
   useEffect(() => {
     const fetchPendingReviewsCount = async () => {
       if (!user?.id) return;
       try {
-        // Get completed orders from the user as buyer
+        // Completed orders (buyer, collected)
         const { data: orders, error: ordersError } = await supabase
           .from('orders')
           .select('id')
@@ -47,28 +50,67 @@ const StudentDashboard = ({ user, userRole, handleLogout }) => {
           .eq('status', 'completed')
           .eq('buyer_status', 'collected');
 
-        if (ordersError || !orders) return;
-
-        // Check which orders don't have reviews yet
-        const orderIds = orders.map(o => o.id);
-        if (orderIds.length === 0) {
+        if (ordersError) {
           setPendingReviewsCount(0);
-          return;
+        } else {
+          const orderIds = (orders || []).map(o => o.id);
+          if (orderIds.length === 0) {
+            setPendingReviewsCount(0);
+          } else {
+            const { data: reviews, error: reviewsError } = await supabase
+              .from('reviews')
+              .select('order_id')
+              .in('order_id', orderIds)
+              .eq('reviewer_id', user.id);
+
+            if (reviewsError) {
+              setPendingReviewsCount(0);
+            } else {
+              const reviewedOrderIds = new Set((reviews || []).map(r => r.order_id));
+              setPendingReviewsCount(orderIds.filter(id => !reviewedOrderIds.has(id)).length);
+            }
+          }
         }
 
-        const { data: reviews, error: reviewsError } = await supabase
-          .from('reviews')
-          .select('order_id')
-          .in('order_id', orderIds)
-          .eq('reviewer_id', user.id);
+        // Completed trades (both bookings collected — same rule as MyOrders)
+        const { data: trades, error: tradesError } = await supabase
+          .from('trades')
+          .select('id, bookings ( status )')
+          .or(`initiator_id.eq.${user.id},receiver_id.eq.${user.id}`);
 
-        if (reviewsError) return;
-        
-        const reviewedOrderIds = new Set((reviews || []).map(r => r.order_id));
-        const unreviewedCount = orderIds.filter(id => !reviewedOrderIds.has(id)).length;
-        setPendingReviewsCount(unreviewedCount);
+        if (tradesError) {
+          setPendingTradeReviewsCount(0);
+        } else {
+          const completedTradeIds = (trades || [])
+            .filter(trade => {
+              const bookings = trade.bookings || [];
+              return bookings.length >= 2 && bookings.every(b => b.status === 'collected');
+            })
+            .map(t => t.id);
+
+          if (completedTradeIds.length === 0) {
+            setPendingTradeReviewsCount(0);
+          } else {
+            const { data: tradeReviews, error: tradeReviewsError } = await supabase
+              .from('reviews')
+              .select('trade_id')
+              .in('trade_id', completedTradeIds)
+              .eq('reviewer_id', user.id);
+
+            if (tradeReviewsError) {
+              setPendingTradeReviewsCount(0);
+            } else {
+              const reviewedTradeIds = new Set((tradeReviews || []).map(r => r.trade_id));
+              setPendingTradeReviewsCount(
+                completedTradeIds.filter(id => !reviewedTradeIds.has(id)).length
+              );
+            }
+          }
+        }
       } catch (err) {
         console.error('Error fetching pending reviews:', err);
+        setPendingReviewsCount(0);
+        setPendingTradeReviewsCount(0);
       }
     };
 
@@ -427,14 +469,6 @@ const filteredProducts = useMemo(() => {
             <Menu size={24} className="text-dark" />
           </button>
 
-          {/* Desktop Actions Only */}
-          <button
-            className="hidden md:block text-dark hover:text-primary transition-colors"
-            onClick={() => setShowSearch(!showSearch)}
-          >
-            <Search size={22} className="stroke-[1.5]" />
-          </button>
-
           <button 
             onClick={() => navigate('/messages')}
             className="hidden md:block text-dark hover:text-primary transition-colors relative"
@@ -539,13 +573,13 @@ const filteredProducts = useMemo(() => {
         )}
 
         {/* Pending Reviews Banner */}
-        {pendingReviewsCount > 0 && currentView === 'home' && (
+        {totalPendingReviews > 0 && currentView === 'home' && (
           <section className="mt-6 mb-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-lg flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="text-amber-600 font-bold text-lg">⭐</div>
               <div>
-                <p className="font-semibold text-amber-900">You have {pendingReviewsCount} pending review{pendingReviewsCount > 1 ? 's' : ''}</p>
-                <p className="text-sm text-amber-700">Help build the UniMart community by reviewing completed orders</p>
+                <p className="font-semibold text-amber-900">You have {totalPendingReviews} pending review{totalPendingReviews > 1 ? 's' : ''}</p>
+                <p className="text-sm text-amber-700">Help build the UniMart community by leaving your reviews</p>
               </div>
             </div>
             <button

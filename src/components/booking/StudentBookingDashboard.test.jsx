@@ -79,7 +79,14 @@ import {
 // ── Default hook returns ──────────────────────────────────────────────────
 const defaultBookings = { bookings: [], loading: false, error: null, refetch: mockRefetch };
 const defaultOrders   = { orders: [{ orderId: 'order-1', buyerId: 'user-123', title: 'Textbook', sellerName: 'Alice' }], loading: false, error: null };
-const defaultTrades   = { trades: [], loading: false, error: null };
+const defaultTrades   = {
+  trades: [{
+    tradeId: 'trade-1', initiatorId: 'user-123', receiverId: 'partner-1',
+    myListingTitle: 'Laptop', partnerListingTitle: 'Phone', partnerName: 'Alice', role: 'initiator',
+  }],
+  loading: false,
+  error: null,
+};
 const defaultPending  = { pendingOrders: [] };
 
 const setup = (props = {}) => {
@@ -330,6 +337,46 @@ describe('Failed booking', () => {
     fireEvent.click(screen.getByRole('button', { name: /Confirm booking/i }));
     await waitFor(() => screen.getByText('Fail'));
     expect(screen.getByTestId('booking-flow')).toBeInTheDocument();
+  });
+});
+
+// ===========================================================================
+// Successful trade booking
+// ===========================================================================
+describe('Successful trade booking', () => {
+  beforeEach(() => createBooking.mockResolvedValue({}));
+
+  test('shows success banner after confirming trade booking', async () => {
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: /Trade exchanges/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirm trade booking/i }));
+    await waitFor(() => expect(screen.getByText('Booking confirmed!')).toBeInTheDocument());
+  });
+
+  test('createBooking receives trade payload with tradeId', async () => {
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: /Trade exchanges/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirm trade booking/i }));
+    await waitFor(() =>
+      expect(createBooking).toHaveBeenCalledWith({
+        bookingType: 'trade',
+        tradeId:     'trade-1',
+        buyerId:     'user-123',
+        sellerId:    'partner-1',
+        bookedBy:    'user-123',
+        date:        '2024-09-15',
+        timeSlot:    '10:00',
+        notes:       '',
+      })
+    );
+  });
+
+  test('hides BookingFlowTrades when success banner is shown', async () => {
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: /Trade exchanges/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirm trade booking/i }));
+    await waitFor(() => screen.getByText('Booking confirmed!'));
+    expect(screen.queryByTestId('booking-flow-trades')).not.toBeInTheDocument();
   });
 });
 

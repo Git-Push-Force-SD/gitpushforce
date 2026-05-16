@@ -12,6 +12,7 @@ const buildChainMock = (resolveValue = { data: null, error: null }) => {
   const chain = {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
+    or: jest.fn().mockReturnThis(),
     in: jest.fn().mockResolvedValue(resolveValue),
     order: jest.fn().mockResolvedValue(resolveValue),
     single: jest.fn().mockResolvedValue(resolveValue),
@@ -65,27 +66,54 @@ const mockBuyer = { id: 'buyer-1', username: 'john_buyer', email: 'buyer@example
  * fetchOrders calls:
  *   supabase.from('orders') × 2  (buying, then selling)
  *   supabase.from('users')  × 1  (sellers for buying OR buyers for selling)
- *   supabase.from('reviews') — from checkExistingReview inside OrderCard
+ *   supabase.from('trades') × 1
+ *   supabase.from('users')  — sellers, buyers, trade partners
+ *   supabase.from('reviews') — from checkExistingReview inside OrderCard / TradeCard
  */
-const setupMocks = ({ buyingOrders = [], sellingOrders = [], sellers = [], users = [], reviewData = null } = {}) => {
+const setupMocks = ({
+  buyingOrders = [],
+  sellingOrders = [],
+  trades = [],
+  sellers = [],
+  users = [],
+  tradePartners = [],
+  reviewData = null,
+} = {}) => {
   let ordersCallCount = 0;
-  let usersCallCount = 0;
   supabase.from.mockImplementation((table) => {
     if (table === 'orders') {
       ordersCallCount += 1;
       if (ordersCallCount === 1) return buildChainMock({ data: buyingOrders, error: null });
       return buildChainMock({ data: sellingOrders, error: null });
     }
+    if (table === 'trades') {
+      return buildChainMock({ data: trades, error: null });
+    }
     if (table === 'users') {
-      usersCallCount += 1;
-      // First users call = sellers (for buying orders), second = buyers (for selling orders)
-      if (usersCallCount === 1) return buildChainMock({ data: sellers, error: null });
-      return buildChainMock({ data: users, error: null });
+      return buildChainMock({
+        data: [...sellers, ...users, ...tradePartners],
+        error: null,
+      });
     }
     if (table === 'reviews') return buildChainMock({ data: reviewData, error: null });
     return buildChainMock({ data: [], error: null });
   });
 };
+
+const mockCompletedTrade = {
+  id: 'trade-1',
+  initiator_id: 'user-123',
+  receiver_id: 'partner-1',
+  created_at: '2025-01-01T00:00:00Z',
+  offered_listing: { id: 'listing-offered', title: 'Laptop', image_path: null },
+  requested_listing: { id: 'listing-requested', title: 'Phone', image_path: null },
+  bookings: [
+    { id: 'b1', status: 'collected', booked_by: 'user-123', date: '2025-01-15', time_slot: '10:00' },
+    { id: 'b2', status: 'collected', booked_by: 'partner-1', date: '2025-01-15', time_slot: '10:00' },
+  ],
+};
+
+const mockPartner = { id: 'partner-1', username: 'trade_partner', email: 'partner@example.com' };
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 describe('MyOrders', () => {
@@ -98,11 +126,12 @@ describe('MyOrders', () => {
       expect(screen.getByText(/My Orders/i)).toBeInTheDocument();
     });
 
-    it('renders "Buying" and "Selling" tabs', () => {
+    it('renders "Buying", "Selling", and "Trades" tabs', () => {
       setupMocks();
       render(<MyOrders user={mockUser} onBack={jest.fn()} />);
       expect(screen.getByRole('tab', { name: /buying/i })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: /selling/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /trades/i })).toBeInTheDocument();
     });
 
     it('shows "Buying" tab as active by default', () => {
@@ -156,6 +185,51 @@ describe('MyOrders', () => {
       await waitFor(() =>
         expect(screen.getByText(/Collection: Awaiting Confirmation/i)).toBeInTheDocument()
       );
+    });
+  });
+
+  describe('Trades tab', () => {
+    it('shows completed trade with Completed Trade badge', async () => {
+      const user = userEvent.setup();
+      setupMocks({
+        trades: [mockCompletedTrade],
+        tradePartners: [mockPartner],
+      });
+      render(<MyOrders user={mockUser} onBack={jest.fn()} />);
+      await user.click(screen.getByRole('tab', { name: /trades/i }));
+      await waitFor(() => {
+        expect(screen.getByText('Laptop ↔ Phone')).toBeInTheDocument();
+        expect(screen.getByText('Completed Trade')).toBeInTheDocument();
+        expect(screen.getByText('trade_partner')).toBeInTheDocument();
+      });
+    });
+
+    it('does not show trades until both bookings are collected', async () => {
+      const user = userEvent.setup();
+      setupMocks({
+        trades: [{
+          ...mockCompletedTrade,
+          bookings: [
+            { id: 'b1', status: 'collected', booked_by: 'user-123' },
+            { id: 'b2', status: 'pending', booked_by: 'partner-1' },
+          ],
+        }],
+      });
+      render(<MyOrders user={mockUser} onBack={jest.fn()} />);
+      await user.click(screen.getByRole('tab', { name: /trades/i }));
+      await waitFor(() => {
+        expect(screen.getByText('No completed trades yet')).toBeInTheDocument();
+      });
+    });
+
+    it('shows empty state when no completed trades', async () => {
+      const user = userEvent.setup();
+      setupMocks();
+      render(<MyOrders user={mockUser} onBack={jest.fn()} />);
+      await user.click(screen.getByRole('tab', { name: /trades/i }));
+      await waitFor(() => {
+        expect(screen.getByText('No completed trades yet')).toBeInTheDocument();
+      });
     });
   });
 
