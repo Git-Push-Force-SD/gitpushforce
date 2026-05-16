@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, MessageCircle, User, Plus, LayoutGrid, List, Heart, SlidersHorizontal, LogOut, Menu } from 'lucide-react';
+import Transactions from './components/Transactions';
 import Profile from './Profile';
 import SellItemModal from './SellItemModal';
 import MyOrders from './MyOrders';
@@ -410,7 +411,8 @@ const filteredProducts = useMemo(() => {
   }
 
   if (currentView === 'orders') {
-    return <MyOrders user={user} onBack={() => setCurrentView('home')} />;
+   return <MyOrders user={user} onBack={() => setCurrentView('home')} />;
+   
   }
 
   return (
@@ -445,10 +447,12 @@ const filteredProducts = useMemo(() => {
           >
             My Orders
           </button>
-          <button
+    
+           <button
             onClick={() => setShowBookingDashboard(true)}
-            className="text-gray-500 hover:text-dark transition-colors relative flex items-center gap-1"
-          >
+            className='text-gray-500 hover:text-dark transition-colors relative flex items-center gap-1'
+            >
+
             Bookings
             {pendingOrders.length > 0 && (
               <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
@@ -457,6 +461,7 @@ const filteredProducts = useMemo(() => {
             )}
           </button>
         </section>
+
 
         {/* Right Section - Desktop Actions (Desktop Only) + Hamburger (Mobile Only) */}
         <section className="flex items-center gap-2 sm:gap-4 md:gap-6">

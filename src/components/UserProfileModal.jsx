@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import StarRating from './StarRating';
+import Transactions from './Transactions';
 
 const UserProfileModal = ({ isOpen, onClose, userId }) => {
   const [user, setUser] = useState(null);
@@ -200,6 +201,19 @@ const UserProfileModal = ({ isOpen, onClose, userId }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Transactions Section */}
+              <div className = "space-y-3 pt-2">
+              <h4 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">
+                Completed Transactions
+                </h4>
+              
+              <Transactions
+              user = {user}
+              compact = {true}
+               />
+               </div>
+
 
               {/* Reviews Section */}
               {reviews.length > 0 && (

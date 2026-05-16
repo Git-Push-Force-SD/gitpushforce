@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Edit2, Plus, Trash2, Camera, X, Loader, Check, Heart, ArrowLeftRight, CheckCircle, XCircle, CircleDot } from 'lucide-react';
 import { supabase } from './utils/supabase';
 
+
 const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [imageError, setImageError] = useState(null);
@@ -692,8 +693,7 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) 
               </span>
             </button>
           </section>
-
-          <section className="mb-10">
+ 
             <section className="flex justify-between items-end mb-4">
               <h2 className="text-xl font-bold text-dark">My Reviews</h2>
               {!isLoadingReviews && avgRating && (
@@ -756,7 +756,7 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) 
                 })}
               </section>
             )}
-          </section>
+        
 
           <section className="mb-10">
             <section className="flex justify-between items-end mb-4">
