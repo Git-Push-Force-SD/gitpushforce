@@ -349,9 +349,9 @@ const ListingDetails = ({ user }) => {
   const formattedPrice = listing?.price
     ? `R${parseFloat(listing.price).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : 'R---.--';
-  const canTradeThisListing = ['trade', 'either'].includes((listing?.listing_type || '').toLowerCase());
-  const isTradeOnly = listing?.listing_type === 'trade' || listing?.listing_type === 'either';
-  const canBuyThisListing = !isTradeOnly;
+  const listingType = (listing?.listing_type || 'sale').toLowerCase();
+  const canBuyThisListing = listingType === 'sale' || listingType === 'either';
+  const canTradeThisListing = listingType === 'trade' || listingType === 'either';
 
   return (
     <section className="min-h-screen bg-offwhite font-main text-dark pb-20">
@@ -444,7 +444,7 @@ const ListingDetails = ({ user }) => {
                       onClick={() => setShowOfferInput(true)}
                       className="w-full bg-white text-dark border border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
                     >
-                      <ShoppingBag size={22} className="stroke-[2.5]" /> Buy / Offer
+                      <ShoppingBag size={22} className="stroke-[2.5]" /> Buy Now
                     </button>
                   )}
                   {canBuyThisListing && showOfferInput && (
@@ -475,7 +475,7 @@ const ListingDetails = ({ user }) => {
                       className="w-full bg-white text-dark border border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
                     >
                       <ArrowLeftRight size={20} className="stroke-[2.5]" />
-                      Trade
+                      Make Trade Offer
                     </button>
                   )}
                 </>

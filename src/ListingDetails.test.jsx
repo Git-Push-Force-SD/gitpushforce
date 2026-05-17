@@ -300,66 +300,67 @@ describe('ListingDetails', () => {
       );
     });
 
-    test('renders Buy / Offer button for sale listing', async () => {
+    test('renders Buy Now button for sale listing', async () => {
       renderComponent();
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /Buy \/ Offer/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /Buy Now/i })).toBeInTheDocument()
       );
     });
 
-    test('does not render Buy / Offer button for trade-only listing', async () => {
+    test('does not render Buy Now button for trade-only listing', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
       await waitFor(() =>
-        expect(screen.queryByRole('button', { name: /Buy \/ Offer/i })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /Buy Now/i })).not.toBeInTheDocument()
       );
     });
 
-    test('renders Trade button for trade listing', async () => {
+    test('renders Make Trade Offer button for trade listing', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /Trade/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /Make Trade Offer/i })).toBeInTheDocument()
       );
     });
 
-    test('renders Trade button for "either" listing type', async () => {
+    test('renders both Buy Now and Make Trade Offer for "either" listing type', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'either' } });
       renderComponent();
-      await waitFor(() =>
-        expect(screen.getByRole('button', { name: /Trade/i })).toBeInTheDocument()
-      );
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Buy Now/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Make Trade Offer/i })).toBeInTheDocument();
+      });
     });
 
-    test('hides Buy / Offer and Trade buttons when viewer is the seller', async () => {
+    test('hides Buy Now and Make Trade Offer buttons when viewer is the seller', async () => {
       AuthContext.useAuth.mockReturnValue({ user: { id: 'seller-1' } });
       renderComponent();
       await waitFor(() => {
-        expect(screen.queryByRole('button', { name: /Buy \/ Offer/i })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /^Trade$/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Buy Now/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Make Trade Offer/i })).not.toBeInTheDocument();
       });
     });
   });
 
   describe('buy / offer flow', () => {
-    test('clicking Buy / Offer shows amount input', async () => {
+    test('clicking Buy Now shows amount input', async () => {
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Buy \/ Offer/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Buy Now/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Buy Now/i }));
       expect(screen.getByPlaceholderText(/Enter amount/i)).toBeInTheDocument();
     });
 
-    test('shows Proceed to Payment button after clicking Buy / Offer', async () => {
+    test('shows Proceed to Payment button after clicking Buy Now', async () => {
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Buy \/ Offer/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Buy Now/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Buy Now/i }));
       expect(screen.getByRole('button', { name: /Proceed to Payment/i })).toBeInTheDocument();
     });
 
     test('shows alert when amount is zero', async () => {
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Buy \/ Offer/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Buy Now/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Buy Now/i }));
       fireEvent.change(screen.getByPlaceholderText(/Enter amount/i), {
         target: { value: '0' },
       });
@@ -369,8 +370,8 @@ describe('ListingDetails', () => {
 
     test('shows alert when amount exceeds listing price', async () => {
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Buy \/ Offer/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Buy Now/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Buy Now/i }));
       fireEvent.change(screen.getByPlaceholderText(/Enter amount/i), {
         target: { value: '9999' },
       });
@@ -381,8 +382,8 @@ describe('ListingDetails', () => {
     test('redirects to unauthenticated user to login on buy', async () => {
       AuthContext.useAuth.mockReturnValue({ user: null });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Buy \/ Offer/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Buy Now/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Buy Now/i }));
       fireEvent.change(screen.getByPlaceholderText(/Enter amount/i), {
         target: { value: '500' },
       });
@@ -399,8 +400,8 @@ describe('ListingDetails', () => {
       window.location = { href: '' };
 
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Buy \/ Offer/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Buy Now/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Buy Now/i }));
       fireEvent.change(screen.getByPlaceholderText(/Enter amount/i), {
         target: { value: '1000' },
       });
@@ -419,8 +420,8 @@ describe('ListingDetails', () => {
       });
 
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Buy \/ Offer/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Buy Now/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Buy Now/i }));
       fireEvent.change(screen.getByPlaceholderText(/Enter amount/i), {
         target: { value: '1000' },
       });
@@ -442,8 +443,8 @@ describe('ListingDetails', () => {
       setupSupabaseMocks({ existingOrder: { id: 'existing-order-1' } });
 
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Buy \/ Offer/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Buy \/ Offer/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Buy Now/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Buy Now/i }));
       fireEvent.change(screen.getByPlaceholderText(/Enter amount/i), {
         target: { value: '1000' },
       });
@@ -504,19 +505,19 @@ describe('ListingDetails', () => {
   });
 
   describe('trade modal', () => {
-    test('opens trade modal when Trade button is clicked', async () => {
+    test('opens trade modal when Make Trade Offer button is clicked', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
       expect(screen.getByText('Create Trade Offer')).toBeInTheDocument();
     });
 
     test('closes trade modal when Cancel is clicked', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
       fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
       expect(screen.queryByText('Create Trade Offer')).not.toBeInTheDocument();
     });
@@ -524,8 +525,8 @@ describe('ListingDetails', () => {
     test('closes trade modal when X button is clicked', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
       const closeBtn = screen.getAllByRole('button').find(
         (btn) => btn.className.includes('rounded-full') && btn.className.includes('bg-gray-100')
       );
@@ -536,8 +537,8 @@ describe('ListingDetails', () => {
     test('renders trade form fields inside modal', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
       expect(screen.getByPlaceholderText(/Nintendo Switch Lite/i)).toBeInTheDocument();
       expect(screen.getAllByRole('combobox').length).toBeGreaterThanOrEqual(2);
     });
@@ -546,16 +547,16 @@ describe('ListingDetails', () => {
       AuthContext.useAuth.mockReturnValue({ user: null });
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
       expect(mockNavigate).toHaveBeenCalledWith('/login');
     });
 
     test('shows alert when required fields are missing on submit', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
       const form = document.querySelector('form');
       fireEvent.submit(form);
       expect(window.alert).toHaveBeenCalledWith(expect.stringMatching(/complete all required fields/i));
@@ -564,8 +565,8 @@ describe('ListingDetails', () => {
     test('shows alert when image is missing on submit', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
 
       fireEvent.change(screen.getByPlaceholderText(/Nintendo Switch Lite/i), {
         target: { value: 'My Item' },
@@ -591,8 +592,8 @@ describe('ListingDetails', () => {
     test('shows alert when trade image file is too large', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
 
       const largeFile = new File(['x'.repeat(2 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' });
       Object.defineProperty(largeFile, 'size', { value: 2 * 1024 * 1024 });
@@ -606,8 +607,8 @@ describe('ListingDetails', () => {
     test('shows alert when trade image file is not an image', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
 
       const badFile = new File(['content'], 'doc.pdf', { type: 'application/pdf' });
       const fileInput = document.querySelector('input[type="file"]');
@@ -619,8 +620,8 @@ describe('ListingDetails', () => {
     test('shows image selected state after valid file upload', async () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
 
       const validFile = new File(['image'], 'photo.jpg', { type: 'image/jpeg' });
       Object.defineProperty(validFile, 'size', { value: 500 * 1024 });
@@ -639,8 +640,8 @@ describe('ListingDetails', () => {
       setupSupabaseMocks({ listing: { ...mockListing, listing_type: 'trade' } });
 
       renderComponent();
-      await waitFor(() => screen.getByRole('button', { name: /Trade/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Trade/i }));
+      await waitFor(() => screen.getByRole('button', { name: /Make Trade Offer/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make Trade Offer/i }));
 
       const validFile = new File(['image'], 'photo.jpg', { type: 'image/jpeg' });
       Object.defineProperty(validFile, 'size', { value: 500 * 1024 });

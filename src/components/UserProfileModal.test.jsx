@@ -189,6 +189,64 @@ describe('UserProfileModal', () => {
       await screen.findByText('No reviews yet');
       expect(screen.queryByText('Reviews')).not.toBeInTheDocument();
     });
+
+    it('Fetched reviews filter on status = active', async () => {
+      const eqMock = jest.fn().mockReturnThis();
+      supabase.from.mockImplementation((table) => {
+        const chain = {
+          select: jest.fn().mockReturnThis(),
+          eq: eqMock,
+          order: jest.fn().mockReturnThis(),
+          maybeSingle: jest.fn().mockResolvedValue({ data: mockUser, error: null }),
+        };
+        if (table === 'reviews') {
+          chain.order.mockResolvedValue({ data: mockReviews, error: null });
+        }
+        return chain;
+      });
+
+      render(<UserProfileModal {...baseProps} />);
+      await screen.findByText('Alice');
+
+      expect(supabase.from).toHaveBeenCalledWith('reviews');
+      expect(eqMock).toHaveBeenCalledWith('status', 'active');
+    });
+
+    it('A review with status = removed does not appear in the rendered output', async () => {
+      const activeReview = {
+        ...mockReviews[0],
+        id: 'review-active',
+        status: 'active',
+        comment: 'Active review visible',
+      };
+      const removedReview = {
+        ...mockReviews[0],
+        id: 'review-removed',
+        status: 'removed',
+        comment: 'Removed review hidden',
+      };
+
+      supabase.from.mockImplementation((table) => {
+        const chain = {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          order: jest.fn().mockReturnThis(),
+          maybeSingle: jest.fn().mockResolvedValue({ data: mockUser, error: null }),
+        };
+        if (table === 'reviews') {
+          chain.order.mockResolvedValue({
+            data: [activeReview, removedReview].filter((r) => r.status === 'active'),
+            error: null,
+          });
+        }
+        return chain;
+      });
+
+      render(<UserProfileModal {...baseProps} />);
+      await screen.findByText('Active review visible');
+
+      expect(screen.queryByText('Removed review hidden')).not.toBeInTheDocument();
+    });
   });
 
   describe('close behaviour', () => {

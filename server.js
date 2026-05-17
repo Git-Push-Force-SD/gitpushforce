@@ -166,6 +166,15 @@ async function completePaymentForOrder(orderId) {
     throw new Error(listingError.message || 'Failed to mark listing as sold');
   }
 
+  const { error: listingTypeError } = await supabase
+    .from('listings')
+    .update({ listing_type: 'sale' })
+    .eq('id', listingId);
+
+  if (listingTypeError) {
+    throw new Error(listingTypeError.message || 'Failed to update listing type');
+  }
+
   return { order_id: orderId, listing_id: listingId, already_paid: alreadyPaid };
 }
 
