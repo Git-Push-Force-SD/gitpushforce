@@ -47,6 +47,7 @@ const UserProfileModal = ({ isOpen, onClose, userId }) => {
           reviewer:reviewer_id (id, username, profile_picture_url)
         `)
         .eq('reviewee_id', userId)
+        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (reviewsError) throw reviewsError;

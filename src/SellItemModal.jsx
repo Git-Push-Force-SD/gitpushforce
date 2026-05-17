@@ -99,22 +99,7 @@ const SellItemModal = ({ onClose }) => {
         .upload(fileName, uploadedFile);
 
       if (uploadError) throw uploadError;
-console.log('Inserting:', {
-  seller_id: user.id,
-  title: formData.title,
-  description: formData.description,
-  price: parseFloat(formData.price),
-  category: formData.category,
-  condition: formData.condition
-    ? formData.condition.toLowerCase().replace(' ', '_')
-    : null,
-  image_path: fileName,
-  status: 'active',
-  listing_type: formData.listingType,
-  cpi_suggested_price: priceSuggestion
-    ? (priceSuggestion.min + priceSuggestion.max) / 2
-    : null,
-});
+
       const { error: insertError } = await supabase
   .from('listings')
   .insert({
@@ -241,8 +226,9 @@ console.log('Inserting:', {
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm bg-white cursor-pointer"
                   required
                 >
-                  <option value="sale">Sale</option>
-                  <option value="trade">Trade</option>
+                  <option value="sale">For Sale</option>
+                  <option value="trade">For Trade</option>
+                  <option value="either">Either</option>
                 </select>
               </section>
 

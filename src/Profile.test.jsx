@@ -660,6 +660,56 @@ describe('Profile Component', () => {
     await waitFor(() => expect(supabase.from).toHaveBeenCalledWith('trades'));
   });
 
+  test('sets listing_type to trade on both listings when trade is accepted', async () => {
+    const { supabase } = require('./utils/supabase');
+    const listingUpdates = [];
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'listings') {
+        const chain = makeChain({ data: [mockListing], error: null });
+        chain.update = jest.fn((payload) => {
+          listingUpdates.push(payload);
+          return { eq: jest.fn().mockResolvedValue({ data: null, error: null }) };
+        });
+        return chain;
+      }
+      if (table === 'trades') {
+        const chain = makeChain({ data: [mockReceivedTrade], error: null });
+        chain.single = jest.fn().mockResolvedValue({
+          data: {
+            offered_listing_id: 'listing-a',
+            requested_listing_id: 'listing-b',
+          },
+          error: null,
+        });
+        return chain;
+      }
+      if (table === 'users') {
+        const chain = makeChain();
+        chain.single = jest.fn().mockResolvedValue({
+          data: { username: 'Test User', profile_picture_url: null },
+          error: null,
+        });
+        return chain;
+      }
+      if (table === 'reviews') {
+        return makeChain({ data: [], error: null });
+      }
+      return makeChain({ data: [], error: null });
+    });
+
+    renderProfile();
+    await waitFor(() => screen.getByRole('button', { name: /Accept/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Accept/i }));
+
+    await waitFor(() => {
+      expect(listingUpdates).toHaveLength(2);
+      listingUpdates.forEach((payload) => {
+        expect(payload).toMatchObject({ status: 'removed', listing_type: 'trade' });
+      });
+    });
+  });
+
   test('declines trade when decline button clicked', async () => {
     const { supabase } = require('./utils/supabase');
     applyMocks({ tradesData: [mockReceivedTrade] });

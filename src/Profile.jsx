@@ -324,14 +324,22 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) 
         // Mark both listings as removed
         const { error: error1 } = await supabase
           .from('listings')
-          .update({ status: 'removed', updated_at: new Date().toISOString() })
+          .update({
+            status: 'removed',
+            listing_type: 'trade',
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', tradeData.offered_listing_id);
 
         if (error1) console.error('Error removing offered listing:', error1);
 
         const { error: error2 } = await supabase
           .from('listings')
-          .update({ status: 'removed', updated_at: new Date().toISOString() })
+          .update({
+            status: 'removed',
+            listing_type: 'trade',
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', tradeData.requested_listing_id);
 
         if (error2) console.error('Error removing requested listing:', error2);

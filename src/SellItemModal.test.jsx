@@ -103,7 +103,7 @@ describe('SellItemModal Component', () => {
   test('Listing type defaults to sale', () => {
     render(<SellItemModal onClose={jest.fn()} />);
 
-    const listingTypeSelect = screen.getByDisplayValue(/Sale/i);
+    const listingTypeSelect = screen.getByDisplayValue(/For Sale/i);
     expect(listingTypeSelect).toHaveValue('sale');
   });
 
@@ -111,9 +111,18 @@ describe('SellItemModal Component', () => {
     const user = userEvent.setup();
     render(<SellItemModal onClose={jest.fn()} />);
 
-    const listingTypeSelect = screen.getByDisplayValue(/Sale/i);
+    const listingTypeSelect = screen.getByDisplayValue(/For Sale/i);
     await user.selectOptions(listingTypeSelect, 'trade');
     expect(listingTypeSelect).toHaveValue('trade');
+  });
+
+  test('Listing type can be changed to either', async () => {
+    const user = userEvent.setup();
+    render(<SellItemModal onClose={jest.fn()} />);
+
+    const listingTypeSelect = screen.getByDisplayValue(/For Sale/i);
+    await user.selectOptions(listingTypeSelect, 'either');
+    expect(listingTypeSelect).toHaveValue('either');
   });
 
 
@@ -328,8 +337,9 @@ describe('SellItemModal Component', () => {
   test('Listing type select shows all options', () => {
     render(<SellItemModal onClose={jest.fn()} />);
 
-    expect(screen.getByRole('option', { name: /Sale/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Trade/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /For Sale/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /For Trade/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /^Either$/i })).toBeInTheDocument();
   });
 
   test('Price input accepts only numbers', async () => {
