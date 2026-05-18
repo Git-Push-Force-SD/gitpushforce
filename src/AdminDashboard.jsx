@@ -782,18 +782,18 @@ export default function AdminDashboard({ handleLogout }) {
   return (
     <section className="min-h-screen bg-offwhite text-slate-900">
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between gap-3 px-4 lg:px-6 h-16">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 shrink-0 rounded-2xl bg-indigo-600 grid place-items-center text-white text-base font-bold">
+        <section className="flex items-center justify-between gap-3 px-4 lg:px-6 h-16">
+          <section className="flex items-center gap-3 min-w-0">
+            <section className="w-9 h-9 shrink-0 rounded-2xl bg-indigo-600 grid place-items-center text-white text-base font-bold">
               U
-            </div>
-            <div className="min-w-0">
-              <div className="font-display text-base lg:text-lg font-semibold text-slate-900 truncate">UNIMART</div>
-              <div className="text-[10px] lg:text-xs uppercase tracking-[0.18em] text-slate-500 truncate">Admin Portal</div>
-            </div>
-            <div className="hidden md:block h-8 w-px bg-slate-200 mx-1" aria-hidden="true" />
-            <div className="hidden md:block text-sm font-semibold text-slate-900 truncate">Admin Workspace</div>
-          </div>
+            </section>
+            <section className="min-w-0">
+              <section className="font-display text-base lg:text-lg font-semibold text-slate-900 truncate">UNIMART</section>
+              <section className="text-[10px] lg:text-xs uppercase tracking-[0.18em] text-slate-500 truncate">Admin Portal</section>
+            </section>
+            <section className="hidden md:block h-8 w-px bg-slate-200 mx-1" aria-hidden="true" />
+            <section className="hidden md:block text-sm font-semibold text-slate-900 truncate">Admin Workspace</section>
+          </section>
 
           <nav
             className="hidden lg:flex flex-1 items-center justify-center gap-1 max-w-3xl mx-4"
@@ -814,7 +814,7 @@ export default function AdminDashboard({ handleLogout }) {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <section className="flex items-center gap-2 shrink-0">
             {BOTTOM_NAV.map(({ icon, label }) => (
               <button
                 key={label}
@@ -826,9 +826,9 @@ export default function AdminDashboard({ handleLogout }) {
                 {label}
               </button>
             ))}
-            <div className="hidden sm:grid w-9 h-9 rounded-full bg-indigo-600 place-items-center text-white text-sm font-semibold">
+            <section className="hidden sm:grid w-9 h-9 rounded-full bg-indigo-600 place-items-center text-white text-sm font-semibold">
               A
-            </div>
+            </section>
             <button
               type="button"
               onClick={() => setIsMobileNavOpen((prev) => !prev)}
@@ -840,8 +840,8 @@ export default function AdminDashboard({ handleLogout }) {
                 {isMobileNavOpen ? "close" : "menu"}
               </span>
             </button>
-          </div>
-        </div>
+          </section>
+        </section>
 
         {isMobileNavOpen && (
           <nav
@@ -1178,7 +1178,7 @@ export default function AdminDashboard({ handleLogout }) {
               ) : moderationReviews.length === 0 ? (
                 <p style={{ color: "#6b7280", fontSize: 14 }}>No active reviews to moderate.</p>
               ) : (
-                <div style={{ overflowX: "auto" }}>
+                <section style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
                       <tr>
@@ -1214,7 +1214,7 @@ export default function AdminDashboard({ handleLogout }) {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </section>
               )}
             </section>
 
@@ -1242,38 +1242,38 @@ export default function AdminDashboard({ handleLogout }) {
               ) : (
                 <>
                   <section className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-                    <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
+                    <section style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                       <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                         Total Bookings
                       </p>
                       <p style={{ marginTop: 12, fontSize: 24, fontWeight: 700 }}>
                         {analytics.bookings.total}
                       </p>
-                    </div>
-                    <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
+                    </section>
+                    <section style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                       <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                         Confirmed
                       </p>
                       <p style={{ marginTop: 12, fontSize: 24, fontWeight: 700 }}>
                         {analytics.bookings.confirmed}
                       </p>
-                    </div>
-                    <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
+                    </section>
+                    <section style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                       <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                         Cancelled
                       </p>
                       <p style={{ marginTop: 12, fontSize: 24, fontWeight: 700 }}>
                         {analytics.bookings.cancelled}
                       </p>
-                    </div>
-                    <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
+                    </section>
+                    <section style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                       <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                         Total Users
                       </p>
                       <p style={{ marginTop: 12, fontSize: 24, fontWeight: 700 }}>
                         {analytics.users.total}
                       </p>
-                    </div>
+                    </section>
                   </section>
 
                   <section style={{ marginTop: 28 }}>
@@ -1302,48 +1302,48 @@ export default function AdminDashboard({ handleLogout }) {
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#1a1a2e" }}>
                       Revenue Snapshot
                     </h3>
-                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
+                    <section className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <section style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                         <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                           Total Revenue
                         </p>
                         <p style={{ marginTop: 12, fontSize: 24, fontWeight: 700 }}>
                           ${analytics.revenue.total.toFixed(2)}
                         </p>
-                      </div>
-                      <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
+                      </section>
+                      <section style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                         <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                           Avg. Transaction
                         </p>
                         <p style={{ marginTop: 12, fontSize: 24, fontWeight: 700 }}>
                           ${analytics.revenue.average.toFixed(2)}
                         </p>
-                      </div>
-                    </div>
+                      </section>
+                    </section>
                   </section>
 
                   <section style={{ marginTop: 28 }}>
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#1a1a2e" }}>
                       Listing Performance
                     </h3>
-                    <div className="mt-4 grid grid-cols-2 gap-5">
-                      <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
+                    <section className="mt-4 grid grid-cols-2 gap-5">
+                      <section style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                         <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                           Total Listings
                         </p>
                         <p style={{ marginTop: 12, fontSize: 24, fontWeight: 700 }}>
                           {analytics.listings.total}
                         </p>
-                      </div>
-                      <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
+                      </section>
+                      <section style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                         <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                           Active Listings
                         </p>
                         <p style={{ marginTop: 12, fontSize: 24, fontWeight: 700 }}>
                           {analytics.listings.active}
                         </p>
-                      </div>
-                    </div>
+                      </section>
+                    </section>
                     <section style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 12 }}>
                       {Object.entries(analytics.listings.categories).map(([category, count]) => (
                         <span key={category} style={{ padding: "10px 14px", borderRadius: 999, background: "#f3f4f6", color: "#374151", fontSize: 14 }}>
@@ -1355,14 +1355,14 @@ export default function AdminDashboard({ handleLogout }) {
 
                   <section style={{ marginTop: 36, padding: 28, border: "1px solid #e8e8f0", borderRadius: 16, background: "#fafafb" }}>
                     <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div>
+                      <section>
                         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#1a1a2e" }}>
                           Reports & Exports
                         </h3>
                         <p style={{ margin: "8px 0 0", fontSize: 14, color: "#6b7280" }}>
                           Download the latest category, facility, and moderation reports as CSV or PDF.
                         </p>
-                      </div>
+                      </section>
                       <section className="flex flex-wrap gap-3">
                         <button
                           onClick={exportCategoriesAsCSV}
@@ -1387,7 +1387,7 @@ export default function AdminDashboard({ handleLogout }) {
                         <p style={{ margin: 0, fontSize: 14, color: "#6b7280" }}>
                           Tracks which item categories are most listed and how many completed transactions happened each day.
                         </p>
-                        <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+                        <section style={{ marginTop: 16, display: "grid", gap: 10 }}>
                           {reportsLoading ? (
                             <span style={{ color: "#6b7280" }}>Loading report data...</span>
                           ) : reportsError ? (
@@ -1401,7 +1401,7 @@ export default function AdminDashboard({ handleLogout }) {
                               ))}
                             </section>
                           )}
-                        </div>
+                        </section>
                       </section>
 
                       <section style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10, background: "#ffffff" }}>
@@ -1457,7 +1457,7 @@ export default function AdminDashboard({ handleLogout }) {
                             </button>
                           </section>
                         </section>
-                        <div style={{ marginTop: 18 }}>
+                        <section style={{ marginTop: 18 }}>
                           {reportsLoading ? (
                             <p style={{ color: '#6b7280' }}>Loading facility metrics...</p>
                           ) : reportsError ? (
@@ -1465,16 +1465,16 @@ export default function AdminDashboard({ handleLogout }) {
                           ) : reports.facilityUsage.length ? (
                             <section style={{ display: 'grid', gap: 12 }}>
                               {reports.facilityUsage.slice(0, 5).map((slot) => (
-                                <div key={`${slot.date}-${slot.time_slot}`} style={{ padding: 14, borderRadius: 12, background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <section key={`${slot.date}-${slot.time_slot}`} style={{ padding: 14, borderRadius: 12, background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <span>{slot.date} · {slot.time_slot}</span>
                                   <span style={{ fontWeight: 600 }}>{slot.booked}/{slot.capacity} ({slot.utilization}%)</span>
-                                </div>
+                                </section>
                               ))}
                             </section>
                           ) : (
                             <p style={{ color: '#6b7280' }}>No facility usage data available.</p>
                           )}
-                        </div>
+                        </section>
                       </section>
 
                       <section style={{ padding: 24, border: '1px solid #e8e8f0', borderRadius: 16, background: '#ffffff' }}>
@@ -1497,7 +1497,7 @@ export default function AdminDashboard({ handleLogout }) {
                             </button>
                           </section>
                         </section>
-                        <div style={{ marginTop: 18 }}>
+                        <section style={{ marginTop: 18 }}>
                           {reportsLoading ? (
                             <p style={{ color: '#6b7280' }}>Loading moderation insights...</p>
                           ) : reportsError ? (
@@ -1510,11 +1510,11 @@ export default function AdminDashboard({ handleLogout }) {
                               {reports.flaggedSummary.flaggedSamples.length ? (
                                 <section style={{ display: 'grid', gap: 12 }}>
                                   {reports.flaggedSummary.flaggedSamples.map((item, index) => (
-                                    <div key={`${item.type}-${index}`} style={{ padding: 14, borderRadius: 12, border: '1px solid #e5e7eb', background: '#f8fafc' }}>
+                                    <section key={`${item.type}-${index}`} style={{ padding: 14, borderRadius: 12, border: '1px solid #e5e7eb', background: '#f8fafc' }}>
                                       <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{item.type}</p>
                                       <p style={{ margin: '6px 0 0', fontSize: 13, color: '#4b5563' }}>{item.detail}</p>
                                       <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280' }}>Reference: {item.reference}</p>
-                                    </div>
+                                    </section>
                                   ))}
                                 </section>
                               ) : (
@@ -1522,7 +1522,7 @@ export default function AdminDashboard({ handleLogout }) {
                               )}
                             </>
                           )}
-                        </div>
+                        </section>
                       </section>
                     </section>
                   </section>
