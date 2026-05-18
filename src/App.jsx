@@ -69,6 +69,15 @@ function Landing() {
     setShowLogin(false);
   };
 
+  const scrollToSection = (id) => (event) => {
+    event.preventDefault();
+    const section = document.getElementById(id);
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setIsMenuOpen(false);
+    }
+  };
+
   if (loading) {
     return (
       <main className="w-full min-h-screen bg-offwhite flex items-center justify-center">
@@ -118,8 +127,8 @@ function Landing() {
             </section>
 
             <ul className="flex-1 hidden md:flex justify-center gap-8 text-[0.85rem] font-semibold uppercase tracking-wider">
-              <li><a href="#" className="text-dark hover:text-primary transition-colors">How It Works</a></li>
-              <li><a href="#" className="text-dark hover:text-primary transition-colors">Safety</a></li>
+              <li><a href="#how-it-works" onClick={scrollToSection('how-it-works')} className="text-dark hover:text-primary transition-colors">How It Works</a></li>
+              <li><a href="#safety" onClick={scrollToSection('safety')} className="text-dark hover:text-primary transition-colors">Safety</a></li>
             </ul>
 
             <section className="flex-1 flex justify-end items-center gap-4">
@@ -152,8 +161,8 @@ function Landing() {
 
           {isMenuOpen && (
             <section className="absolute top-full left-0 w-full bg-offwhite shadow-md flex flex-col items-center gap-6 py-8 z-40 md:hidden">
-              <a href="#" className="text-dark font-semibold uppercase text-sm">How It Works</a>
-              <a href="#" className="text-dark font-semibold uppercase text-sm">Safety</a>
+              <a href="#how-it-works" onClick={scrollToSection('how-it-works')} className="text-dark font-semibold uppercase text-sm">How It Works</a>
+              <a href="#safety" onClick={scrollToSection('safety')} className="text-dark font-semibold uppercase text-sm">Safety</a>
               {user ? (
                 <>
                   <span className="text-dark text-sm">{user.email}</span>
@@ -305,6 +314,62 @@ function Landing() {
               </section>
             </RevealOnScroll>
 
+          </section>
+        </section>
+
+        <section id="how-it-works" className="py-24 px-5 md:px-10 w-full max-w-[1400px] mx-auto">
+          <RevealOnScroll>
+            <section className="max-w-4xl mx-auto text-center mb-12">
+              <p className="text-primary uppercase tracking-[0.25em] font-semibold text-sm mb-4">How It Works</p>
+              <h2 className="text-[2.5rem] md:text-[3.5rem] font-bold tracking-tight">A faster way to trade on campus</h2>
+              <p className="mt-4 text-text-muted text-base md:text-lg">List items in minutes, connect with verified students, and complete trades through secure campus exchange points.</p>
+            </section>
+          </RevealOnScroll>
+
+          <section className="grid gap-6 md:grid-cols-3">
+            <RevealOnScroll className="bg-white rounded-[24px] p-8 shadow-sm border border-light">
+              <section className="text-primary font-semibold uppercase text-sm mb-4">Step 1</section>
+              <h3 className="text-xl font-bold mb-3">List Your Item</h3>
+              <p className="text-text-muted leading-relaxed">Create a listing with photos, a description, and a campus-safe price so verified buyers can find it instantly.</p>
+            </RevealOnScroll>
+            <RevealOnScroll delay={100} className="bg-white rounded-[24px] p-8 shadow-sm border border-light">
+              <section className="text-primary font-semibold uppercase text-sm mb-4">Step 2</section>
+              <h3 className="text-xl font-bold mb-3">Chat Securely</h3>
+              <p className="text-text-muted leading-relaxed">Use in-app messaging to ask questions, schedule a pickup, and avoid sharing private contact details.</p>
+            </RevealOnScroll>
+            <RevealOnScroll delay={200} className="bg-white rounded-[24px] p-8 shadow-sm border border-light">
+              <section className="text-primary font-semibold uppercase text-sm mb-4">Step 3</section>
+              <h3 className="text-xl font-bold mb-3">Meet on Campus</h3>
+              <p className="text-text-muted leading-relaxed">Complete transactions at designated safe zones on campus, with support for verified account checks and pickup coordination.</p>
+            </RevealOnScroll>
+          </section>
+        </section>
+
+        <section id="safety" className="py-24 px-5 md:px-10 w-full max-w-[1400px] mx-auto bg-slate-50 rounded-[32px]">
+          <RevealOnScroll>
+            <section className="max-w-4xl mx-auto text-center mb-12">
+              <p className="text-primary uppercase tracking-[0.25em] font-semibold text-sm mb-4">Safety</p>
+              <h2 className="text-[2.5rem] md:text-[3.5rem] font-bold tracking-tight">Security built into every trade</h2>
+              <p className="mt-4 text-text-muted text-base md:text-lg">From verified accounts to protected messaging and campus exchange guidelines, Unimart makes student trading safer.</p>
+            </section>
+          </RevealOnScroll>
+
+          <section className="grid gap-6 md:grid-cols-3">
+            <RevealOnScroll className="bg-white rounded-[24px] p-8 shadow-sm border border-light">
+              <section className="text-primary font-semibold uppercase text-sm mb-4">Verified Accounts</section>
+              <h3 className="text-xl font-bold mb-3">Trusted student profiles</h3>
+              <p className="text-text-muted leading-relaxed">Each user is linked to a campus account so buyers and sellers know they’re dealing with fellow students.</p>
+            </RevealOnScroll>
+            <RevealOnScroll delay={100} className="bg-white rounded-[24px] p-8 shadow-sm border border-light">
+              <section className="text-primary font-semibold uppercase text-sm mb-4">Secure Messaging</section>
+              <h3 className="text-xl font-bold mb-3">No outside contact needed</h3>
+              <p className="text-text-muted leading-relaxed">Keep conversations inside the platform to reduce scams and preserve student privacy.</p>
+            </RevealOnScroll>
+            <RevealOnScroll delay={200} className="bg-white rounded-[24px] p-8 shadow-sm border border-light">
+              <section className="text-primary font-semibold uppercase text-sm mb-4">Campus Exchange</section>
+              <h3 className="text-xl font-bold mb-3">Safe meet-up zones</h3>
+              <p className="text-text-muted leading-relaxed">Coordinate pickups at recommended campus locations to keep every trade transparent and secure.</p>
+            </RevealOnScroll>
           </section>
         </section>
 
