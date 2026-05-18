@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Heart, ShieldCheck, Clock, MessageCircle, ShoppingBag, ChevronRight, UploadCloud, Loader, X, ArrowLeftRight } from 'lucide-react';
+import { ChevronLeft, ShieldCheck, Clock, MessageCircle, ShoppingBag, ChevronRight, UploadCloud, Loader, X, ArrowLeftRight } from 'lucide-react';
+import { getInitials } from './utils/avatarUtils';
 import { supabase } from './utils/supabase';
 import { useAuth } from './AuthContext';
 import { useConversation } from './hooks/useConversation';
@@ -52,7 +53,7 @@ const ListingDetails = ({ user }) => {
 
         const { data: sellerData, error: sellerError } = await supabase
           .from('users')
-          .select('id, username, email')
+          .select('id, username, email, profile_picture_url')
           .eq('id', listingData.seller_id)
           .single();
 
@@ -375,9 +376,6 @@ const ListingDetails = ({ user }) => {
                 alt={listing?.title || 'Loading'}
                 className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${loading ? 'opacity-0' : 'opacity-100'}`}
               />
-              <button className="absolute top-4 right-4 bg-white/90 p-2.5 rounded-full shadow-sm hover:scale-110 transition-transform">
-                <Heart size={22} className="text-dark hover:text-red-500 transition-colors" />
-              </button>
             </section>
           </section>
 
@@ -409,12 +407,18 @@ const ListingDetails = ({ user }) => {
               className="w-full bg-white rounded-2xl p-4 flex items-center justify-between border border-gray-200 shadow-sm mb-6 hover:shadow-md hover:border-gray-300 transition-all group"
             >
               <section className="flex items-center gap-4">
-                <section className={`w-12 h-12 rounded-full border border-light overflow-hidden ${loading ? 'bg-gray-200 animate-pulse' : 'bg-white'}`}>
-                  <img
-                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60"
-                    alt={sellerDisplayName}
-                    className={`w-full h-full object-cover ${loading ? 'opacity-0' : 'opacity-100'}`}
-                  />
+                <section className={`w-12 h-12 rounded-full border border-light overflow-hidden flex items-center justify-center ${loading ? 'bg-gray-200 animate-pulse' : seller?.profile_picture_url ? 'bg-white' : 'bg-gradient-to-br from-blue-400 to-blue-600'}`}>
+                  {seller?.profile_picture_url ? (
+                    <img
+                      src={seller.profile_picture_url}
+                      alt={sellerDisplayName}
+                      className={`w-full h-full object-cover ${loading ? 'opacity-0' : 'opacity-100'}`}
+                    />
+                  ) : (
+                    <span className={`text-white font-bold text-sm ${loading ? 'opacity-0' : 'opacity-100'}`}>
+                      {getInitials(seller?.username || seller?.email?.split('@')[0])}
+                    </span>
+                  )}
                 </section>
                 <section>
                   <h3 className={`font-bold text-dark ${loading ? 'text-transparent bg-gray-200 animate-pulse rounded' : ''}`}>{sellerDisplayName}</h3>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import StarRating from './StarRating';
 import Transactions from './../Transactions';
+import { getInitials } from '../utils/avatarUtils';
 
 const UserProfileModal = ({ isOpen, onClose, userId }) => {
   const [user, setUser] = useState(null);
@@ -68,15 +69,6 @@ const UserProfileModal = ({ isOpen, onClose, userId }) => {
   };
 
   if (!isOpen) return null;
-
-  const getInitials = (username) => {
-    return username
-      ?.split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || '?';
-  };
 
   const getRelativeDate = (dateString) => {
     const date = new Date(dateString);

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Edit2, Plus, Trash2, Camera, X, Loader, Check, Heart, ArrowLeftRight, CheckCircle, XCircle, CircleDot } from 'lucide-react';
+import { ArrowLeft, Edit2, Plus, Trash2, X, Loader, Check, Heart, ArrowLeftRight, CheckCircle, XCircle, CircleDot } from 'lucide-react';
 import { supabase } from './utils/supabase';
+import { getInitials } from './utils/avatarUtils';
 
 
 const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) => {
@@ -264,16 +265,6 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) 
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString('en-ZA');
-  };
-
-  // Helper function for getting initials from username
-  const getInitials = (username) => {
-    if (!username) return '?';
-    const parts = username.split(' ');
-    if (parts.length > 1) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return username.substring(0, 2).toUpperCase();
   };
 
   // Helper function for rendering star ratings
@@ -642,8 +633,8 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) 
                 </button>
               </div>
             ) : (
-              <div className="w-28 h-28 rounded-2xl bg-gray-200 flex items-center justify-center shadow-sm">
-                <Camera size={32} className="text-gray-400" />
+              <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-sm">
+                <span className="text-white font-bold text-3xl">{getInitials(displayName)}</span>
               </div>
             )}
             <button
@@ -696,9 +687,11 @@ const Profile = ({ onBack, onAddNew, onOpenWishlist, wishlistCount = 0, user }) 
                 <Heart size={18} className="text-red-500" />
                 Wishlist
               </span>
-              <span className="text-sm text-gray-500">
-                {wishlistCount} item{wishlistCount === 1 ? '' : 's'}
-              </span>
+              {wishlistCount > 0 && (
+                <span className="text-sm text-gray-500">
+                  {wishlistCount} item{wishlistCount === 1 ? '' : 's'}
+                </span>
+              )}
             </button>
           </section>
  
