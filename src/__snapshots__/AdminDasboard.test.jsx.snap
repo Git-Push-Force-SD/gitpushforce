@@ -1,224 +1,140 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Snapshot matches snapshot on initial render 1`] = `
+exports[`Snapshot matches snapshot after data loads 1`] = `
 <DocumentFragment>
   <section
-    style="display: flex; height: 100vh; font-family: 'Inter', sans-serif; background: rgb(240, 240, 248); color: rgb(26, 26, 46); overflow: hidden;"
+    class="min-h-screen bg-offwhite text-slate-900"
   >
-    <aside
-      style="width: 280px; min-width: 280px; background: rgb(255, 255, 255); border-right: 1px solid #e8e8f0; display: flex; flex-direction: column; padding: 28px 0px;"
+    <header
+      class="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm"
     >
-      <section
-        style="padding: 0px 24px 32px; border-bottom: 1px solid #e8e8f0;"
+      <div
+        class="flex items-center justify-between gap-3 px-4 lg:px-6 h-16"
       >
-        <section
-          style="display: flex; align-items: center; gap: 12px;"
+        <div
+          class="flex items-center gap-3 min-w-0"
         >
-          <section
-            style="width: 40px; height: 40px; border-radius: 10px; background: rgb(79, 70, 229); display: flex; align-items: center; justify-content: center;"
+          <div
+            class="w-9 h-9 shrink-0 rounded-2xl bg-indigo-600 grid place-items-center text-white text-base font-bold"
           >
-            <svg
-              fill="white"
-              height="20"
-              viewBox="0 0 24 24"
-              width="20"
+            U
+          </div>
+          <div
+            class="min-w-0"
+          >
+            <div
+              class="font-display text-base lg:text-lg font-semibold text-slate-900 truncate"
             >
-              <path
-                d="M19 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm-9 8H7v-2h3v2zm5 0h-3v-2h3v2zm3-4H6V8h12v2z"
-              />
-            </svg>
-          </section>
-          <section>
-            <section
-              style="font-weight: 800; font-size: 18px; color: rgb(26, 26, 46); line-height: 1.2;"
-            >
-              Uni-Mart
-            </section>
-            <section
-              style="font-size: 10px; color: rgb(139, 143, 168); letter-spacing: 0.08em; text-transform: uppercase;"
+              UNIMART
+            </div>
+            <div
+              class="text-[10px] lg:text-xs uppercase tracking-[0.18em] text-slate-500 truncate"
             >
               Admin Portal
-            </section>
-          </section>
-        </section>
-      </section>
-      <nav
-        style="flex: 1; padding: 24px 16px; display: flex; flex-direction: column; gap: 4px;"
-      >
-        <section
-          style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: transparent; color: rgb(107, 114, 128); font-weight: 400; font-size: 15px;"
-        >
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 22px;"
+            </div>
+          </div>
+          <div
+            aria-hidden="true"
+            class="hidden md:block h-8 w-px bg-slate-200 mx-1"
+          />
+          <div
+            class="hidden md:block text-sm font-semibold text-slate-900 truncate"
           >
-            grid_view
-          </span>
-          Dashboard
-        </section>
-        <section
-          style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: rgb(238, 236, 253); color: rgb(79, 70, 229); font-weight: 600; font-size: 15px;"
+            Admin Workspace
+          </div>
+        </div>
+        <nav
+          aria-label="Dashboard navigation"
+          class="hidden lg:flex flex-1 items-center justify-center gap-1 max-w-3xl mx-4"
         >
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 22px;"
+          <button
+            class="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors text-slate-600 hover:bg-slate-100"
+            type="button"
           >
-            person
-          </span>
-          Users
-        </section>
-        <section
-          style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: transparent; color: rgb(107, 114, 128); font-weight: 400; font-size: 15px;"
+            <span
+              class="material-symbols-outlined text-lg"
+            >
+              person_add
+            </span>
+            Create Staff
+          </button>
+          <button
+            class="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors text-slate-600 hover:bg-slate-100"
+            type="button"
+          >
+            <span
+              class="material-symbols-outlined text-lg"
+            >
+              calendar_month
+            </span>
+            Slot Capacity
+          </button>
+          <button
+            class="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors text-slate-600 hover:bg-slate-100"
+            type="button"
+          >
+            <span
+              class="material-symbols-outlined text-lg"
+            >
+              schedule
+            </span>
+            Operating Hours
+          </button>
+          <button
+            class="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors bg-indigo-50 text-indigo-700"
+            type="button"
+          >
+            <span
+              class="material-symbols-outlined text-lg"
+            >
+              analytics
+            </span>
+            Analytics
+          </button>
+        </nav>
+        <div
+          class="flex items-center gap-2 shrink-0"
         >
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 22px;"
+          <button
+            class="hidden lg:flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
+            type="button"
           >
-            list_alt
-          </span>
-          Listings
-        </section>
-        <section
-          style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: transparent; color: rgb(107, 114, 128); font-weight: 400; font-size: 15px;"
-        >
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 22px;"
+            <span
+              class="material-symbols-outlined text-lg"
+            >
+              logout
+            </span>
+            Logout
+          </button>
+          <div
+            class="hidden sm:grid w-9 h-9 rounded-full bg-indigo-600 place-items-center text-white text-sm font-semibold"
           >
-            bar_chart
-          </span>
-          Reports
-        </section>
-        <section
-          style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: transparent; color: rgb(107, 114, 128); font-weight: 400; font-size: 15px;"
-        >
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 22px;"
+            A
+          </div>
+          <button
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            class="lg:hidden text-slate-900 p-1"
+            type="button"
           >
-            analytics
-          </span>
-          Analytics
-        </section>
-        <section
-          style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; background: transparent; color: rgb(107, 114, 128); font-weight: 400; font-size: 15px;"
-        >
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 22px;"
-          >
-            settings
-          </span>
-          Settings
-        </section>
-      </nav>
-      <section
-        style="padding: 16px; border-top: 1px solid #e8e8f0; display: flex; flex-direction: column; gap: 4px;"
-      >
-        <section
-          style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; color: rgb(107, 114, 128); font-size: 15px;"
-        >
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 22px;"
-          >
-            help_outline
-          </span>
-          Support
-        </section>
-        <section
-          style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 10px; cursor: pointer; color: rgb(107, 114, 128); font-size: 15px;"
-        >
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 22px;"
-          >
-            logout
-          </span>
-          Logout
-        </section>
-      </section>
-    </aside>
+            <span
+              class="material-symbols-outlined text-3xl"
+            >
+              menu
+            </span>
+          </button>
+        </div>
+      </div>
+    </header>
     <section
-      style="flex: 1; display: flex; flex-direction: column; overflow: hidden;"
+      class="pt-16 min-h-screen flex flex-col"
     >
-      <header
-        style="height: 64px; background: rgb(255, 255, 255); border-bottom: 1px solid #e8e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0px 32px;"
-      >
-        <section
-          style="display: flex; align-items: center; gap: 10px;"
-        >
-          <span
-            style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46);"
-          >
-            Create Staff Profile
-          </span>
-          <span
-            style="color: rgb(209, 213, 219); font-size: 14px;"
-          >
-            |
-          </span>
-          <span
-            style="font-size: 14px; color: rgb(156, 163, 175);"
-          >
-            Users
-          </span>
-          <span
-            style="font-size: 14px; color: rgb(156, 163, 175);"
-          >
-            ›
-          </span>
-          <span
-            style="font-size: 14px; color: rgb(79, 70, 229); font-weight: 500;"
-          >
-            Add Staff
-          </span>
-        </section>
-        <section
-          style="display: flex; align-items: center; gap: 20px;"
-        >
-          <section
-            style="display: flex; align-items: center; gap: 10px; background: rgb(245, 245, 251); border: 1px solid #e8e8f0; border-radius: 24px; padding: 8px 18px; width: 240px;"
-          >
-            <span
-              class="material-symbols-outlined"
-              style="font-size: 18px; color: rgb(156, 163, 175);"
-            >
-              search
-            </span>
-            <span
-              style="font-size: 14px; color: rgb(156, 163, 175);"
-            >
-              Search resources...
-            </span>
-          </section>
-          <section
-            style="display: flex; align-items: center; gap: 16px;"
-          >
-            <span
-              class="material-symbols-outlined"
-              style="font-size: 22px; color: rgb(107, 114, 128); cursor: pointer;"
-            >
-              notifications
-            </span>
-            <span
-              class="material-symbols-outlined"
-              style="font-size: 22px; color: rgb(107, 114, 128); cursor: pointer;"
-            >
-              help_outline
-            </span>
-            <section
-              style="width: 36px; height: 36px; border-radius: 50%; background: rgb(79, 70, 229); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: 600; cursor: pointer;"
-            >
-              A
-            </section>
-          </section>
-        </section>
-      </header>
       <main
-        style="flex: 1; overflow: auto; padding: 32px; display: flex; align-items: flex-start; justify-content: center;"
+        class="flex-1"
+        style="padding: 32px; display: flex; align-items: flex-start; justify-content: center;"
       >
         <section
+          id="create-staff-section"
           style="background: rgb(255, 255, 255); border-radius: 16px; border: 1px solid #e8e8f0; padding: 40px 48px; width: 100%; max-width: 760px;"
         >
           <section
@@ -333,37 +249,922 @@ exports[`Snapshot matches snapshot on initial render 1`] = `
               <button
                 style="padding: 12px 26px; font-size: 14px; font-weight: 600; border-radius: 10px; background: rgb(79, 70, 229); color: rgb(255, 255, 255); cursor: pointer;"
               >
-                Create Staff Profile
+                Save Staff
               </button>
+            </section>
+          </section>
+          <section
+            id="slot-capacity-section"
+            style="margin-top: 40px; padding-top: 40px; border-top: 1px solid #e8e8f0;"
+          >
+            <section
+              style="margin-bottom: 28px;"
+            >
+              <h2
+                style="font-size: 20px; font-weight: 700; color: rgb(26, 26, 46); margin: 0px 0px 8px;"
+              >
+                Configure Slot Capacity
+              </h2>
+              <p
+                style="font-size: 14px; color: rgb(107, 114, 128); margin: 0px; line-height: 1.5;"
+              >
+                Define how many reservations each time slot may accept for a given date.
+              </p>
+            </section>
+            <section
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"
+            >
+              <section>
+                <label
+                  style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
+                >
+                  Date
+                </label>
+                <input
+                  style="width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid #d1d5db; border-radius: 10px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255); box-sizing: border-box;"
+                  type="date"
+                  value="2026-05-18"
+                />
+              </section>
+              <section>
+                <label
+                  style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
+                >
+                  Time Slot
+                </label>
+                <select
+                  style="width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid #d1d5db; border-radius: 10px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255); box-sizing: border-box; appearance: none; cursor: pointer;"
+                >
+                  <option
+                    value="08:00–08:30"
+                  >
+                    08:00–08:30
+                  </option>
+                  <option
+                    value="08:30–09:00"
+                  >
+                    08:30–09:00
+                  </option>
+                  <option
+                    value="09:00–09:30"
+                  >
+                    09:00–09:30
+                  </option>
+                  <option
+                    value="09:30–10:00"
+                  >
+                    09:30–10:00
+                  </option>
+                  <option
+                    value="10:00–10:30"
+                  >
+                    10:00–10:30
+                  </option>
+                  <option
+                    value="10:30–11:00"
+                  >
+                    10:30–11:00
+                  </option>
+                  <option
+                    value="11:00–11:30"
+                  >
+                    11:00–11:30
+                  </option>
+                  <option
+                    value="14:00–14:30"
+                  >
+                    14:00–14:30
+                  </option>
+                  <option
+                    value="14:30–15:00"
+                  >
+                    14:30–15:00
+                  </option>
+                  <option
+                    value="15:00–15:30"
+                  >
+                    15:00–15:30
+                  </option>
+                  <option
+                    value="15:30–16:00"
+                  >
+                    15:30–16:00
+                  </option>
+                </select>
+              </section>
+            </section>
+            <section
+              style="margin-top: 20px;"
+            >
+              <label
+                style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
+              >
+                Slot Capacity
+              </label>
+              <input
+                min="1"
+                style="width: 160px; padding: 12px 16px; font-size: 15px; border: 1px solid #d1d5db; border-radius: 10px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255); box-sizing: border-box;"
+                type="number"
+                value="10"
+              />
+              <section
+                style="margin-top: 12px; display: flex; gap: 16px; flex-wrap: wrap;"
+              >
+                <span
+                  style="font-size: 14px; color: rgb(107, 114, 128);"
+                >
+                  Booked: 5
+                </span>
+                <span
+                  style="font-size: 14px; color: rgb(107, 114, 128);"
+                >
+                  Remaining: 5
+                </span>
+              </section>
+            </section>
+            <section
+              style="display: flex; justify-content: flex-end; margin-top: 24px;"
+            >
+              <button
+                style="padding: 12px 26px; font-size: 14px; font-weight: 600; border-radius: 10px; background: rgb(79, 70, 229); color: rgb(255, 255, 255); cursor: pointer;"
+              >
+                Save Slot Capacity
+              </button>
+            </section>
+          </section>
+          <section
+            id="operating-hours-section"
+            style="margin-top: 40px; padding-top: 40px; border-top: 1px solid #e8e8f0;"
+          >
+            <section
+              style="margin-bottom: 28px;"
+            >
+              <h2
+                style="font-size: 20px; font-weight: 700; color: rgb(26, 26, 46); margin: 0px 0px 8px;"
+              >
+                Configure Facility Operating Hours
+              </h2>
+              <p
+                style="font-size: 14px; color: rgb(107, 114, 128); margin: 0px; line-height: 1.5;"
+              >
+                Set the daily operating hours for the facility.
+              </p>
+            </section>
+            <section
+              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;"
+            >
+              <section
+                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
+              >
+                <h3
+                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
+                >
+                  Monday
+                </h3>
+                <section
+                  style="display: flex; gap: 12px; align-items: center;"
+                >
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      Start Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="08:00"
+                    />
+                  </section>
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      End Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="18:00"
+                    />
+                  </section>
+                </section>
+              </section>
+              <section
+                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
+              >
+                <h3
+                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
+                >
+                  Tuesday
+                </h3>
+                <section
+                  style="display: flex; gap: 12px; align-items: center;"
+                >
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      Start Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="08:00"
+                    />
+                  </section>
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      End Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="18:00"
+                    />
+                  </section>
+                </section>
+              </section>
+              <section
+                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
+              >
+                <h3
+                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
+                >
+                  Wednesday
+                </h3>
+                <section
+                  style="display: flex; gap: 12px; align-items: center;"
+                >
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      Start Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="08:00"
+                    />
+                  </section>
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      End Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="18:00"
+                    />
+                  </section>
+                </section>
+              </section>
+              <section
+                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
+              >
+                <h3
+                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
+                >
+                  Thursday
+                </h3>
+                <section
+                  style="display: flex; gap: 12px; align-items: center;"
+                >
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      Start Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="08:00"
+                    />
+                  </section>
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      End Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="18:00"
+                    />
+                  </section>
+                </section>
+              </section>
+              <section
+                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
+              >
+                <h3
+                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
+                >
+                  Friday
+                </h3>
+                <section
+                  style="display: flex; gap: 12px; align-items: center;"
+                >
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      Start Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="08:00"
+                    />
+                  </section>
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      End Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="18:00"
+                    />
+                  </section>
+                </section>
+              </section>
+              <section
+                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
+              >
+                <h3
+                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
+                >
+                  Saturday
+                </h3>
+                <section
+                  style="display: flex; gap: 12px; align-items: center;"
+                >
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      Start Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="09:00"
+                    />
+                  </section>
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      End Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="17:00"
+                    />
+                  </section>
+                </section>
+              </section>
+              <section
+                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
+              >
+                <h3
+                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
+                >
+                  Sunday
+                </h3>
+                <section
+                  style="display: flex; gap: 12px; align-items: center;"
+                >
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      Start Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="10:00"
+                    />
+                  </section>
+                  <section>
+                    <label
+                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
+                    >
+                      End Time
+                    </label>
+                    <input
+                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
+                      type="time"
+                      value="16:00"
+                    />
+                  </section>
+                </section>
+              </section>
+            </section>
+            <section
+              style="display: flex; justify-content: flex-end; margin-top: 24px;"
+            >
+              <button
+                style="padding: 12px 26px; font-size: 14px; font-weight: 600; border-radius: 10px; background: rgb(79, 70, 229); color: rgb(255, 255, 255); cursor: pointer;"
+              >
+                Save Operating Hours
+              </button>
+            </section>
+          </section>
+          <section
+            style="margin-top: 40px; padding-top: 40px; border-top: 1px solid #e8e8f0;"
+          >
+            <section
+              style="margin-bottom: 28px;"
+            >
+              <h2
+                id="analytics-overview"
+                style="font-size: 20px; font-weight: 700; color: rgb(26, 26, 46); margin: 0px 0px 8px;"
+              >
+                Analytics Overview
+              </h2>
+              <p
+                style="font-size: 14px; color: rgb(107, 114, 128); margin: 0px; line-height: 1.5;"
+              >
+                Quick operational insights for bookings, users, facility usage, revenue, and listings.
+              </p>
+            </section>
+            <section
+              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px;"
+            >
+              <div
+                style="padding: 20px; border: 1px solid #e8e8f0; border-radius: 10px;"
+              >
+                <p
+                  style="margin: 0px; font-size: 12px; color: rgb(107, 114, 128); text-transform: uppercase;"
+                >
+                  Total Bookings
+                </p>
+                <p
+                  style="margin-top: 12px; font-size: 24px; font-weight: 700;"
+                >
+                  5
+                </p>
+              </div>
+              <div
+                style="padding: 20px; border: 1px solid #e8e8f0; border-radius: 10px;"
+              >
+                <p
+                  style="margin: 0px; font-size: 12px; color: rgb(107, 114, 128); text-transform: uppercase;"
+                >
+                  Confirmed
+                </p>
+                <p
+                  style="margin-top: 12px; font-size: 24px; font-weight: 700;"
+                >
+                  1
+                </p>
+              </div>
+              <div
+                style="padding: 20px; border: 1px solid #e8e8f0; border-radius: 10px;"
+              >
+                <p
+                  style="margin: 0px; font-size: 12px; color: rgb(107, 114, 128); text-transform: uppercase;"
+                >
+                  Cancelled
+                </p>
+                <p
+                  style="margin-top: 12px; font-size: 24px; font-weight: 700;"
+                >
+                  1
+                </p>
+              </div>
+              <div
+                style="padding: 20px; border: 1px solid #e8e8f0; border-radius: 10px;"
+              >
+                <p
+                  style="margin: 0px; font-size: 12px; color: rgb(107, 114, 128); text-transform: uppercase;"
+                >
+                  Total Users
+                </p>
+                <p
+                  style="margin-top: 12px; font-size: 24px; font-weight: 700;"
+                >
+                  2
+                </p>
+              </div>
+            </section>
+            <section
+              style="margin-top: 28px;"
+            >
+              <h3
+                style="margin: 0px; font-size: 16px; font-weight: 600; color: rgb(26, 26, 46);"
+              >
+                User Breakdown
+              </h3>
+              <section
+                style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px;"
+              >
+                <span
+                  style="padding: 10px 14px; border-radius: 999px; background: rgb(243, 244, 246); color: rgb(55, 65, 81); font-size: 14px;"
+                >
+                  student: 1
+                </span>
+                <span
+                  style="padding: 10px 14px; border-radius: 999px; background: rgb(243, 244, 246); color: rgb(55, 65, 81); font-size: 14px;"
+                >
+                  facilitator: 1
+                </span>
+              </section>
+            </section>
+            <section
+              style="margin-top: 28px;"
+            >
+              <h3
+                style="margin: 0px; font-size: 16px; font-weight: 600; color: rgb(26, 26, 46);"
+              >
+                Revenue Snapshot
+              </h3>
+              <div
+                style="margin-top: 16px; display: flex; gap: 20px; flex-wrap: wrap;"
+              >
+                <div
+                  style="min-width: 180px; padding: 20px; border: 1px solid #e8e8f0; border-radius: 10px;"
+                >
+                  <p
+                    style="margin: 0px; font-size: 12px; color: rgb(107, 114, 128); text-transform: uppercase;"
+                  >
+                    Total Revenue
+                  </p>
+                  <p
+                    style="margin-top: 12px; font-size: 24px; font-weight: 700;"
+                  >
+                    $200.00
+                  </p>
+                </div>
+                <div
+                  style="min-width: 180px; padding: 20px; border: 1px solid #e8e8f0; border-radius: 10px;"
+                >
+                  <p
+                    style="margin: 0px; font-size: 12px; color: rgb(107, 114, 128); text-transform: uppercase;"
+                  >
+                    Avg. Transaction
+                  </p>
+                  <p
+                    style="margin-top: 12px; font-size: 24px; font-weight: 700;"
+                  >
+                    $100.00
+                  </p>
+                </div>
+              </div>
+            </section>
+            <section
+              style="margin-top: 28px;"
+            >
+              <h3
+                style="margin: 0px; font-size: 16px; font-weight: 600; color: rgb(26, 26, 46);"
+              >
+                Listing Performance
+              </h3>
+              <div
+                style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px;"
+              >
+                <div
+                  style="padding: 20px; border: 1px solid #e8e8f0; border-radius: 10px;"
+                >
+                  <p
+                    style="margin: 0px; font-size: 12px; color: rgb(107, 114, 128); text-transform: uppercase;"
+                  >
+                    Total Listings
+                  </p>
+                  <p
+                    style="margin-top: 12px; font-size: 24px; font-weight: 700;"
+                  >
+                    3
+                  </p>
+                </div>
+                <div
+                  style="padding: 20px; border: 1px solid #e8e8f0; border-radius: 10px;"
+                >
+                  <p
+                    style="margin: 0px; font-size: 12px; color: rgb(107, 114, 128); text-transform: uppercase;"
+                  >
+                    Active Listings
+                  </p>
+                  <p
+                    style="margin-top: 12px; font-size: 24px; font-weight: 700;"
+                  >
+                    2
+                  </p>
+                </div>
+              </div>
+              <section
+                style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 12px;"
+              >
+                <span
+                  style="padding: 10px 14px; border-radius: 999px; background: rgb(243, 244, 246); color: rgb(55, 65, 81); font-size: 14px;"
+                >
+                  Books: 1
+                </span>
+                <span
+                  style="padding: 10px 14px; border-radius: 999px; background: rgb(243, 244, 246); color: rgb(55, 65, 81); font-size: 14px;"
+                >
+                  Electronics: 1
+                </span>
+                <span
+                  style="padding: 10px 14px; border-radius: 999px; background: rgb(243, 244, 246); color: rgb(55, 65, 81); font-size: 14px;"
+                >
+                  Uncategorized: 1
+                </span>
+              </section>
+            </section>
+            <section
+              style="margin-top: 36px; padding: 28px; border: 1px solid #e8e8f0; border-radius: 16px; background: rgb(250, 250, 251);"
+            >
+              <section
+                style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;"
+              >
+                <div>
+                  <h3
+                    style="margin: 0px; font-size: 18px; font-weight: 700; color: rgb(26, 26, 46);"
+                  >
+                    Reports & Exports
+                  </h3>
+                  <p
+                    style="margin: 8px 0px 0px; font-size: 14px; color: rgb(107, 114, 128);"
+                  >
+                    Download the latest category, facility, and moderation reports as CSV or PDF.
+                  </p>
+                </div>
+                <section
+                  style="display: flex; gap: 12px; flex-wrap: wrap;"
+                >
+                  <button
+                    style="padding: 10px 18px; border-radius: 10px; border: 1px solid #e5e7eb; background: rgb(255, 255, 255); cursor: pointer;"
+                  >
+                    Export Categories CSV
+                  </button>
+                  <button
+                    style="padding: 10px 18px; border-radius: 10px; border: 1px solid #4f46e5; background: rgb(79, 70, 229); color: rgb(255, 255, 255); cursor: pointer;"
+                  >
+                    Export Categories PDF
+                  </button>
+                </section>
+              </section>
+              <section
+                style="margin-top: 24px; display: grid; gap: 24px;"
+              >
+                <section>
+                  <h4
+                    style="margin: 0px 0px 10px; font-size: 16px; font-weight: 600; color: rgb(26, 26, 46);"
+                  >
+                    Most Popular Categories & Completed Transactions
+                  </h4>
+                  <p
+                    style="margin: 0px; font-size: 14px; color: rgb(107, 114, 128);"
+                  >
+                    Tracks which item categories are most listed and how many completed transactions happened each day.
+                  </p>
+                  <div
+                    style="margin-top: 16px; display: grid; gap: 10px;"
+                  >
+                    <section
+                      style="display: flex; gap: 12px; flex-wrap: wrap;"
+                    >
+                      <span
+                        style="padding: 10px 14px; border-radius: 999px; background: rgb(255, 255, 255); border: 1px solid #e5e7eb; color: rgb(26, 26, 46); font-size: 14px;"
+                      >
+                        Books: 1
+                      </span>
+                      <span
+                        style="padding: 10px 14px; border-radius: 999px; background: rgb(255, 255, 255); border: 1px solid #e5e7eb; color: rgb(26, 26, 46); font-size: 14px;"
+                      >
+                        Electronics: 1
+                      </span>
+                      <span
+                        style="padding: 10px 14px; border-radius: 999px; background: rgb(255, 255, 255); border: 1px solid #e5e7eb; color: rgb(26, 26, 46); font-size: 14px;"
+                      >
+                        Uncategorized: 1
+                      </span>
+                    </section>
+                  </div>
+                </section>
+                <section
+                  style="padding: 20px; border: 1px solid #e8e8f0; border-radius: 10px; background: rgb(255, 255, 255);"
+                >
+                  <h4
+                    style="margin: 0px 0px 14px; font-size: 16px; font-weight: 600; color: rgb(26, 26, 46);"
+                  >
+                    Completed Transactions Over Time
+                  </h4>
+                  <table
+                    style="width: 100%; border-collapse: collapse; font-size: 13px;"
+                  >
+                    <thead>
+                      <tr>
+                        <th
+                          style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600;"
+                        >
+                          Date
+                        </th>
+                        <th
+                          style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600;"
+                        >
+                          Collected
+                        </th>
+                        <th
+                          style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600;"
+                        >
+                          Completed Orders
+                        </th>
+                        <th
+                          style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600;"
+                        >
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td
+                          style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                        >
+                          2026-05-18
+                        </td>
+                        <td
+                          style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                        >
+                          1
+                        </td>
+                        <td
+                          style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                        >
+                          2
+                        </td>
+                        <td
+                          style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                        >
+                          3
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </section>
+                <section
+                  style="padding: 24px; border: 1px solid #e8e8f0; border-radius: 16px; background: rgb(255, 255, 255);"
+                >
+                  <section
+                    style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;"
+                  >
+                    <h4
+                      style="margin: 0px; font-size: 16px; font-weight: 600; color: rgb(26, 26, 46);"
+                    >
+                      Trade Facility Utilization
+                    </h4>
+                    <section
+                      style="display: flex; gap: 10px; flex-wrap: wrap;"
+                    >
+                      <button
+                        style="padding: 10px 16px; border-radius: 10px; border: 1px solid #e5e7eb; background: rgb(255, 255, 255); cursor: pointer;"
+                      >
+                        CSV
+                      </button>
+                      <button
+                        style="padding: 10px 16px; border-radius: 10px; border: 1px solid #4f46e5; background: rgb(79, 70, 229); color: rgb(255, 255, 255); cursor: pointer;"
+                      >
+                        PDF
+                      </button>
+                    </section>
+                  </section>
+                  <div
+                    style="margin-top: 18px;"
+                  >
+                    <section
+                      style="display: grid; gap: 12px;"
+                    >
+                      <div
+                        style="padding: 14px; border-radius: 12px; background: rgb(248, 250, 252); display: flex; justify-content: space-between; align-items: center;"
+                      >
+                        <span>
+                          2026-05-18 · 08:00–08:30
+                        </span>
+                        <span
+                          style="font-weight: 600;"
+                        >
+                          2/10 (20%)
+                        </span>
+                      </div>
+                      <div
+                        style="padding: 14px; border-radius: 12px; background: rgb(248, 250, 252); display: flex; justify-content: space-between; align-items: center;"
+                      >
+                        <span>
+                          2026-05-18 · 10:00–10:30
+                        </span>
+                        <span
+                          style="font-weight: 600;"
+                        >
+                          0/5 (0%)
+                        </span>
+                      </div>
+                    </section>
+                  </div>
+                </section>
+                <section
+                  style="padding: 24px; border: 1px solid #e8e8f0; border-radius: 16px; background: rgb(255, 255, 255);"
+                >
+                  <section
+                    style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;"
+                  >
+                    <h4
+                      style="margin: 0px; font-size: 16px; font-weight: 600; color: rgb(26, 26, 46);"
+                    >
+                      Flagged / Moderated Content Summary
+                    </h4>
+                    <section
+                      style="display: flex; gap: 10px; flex-wrap: wrap;"
+                    >
+                      <button
+                        style="padding: 10px 16px; border-radius: 10px; border: 1px solid #e5e7eb; background: rgb(255, 255, 255); cursor: pointer;"
+                      >
+                        CSV
+                      </button>
+                      <button
+                        style="padding: 10px 16px; border-radius: 10px; border: 1px solid #4f46e5; background: rgb(79, 70, 229); color: rgb(255, 255, 255); cursor: pointer;"
+                      >
+                        PDF
+                      </button>
+                    </section>
+                  </section>
+                  <div
+                    style="margin-top: 18px;"
+                  >
+                    <p
+                      style="margin: 0px 0px 12px; color: rgb(55, 65, 81);"
+                    >
+                      Flagged messages: 1, flagged reviews: 1
+                    </p>
+                    <section
+                      style="display: grid; gap: 12px;"
+                    >
+                      <div
+                        style="padding: 14px; border-radius: 12px; border: 1px solid #e5e7eb; background: rgb(248, 250, 252);"
+                      >
+                        <p
+                          style="margin: 0px; font-size: 13px; font-weight: 600; color: rgb(26, 26, 46);"
+                        >
+                          Message
+                        </p>
+                        <p
+                          style="margin: 6px 0px 0px; font-size: 13px; color: rgb(75, 85, 99);"
+                        >
+                          This is spam content
+                        </p>
+                        <p
+                          style="margin: 6px 0px 0px; font-size: 12px; color: rgb(107, 114, 128);"
+                        >
+                          Reference: l1
+                        </p>
+                      </div>
+                      <div
+                        style="padding: 14px; border-radius: 12px; border: 1px solid #e5e7eb; background: rgb(248, 250, 252);"
+                      >
+                        <p
+                          style="margin: 0px; font-size: 13px; font-weight: 600; color: rgb(26, 26, 46);"
+                        >
+                          Review
+                        </p>
+                        <p
+                          style="margin: 6px 0px 0px; font-size: 13px; color: rgb(75, 85, 99);"
+                        >
+                          inappropriate language here
+                        </p>
+                        <p
+                          style="margin: 6px 0px 0px; font-size: 12px; color: rgb(107, 114, 128);"
+                        >
+                          Reference: l3
+                        </p>
+                      </div>
+                    </section>
+                  </div>
+                </section>
+              </section>
             </section>
           </section>
         </section>
       </main>
       <footer
-        style="height: 52px; background: rgb(255, 255, 255); border-top: 1px solid #e8e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0px 32px; font-size: 13px; color: rgb(156, 163, 175);"
+        class="h-14 bg-white border-t border-slate-200 px-6 flex items-center justify-center text-sm text-slate-500"
       >
         <span>
-          © 2024 Uni-Mart Campus Marketplace. All Rights Reserved.
+          © 2026 UNIMART. All Rights Reserved.
         </span>
-        <section
-          style="display: flex; gap: 24px;"
-        >
-          <span
-            style="cursor: pointer;"
-          >
-            Privacy Policy
-          </span>
-          <span
-            style="cursor: pointer;"
-          >
-            Security Standards
-          </span>
-          <span
-            style="cursor: pointer;"
-          >
-            System Status
-          </span>
-        </section>
       </footer>
     </section>
   </section>

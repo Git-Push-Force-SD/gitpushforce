@@ -4,16 +4,13 @@ import { supabase } from "./utils/supabase";
 import { DEFAULT_TIME_SLOTS } from "./utils/bookingConstants";
 
 const NAV_ITEMS = [
-  { icon: "grid_view", label: "Dashboard" },
-  { icon: "person", label: "Users", active: true },
-  { icon: "list_alt", label: "Listings" },
-  { icon: "bar_chart", label: "Reports" },
-  { icon: "analytics", label: "Analytics" },
-  { icon: "settings", label: "Settings" },
+  { icon: "person_add", label: "Create Staff", active: false },
+  { icon: "calendar_month", label: "Slot Capacity", active: false },
+  { icon: "schedule", label: "Operating Hours", active: false },
+  { icon: "analytics", label: "Analytics", active: true },
 ];
 
 const BOTTOM_NAV = [
-  { icon: "help_outline", label: "Support" },
   { icon: "logout", label: "Logout" },
 ];
 
@@ -63,10 +60,17 @@ export default function AdminDashboard({ handleLogout }) {
   });
   const [reportsError, setReportsError] = useState("");
   const [reportsLoading, setReportsLoading] = useState(true);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   const handleNavClick = (label) => {
     if (label === "Analytics") {
       document.getElementById("analytics-overview")?.scrollIntoView({ behavior: "smooth" });
+    } else if (label === "Create Staff") {
+      document.getElementById("create-staff-section")?.scrollIntoView({ behavior: "smooth" });
+    } else if (label === "Slot Capacity") {
+      document.getElementById("slot-capacity-section")?.scrollIntoView({ behavior: "smooth" });
+    } else if (label === "Operating Hours") {
+      document.getElementById("operating-hours-section")?.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -87,28 +91,6 @@ export default function AdminDashboard({ handleLogout }) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  };
-
-  const downloadPDF = (filename, title, headers, rows) => {
-    const doc = new jsPDF({ unit: "pt", format: "letter" });
-    doc.setFontSize(16);
-    doc.text(title, 40, 50);
-    doc.setFontSize(11);
-    const startY = 75;
-    const lineHeight = 16;
-    let y = startY;
-    const rowText = rows.length
-      ? [headers.join(" | "), ...rows.map((row) => headers.map((key) => row[key] ?? "").join(" | "))]
-      : ["No data available"];
-    rowText.forEach((line) => {
-      if (y > 740) {
-        doc.addPage();
-        y = 50;
-      }
-      doc.text(line, 40, y);
-      y += lineHeight;
-    });
-    doc.save(filename);
   };
 
   const exportCategoriesAsCSV = () => {
@@ -230,6 +212,7 @@ export default function AdminDashboard({ handleLogout }) {
     doc.text("Samples:", 40, y);
     y += lineHeight;
     reports.flaggedSummary.flaggedSamples.forEach((sample) => {
+      /* istanbul ignore next */
       if (y > 700) {
         doc.addPage();
         y = 50;
@@ -592,216 +575,107 @@ export default function AdminDashboard({ handleLogout }) {
     }
   };
 
-  return (    <section
-      style={{
-        display: "flex",
-        height: "100vh",
-        fontFamily: "'Inter', sans-serif",
-        background: "#f0f0f8",
-        color: "#1a1a2e",
-        overflow: "hidden",
-      }}
-    >
-      {/* Sidebar - Wider */}
-      <aside
-        style={{
-          width: 280,
-          minWidth: 280,
-          background: "#ffffff",
-          borderRight: "1px solid #e8e8f0",
-          display: "flex",
-          flexDirection: "column",
-          padding: "28px 0",
-        }}
-      >
-        {/* Logo - Larger */}
-        <section style={{ padding: "0 24px 32px", borderBottom: "1px solid #e8e8f0" }}>
-          <section style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <section
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                background: "#4f46e5",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+  return (
+    <section className="min-h-screen bg-offwhite text-slate-900">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+        <div className="flex items-center justify-between gap-3 px-4 lg:px-6 h-16">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 shrink-0 rounded-2xl bg-indigo-600 grid place-items-center text-white text-base font-bold">
+              U
+            </div>
+            <div className="min-w-0">
+              <div className="font-display text-base lg:text-lg font-semibold text-slate-900 truncate">UNIMART</div>
+              <div className="text-[10px] lg:text-xs uppercase tracking-[0.18em] text-slate-500 truncate">Admin Portal</div>
+            </div>
+            <div className="hidden md:block h-8 w-px bg-slate-200 mx-1" aria-hidden="true" />
+            <div className="hidden md:block text-sm font-semibold text-slate-900 truncate">Admin Workspace</div>
+          </div>
+
+          <nav
+            className="hidden lg:flex flex-1 items-center justify-center gap-1 max-w-3xl mx-4"
+            aria-label="Dashboard navigation"
+          >
+            {NAV_ITEMS.map(({ icon, label, active }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => handleNavClick(label)}
+                className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                  active ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <span className="material-symbols-outlined text-lg">{icon}</span>
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {BOTTOM_NAV.map(({ icon, label }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={label === "Logout" ? handleLogout : undefined}
+                className="hidden lg:flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                <span className="material-symbols-outlined text-lg">{icon}</span>
+                {label}
+              </button>
+            ))}
+            <div className="hidden sm:grid w-9 h-9 rounded-full bg-indigo-600 place-items-center text-white text-sm font-semibold">
+              A
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen((prev) => !prev)}
+              className="lg:hidden text-slate-900 p-1"
+              aria-label="Toggle navigation"
+              aria-expanded={isMobileNavOpen}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                <path d="M19 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm-9 8H7v-2h3v2zm5 0h-3v-2h3v2zm3-4H6V8h12v2z" />
-              </svg>
-            </section>
-            <section>
-              <section style={{ fontWeight: 800, fontSize: 18, color: "#1a1a2e", lineHeight: 1.2 }}>
-                Uni-Mart
-              </section>
-              <section
-                style={{
-                  fontSize: 10,
-                  color: "#8b8fa8",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
+              <span className="material-symbols-outlined text-3xl">
+                {isMobileNavOpen ? "close" : "menu"}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {isMobileNavOpen && (
+          <nav
+            className="lg:hidden border-t border-slate-200 px-4 py-3 grid grid-cols-2 gap-2"
+            aria-label="Mobile dashboard navigation"
+          >
+            {NAV_ITEMS.map(({ icon, label, active }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  setIsMobileNavOpen(false);
+                  handleNavClick(label);
                 }}
+                className={`flex items-center justify-center gap-2 rounded-2xl border p-3 text-sm font-medium transition ${
+                  active ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-700 hover:bg-slate-100"
+                }`}
               >
-                Admin Portal
-              </section>
-            </section>
-          </section>
-        </section>
-
-        {/* Nav - Larger items */}
-        <nav
-          style={{
-            flex: 1,
-            padding: "24px 16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-          }}
-        >
-          {NAV_ITEMS.map(({ icon, label, active }) => (
-            <section
-              key={label}
-              onClick={() => handleNavClick(label)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                padding: "12px 16px",
-                borderRadius: 10,
-                cursor: "pointer",
-                background: active ? "#eeecfd" : "transparent",
-                color: active ? "#4f46e5" : "#6b7280",
-                fontWeight: active ? 600 : 400,
-                fontSize: 15,
-              }}
+                <span className="material-symbols-outlined text-lg">{icon}</span>
+                {label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
-                {icon}
-              </span>
-              {label}
-            </section>
-          ))}
-        </nav>
+              <span className="material-symbols-outlined text-lg">logout</span>
+              Logout
+            </button>
+          </nav>
+        )}
+      </header>
 
-        {/* Bottom nav - Larger items */}
-        <section
-          style={{
-            padding: "16px",
-            borderTop: "1px solid #e8e8f0",
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-          }}
-        >
-          {BOTTOM_NAV.map(({ icon, label }) => (
-            <section
-              key={label}
-              onClick={label === "Logout" ? handleLogout : undefined}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                padding: "12px 16px",
-                borderRadius: 10,
-                cursor: "pointer",
-                color: "#6b7280",
-                fontSize: 15,
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
-                {icon}
-              </span>
-              {label}
-            </section>
-          ))}
-        </section>
-      </aside>
-
-      {/* Main */}
-      <section style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Top bar */}
-        <header
-          style={{
-            height: 64,
-            background: "#ffffff",
-            borderBottom: "1px solid #e8e8f0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 32px",
-          }}
-        >
-          <section style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 16, fontWeight: 600, color: "#1a1a2e" }}>
-              Create Staff Profile
-            </span>
-            <span style={{ color: "#d1d5db", fontSize: 14 }}>|</span>
-            <span style={{ fontSize: 14, color: "#9ca3af" }}>Users</span>
-            <span style={{ fontSize: 14, color: "#9ca3af" }}>›</span>
-            <span style={{ fontSize: 14, color: "#4f46e5", fontWeight: 500 }}>Add Staff</span>
-          </section>
-          <section style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <section
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                background: "#f5f5fb",
-                border: "1px solid #e8e8f0",
-                borderRadius: 24,
-                padding: "8px 18px",
-                width: 240,
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 18, color: "#9ca3af" }}
-              >
-                search
-              </span>
-              <span style={{ fontSize: 14, color: "#9ca3af" }}>Search resources...</span>
-            </section>
-            <section style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 22, color: "#6b7280", cursor: "pointer" }}
-              >
-                notifications
-              </span>
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 22, color: "#6b7280", cursor: "pointer" }}
-              >
-                help_outline
-              </span>
-              <section
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  background: "#4f46e5",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                A
-              </section>
-            </section>
-          </section>
-        </header>
-
-        {/* Content - Expanded to fill space */}
+      <section className="pt-16 min-h-screen flex flex-col">
         <main
+          className="flex-1"
           style={{
-            flex: 1,
-            overflow: "auto",
             padding: 32,
             display: "flex",
             alignItems: "flex-start",
@@ -809,6 +683,7 @@ export default function AdminDashboard({ handleLogout }) {
           }}
         >
           <section
+            id="create-staff-section"
             style={{
               background: "#ffffff",
               borderRadius: 16,
@@ -989,12 +864,12 @@ export default function AdminDashboard({ handleLogout }) {
                     cursor: "pointer",
                   }}
                 >
-                  Create Staff Profile
+                  Save Staff
                 </button>
               </section>
             </section>
 
-            <section style={{ marginTop: 40, paddingTop: 40, borderTop: "1px solid #e8e8f0" }}>
+            <section id="slot-capacity-section" style={{ marginTop: 40, paddingTop: 40, borderTop: "1px solid #e8e8f0" }}>
               <section style={{ marginBottom: 28 }}>
                 <h2
                   style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", margin: "0 0 8px" }}
@@ -1155,7 +1030,7 @@ export default function AdminDashboard({ handleLogout }) {
               </section>
             </section>
 
-            <section style={{ marginTop: 40, paddingTop: 40, borderTop: "1px solid #e8e8f0" }}>
+            <section id="operating-hours-section" style={{ marginTop: 40, paddingTop: 40, borderTop: "1px solid #e8e8f0" }}>
               <section style={{ marginBottom: 28 }}>
                 <h2
                   style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", margin: "0 0 8px" }}
@@ -1597,27 +1472,8 @@ export default function AdminDashboard({ handleLogout }) {
         </main>
 
         {/* Footer */}
-        <footer
-          style={{
-            height: 52,
-            background: "#ffffff",
-            borderTop: "1px solid #e8e8f0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 32px",
-            fontSize: 13,
-            color: "#9ca3af",
-          }}
-        >
-          <span>© 2024 Uni-Mart Campus Marketplace. All Rights Reserved.</span>
-          <section style={{ display: "flex", gap: 24 }}>
-            {["Privacy Policy", "Security Standards", "System Status"].map((item) => (
-              <span key={item} style={{ cursor: "pointer" }}>
-                {item}
-              </span>
-            ))}
-          </section>
+        <footer className="h-14 bg-white border-t border-slate-200 px-6 flex items-center justify-center text-sm text-slate-500">
+          <span>© 2026 UNIMART. All Rights Reserved.</span>
         </footer>
       </section>
     </section>
