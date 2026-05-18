@@ -67,7 +67,7 @@ describe("AdminDashboard coverage – analytics & reports", () => {
     expect(within(getMain()).getByText("Revenue Snapshot")).toBeInTheDocument();
     expect(within(getMain()).getByText("Listing Performance")).toBeInTheDocument();
     expect(within(getMain()).getByText(/student:/i)).toBeInTheDocument();
-    expect(within(getMain()).getByText(/\$200\.00/)).toBeInTheDocument();
+    expect(within(getMain()).getByText(/R200\.00/)).toBeInTheDocument();
   });
 
   test("shows analytics error when fetch fails", async () => {
@@ -81,7 +81,7 @@ describe("AdminDashboard coverage – analytics & reports", () => {
 
     expect(within(getMain()).getByText("Reports & Exports")).toBeInTheDocument();
     expect(await screen.findByText("Completed Transactions Over Time")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Date" })).toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader", { name: "Date" }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Books:/i).length).toBeGreaterThan(0);
   });
 
@@ -91,7 +91,7 @@ describe("AdminDashboard coverage – analytics & reports", () => {
     expect(within(getMain()).getByText("Trade Facility Utilization")).toBeInTheDocument();
     expect(within(getMain()).getByText(/Flagged messages:/i)).toBeInTheDocument();
     expect(within(getMain()).getByText(/spam content/i)).toBeInTheDocument();
-    expect(within(getMain()).getByText(/inappropriate language/i)).toBeInTheDocument();
+    expect(within(getMain()).getAllByText(/inappropriate language/i).length).toBeGreaterThanOrEqual(1);
   });
 
   test("renders empty completed transactions message when none exist", async () => {

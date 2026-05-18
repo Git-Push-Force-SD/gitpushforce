@@ -612,7 +612,7 @@ exports[`Snapshot matches snapshot after data loads 1`] = `
                   <p
                     style="margin-top: 12px; font-size: 24px; font-weight: 700;"
                   >
-                    $200.00
+                    R200.00
                   </p>
                 </div>
                 <div
@@ -626,7 +626,7 @@ exports[`Snapshot matches snapshot after data loads 1`] = `
                   <p
                     style="margin-top: 12px; font-size: 24px; font-weight: 700;"
                   >
-                    $100.00
+                    R100.00
                   </p>
                 </div>
               </div>

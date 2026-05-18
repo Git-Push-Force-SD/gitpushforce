@@ -1308,7 +1308,7 @@ export default function AdminDashboard({ handleLogout }) {
                           Total Revenue
                         </p>
                         <p style={{ marginTop: 12, fontSize: 24, fontWeight: 700 }}>
-                          ${analytics.revenue.total.toFixed(2)}
+                          R{analytics.revenue.total.toFixed(2)}
                         </p>
                       </div>
                       <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
@@ -1316,7 +1316,7 @@ export default function AdminDashboard({ handleLogout }) {
                           Avg. Transaction
                         </p>
                         <p style={{ marginTop: 12, fontSize: 24, fontWeight: 700 }}>
-                          ${analytics.revenue.average.toFixed(2)}
+                          R{analytics.revenue.average.toFixed(2)}
                         </p>
                       </div>
                     </div>
