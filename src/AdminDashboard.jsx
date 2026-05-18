@@ -4,7 +4,6 @@ import { supabase } from "./utils/supabase";
 import { DEFAULT_TIME_SLOTS } from "./utils/bookingConstants";
 
 const NAV_ITEMS = [
-  { icon: "person_add", label: "Create Staff", active: false },
   { icon: "calendar_month", label: "Slot Capacity", active: false },
   { icon: "schedule", label: "Operating Hours", active: false },
   { icon: "analytics", label: "Analytics", active: true },
@@ -14,35 +13,38 @@ const BOTTOM_NAV = [
   { icon: "logout", label: "Logout" },
 ];
 
-const FACILITIES = [
-  "North Campus Hub",
-  "Library Commons Zone",
-  "South Plaza Exchange",
-  "Graduate Student Center",
-  "West Wing Marketplace",
-  "Engineering Quarter",
-];
+
+function generateHourlySlots(start, end) {
+  const slots = [];
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let cur = sh * 60 + sm;
+  const endMin = eh * 60 + em;
+  const fmt = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  while (cur + 60 <= endMin) {
+    slots.push(`${fmt(cur)} - ${fmt(cur + 60)}`);
+    cur += 60;
+  }
+  return slots;
+}
 
 export default function AdminDashboard({ handleLogout }) {
-  const [fullName, setFullName] = useState("");
-  const [facility, setFacility] = useState("");
   const [slotDate, setSlotDate] = useState(new Date().toISOString().slice(0, 10));
   const [slotTime, setSlotTime] = useState(DEFAULT_TIME_SLOTS[0] || "");
   const [slotCapacity, setSlotCapacity] = useState(5);
   const [slotTaken, setSlotTaken] = useState(0);
   const [slotMessage, setSlotMessage] = useState("");
   const [slotError, setSlotError] = useState("");
-  const [operatingHours, setOperatingHours] = useState([
-    { day: "Monday", start: "08:00", end: "18:00" },
-    { day: "Tuesday", start: "08:00", end: "18:00" },
-    { day: "Wednesday", start: "08:00", end: "18:00" },
-    { day: "Thursday", start: "08:00", end: "18:00" },
-    { day: "Friday", start: "08:00", end: "18:00" },
-    { day: "Saturday", start: "09:00", end: "17:00" },
-    { day: "Sunday", start: "10:00", end: "16:00" },
-  ]);
+  const [hoursDate,  setHoursDate]  = useState(new Date().toISOString().slice(0, 10));
+  const [hoursStart, setHoursStart] = useState("09:00");
+  const [hoursEnd,   setHoursEnd]   = useState("17:00");
   const [hoursMessage, setHoursMessage] = useState("");
   const [hoursError, setHoursError] = useState("");
+  const [slotSaving, setSlotSaving] = useState(false);
+  const [hoursSaving, setHoursSaving] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState("");
+  const [bulkError, setBulkError] = useState("");
   const [analytics, setAnalytics] = useState({
     bookings: { total: 0, confirmed: 0, cancelled: 0 },
     users: { total: 0, roles: {}, newThisMonth: 0 },
@@ -61,12 +63,13 @@ export default function AdminDashboard({ handleLogout }) {
   const [reportsError, setReportsError] = useState("");
   const [reportsLoading, setReportsLoading] = useState(true);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [moderationReviews, setModerationReviews] = useState([]);
+  const [moderationReviewsLoading, setModerationReviewsLoading] = useState(true);
+  const [moderationReviewsError, setModerationReviewsError] = useState('');
 
   const handleNavClick = (label) => {
     if (label === "Analytics") {
       document.getElementById("analytics-overview")?.scrollIntoView({ behavior: "smooth" });
-    } else if (label === "Create Staff") {
-      document.getElementById("create-staff-section")?.scrollIntoView({ behavior: "smooth" });
     } else if (label === "Slot Capacity") {
       document.getElementById("slot-capacity-section")?.scrollIntoView({ behavior: "smooth" });
     } else if (label === "Operating Hours") {
@@ -407,6 +410,7 @@ export default function AdminDashboard({ handleLogout }) {
   useEffect(() => {
     fetchAnalytics();
     fetchReports();
+    fetchModerationReviews();
   }, []);
 
   const handleSaveSlotCapacity = async () => {
@@ -423,52 +427,252 @@ export default function AdminDashboard({ handleLogout }) {
       return;
     }
 
-    const { error } = await supabase
-      .from("facility_slots")
-      .upsert([
-        {
-          date: slotDate,
-          time_slot: slotTime,
-          capacity: slotCapacity,
-        },
-      ]);
+    setSlotSaving(true);
+    try {
+      const { data: existing, error: checkError } = await supabase
+        .from("facility_slots")
+        .select("id")
+        .eq("date", slotDate)
+        .eq("time_slot", slotTime)
+        .maybeSingle();
 
-    if (error) {
+      if (checkError) throw checkError;
+
+      let saveError;
+      if (existing) {
+        const { error } = await supabase
+          .from("facility_slots")
+          .update({ capacity: slotCapacity })
+          .eq("date", slotDate)
+          .eq("time_slot", slotTime);
+        saveError = error;
+      } else {
+        const { error } = await supabase
+          .from("facility_slots")
+          .insert([{ date: slotDate, time_slot: slotTime, capacity: slotCapacity }]);
+        saveError = error;
+      }
+
+      if (saveError) throw saveError;
+      setSlotMessage("Slot capacity saved successfully.");
+    } catch (error) {
       console.error("[AdminDashboard] slot capacity save error:", error);
       setSlotError("Failed to save slot capacity. Please try again.");
+    } finally {
+      setSlotSaving(false);
+    }
+  };
+
+  const handleBulkUpdateCapacity = async (scope) => {
+    setBulkError("");
+    setBulkMessage("");
+
+    if (slotCapacity < 1) {
+      setBulkError("Capacity must be at least 1.");
       return;
     }
 
-    setSlotMessage("Slot capacity saved successfully.");
+    if (scope === "date" && !slotDate) {
+      setBulkError("Please select a date first.");
+      return;
+    }
+
+    setBulkSaving(true);
+    try {
+      // Determine which dates to target
+      let dates;
+      if (scope === "date") {
+        dates = [slotDate];
+      } else {
+        const { data: allRows, error: datesError } = await supabase
+          .from("facility_slots")
+          .select("date");
+        if (datesError) throw datesError;
+        dates = [...new Set((allRows || []).map(s => s.date))];
+        if (dates.length === 0) {
+          setBulkMessage("No configured dates found. Use 'All slots on [date]' to set up a specific date first.");
+          return;
+        }
+      }
+
+      let totalInserted = 0;
+      let totalUpdated = 0;
+
+      for (const date of dates) {
+        // Find which DEFAULT_TIME_SLOTS already have a row for this date
+        const { data: existing, error: fetchError } = await supabase
+          .from("facility_slots")
+          .select("time_slot")
+          .eq("date", date)
+          .in("time_slot", DEFAULT_TIME_SLOTS);
+        if (fetchError) throw fetchError;
+
+        const existingSet = new Set((existing || []).map(s => s.time_slot));
+        const toInsert = DEFAULT_TIME_SLOTS.filter(ts => !existingSet.has(ts));
+        const toUpdate = DEFAULT_TIME_SLOTS.filter(ts => existingSet.has(ts));
+
+        if (toInsert.length > 0) {
+          const { error } = await supabase
+            .from("facility_slots")
+            .insert(toInsert.map(ts => ({ date, time_slot: ts, capacity: slotCapacity })));
+          if (error) throw error;
+          totalInserted += toInsert.length;
+        }
+
+        if (toUpdate.length > 0) {
+          const { error } = await supabase
+            .from("facility_slots")
+            .update({ capacity: slotCapacity })
+            .eq("date", date)
+            .in("time_slot", toUpdate);
+          if (error) throw error;
+          totalUpdated += toUpdate.length;
+        }
+      }
+
+      const total = totalInserted + totalUpdated;
+      setBulkMessage(
+        `Capacity set to ${slotCapacity} for ${total} slot${total !== 1 ? "s" : ""} across ${dates.length} date${dates.length !== 1 ? "s" : ""} (${totalInserted} new, ${totalUpdated} updated).`
+      );
+      fetchSlotStatus();
+    } catch (err) {
+      console.error("[AdminDashboard] bulk capacity update error:", err);
+      setBulkError("Failed to bulk update capacity. Please try again.");
+    } finally {
+      setBulkSaving(false);
+    }
   };
 
   const handleSaveOperatingHours = async () => {
     setHoursError("");
     setHoursMessage("");
 
-    // Validate that all hours are set
-    for (const hour of operatingHours) {
-      if (!hour.start || !hour.end) {
-        setHoursError("Please set start and end times for all days.");
-        return;
-      }
-    }
-
-    const { error } = await supabase
-      .from("facility_operating_hours")
-      .upsert(operatingHours.map(h => ({
-        day: h.day,
-        start_time: h.start,
-        end_time: h.end,
-      })));
-
-    if (error) {
-      console.error("[AdminDashboard] operating hours save error:", error);
-      setHoursError("Failed to save operating hours. Please try again.");
+    if (!hoursDate || !hoursStart || !hoursEnd) {
+      setHoursError("Please select a date, start time, and end time.");
       return;
     }
 
-    setHoursMessage("Operating hours saved successfully.");
+    setHoursSaving(true);
+    try {
+      const timeSlots = generateHourlySlots(hoursStart, hoursEnd);
+
+      if (timeSlots.length === 0) {
+        setHoursError("No slots generated — end time must be at least 1 hour after start time.");
+        setHoursSaving(false);
+        return;
+      }
+
+      const allSlots = timeSlots.map(ts => ({ date: hoursDate, time_slot: ts, capacity: slotCapacity }));
+      const dates = [hoursDate];
+
+      const { data: existing, error: fetchError } = await supabase
+        .from("facility_slots")
+        .select("date, time_slot")
+        .eq("date", hoursDate);
+
+      if (fetchError) throw fetchError;
+
+      const newSlotSet = new Set(allSlots.map(s => `${s.date}|${s.time_slot}`));
+      const existingSet = new Set((existing || []).map(s => `${s.date}|${s.time_slot}`));
+
+      const toInsert = allSlots.filter(s => !existingSet.has(`${s.date}|${s.time_slot}`));
+      const toUpdate = allSlots.filter(s => existingSet.has(`${s.date}|${s.time_slot}`));
+      const toDelete = (existing || []).filter(s => !newSlotSet.has(`${s.date}|${s.time_slot}`));
+
+      let deleted = 0;
+      let skipped = 0;
+
+      if (toDelete.length > 0) {
+        const deleteDates = [...new Set(toDelete.map(s => s.date))];
+        const deleteTimeSlots = [...new Set(toDelete.map(s => s.time_slot))];
+
+        // Single query to find which of these slots have active bookings
+        const { data: activeBookings } = await supabase
+          .from("bookings")
+          .select("date, time_slot")
+          .in("date", deleteDates)
+          .in("time_slot", deleteTimeSlots)
+          .neq("status", "cancelled");
+
+        const bookedSet = new Set(
+          (activeBookings || []).map(b => `${b.date}|${b.time_slot}`)
+        );
+
+        const canDelete = toDelete.filter(s => !bookedSet.has(`${s.date}|${s.time_slot}`));
+        skipped = toDelete.length - canDelete.length;
+
+        // One delete query per date using .in() for the time slots
+        for (const date of deleteDates) {
+          const slots = canDelete.filter(s => s.date === date).map(s => s.time_slot);
+          if (slots.length === 0) continue;
+          const { error } = await supabase
+            .from("facility_slots")
+            .delete()
+            .eq("date", date)
+            .in("time_slot", slots);
+          if (error) throw error;
+          deleted += slots.length;
+        }
+      }
+
+      if (toInsert.length > 0) {
+        const { error } = await supabase.from("facility_slots").insert(toInsert);
+        if (error) throw error;
+      }
+
+      for (const slot of toUpdate) {
+        const { error } = await supabase
+          .from("facility_slots")
+          .update({ capacity: slot.capacity })
+          .eq("date", slot.date)
+          .eq("time_slot", slot.time_slot);
+        if (error) throw error;
+      }
+
+      const parts = [];
+      if (toInsert.length > 0) parts.push(`${toInsert.length} added`);
+      if (toUpdate.length > 0) parts.push(`${toUpdate.length} updated`);
+      if (deleted > 0) parts.push(`${deleted} removed`);
+      if (skipped > 0) parts.push(`${skipped} kept (has bookings)`);
+      setHoursMessage(`Operating hours saved. ${parts.join(", ") || "no changes"}.`);
+    } catch (error) {
+      console.error("[AdminDashboard] operating hours save error:", error);
+      setHoursError("Failed to save operating hours. Please try again.");
+    } finally {
+      setHoursSaving(false);
+    }
+  };
+
+  const fetchModerationReviews = async () => {
+    setModerationReviewsLoading(true);
+    setModerationReviewsError('');
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('id, rating, comment, created_at, status, listing:listing_id(title), reviewer:reviewer_id(username), reviewee:reviewee_id(username)')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setModerationReviews(data || []);
+    } catch (err) {
+      console.error('[AdminDashboard] moderation reviews fetch error:', err);
+      setModerationReviewsError('Failed to load reviews.');
+    } finally {
+      setModerationReviewsLoading(false);
+    }
+  };
+
+  const handleRemoveReview = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to remove this review?')) return;
+    const { error } = await supabase
+      .from('reviews')
+      .update({ status: 'removed' })
+      .eq('id', reviewId);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setModerationReviews(prev => prev.filter(r => r.id !== reviewId));
   };
 
   const fetchAnalytics = async () => {
@@ -683,7 +887,6 @@ export default function AdminDashboard({ handleLogout }) {
           }}
         >
           <section
-            id="create-staff-section"
             style={{
               background: "#ffffff",
               borderRadius: 16,
@@ -693,183 +896,7 @@ export default function AdminDashboard({ handleLogout }) {
               maxWidth: 760,
             }}
           >
-            {/* Card header */}
-            <section style={{ marginBottom: 36 }}>
-              <h1
-                style={{ fontSize: 24, fontWeight: 700, color: "#1a1a2e", margin: "0 0 8px" }}
-              >
-                Trade Facilitator Staff
-              </h1>
-              <p style={{ fontSize: 14, color: "#6b7280", margin: 0, lineHeight: 1.5 }}>
-                Onboard a new facilitator to manage campus marketplace transactions and safety
-                protocols.
-              </p>
-            </section>
-
-            {/* Form */}
-            <section style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-              {/* Full Name */}
-              <section>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "#6b7280",
-                    letterSpacing: "0.07em",
-                    textTransform: "uppercase",
-                    marginBottom: 8,
-                  }}
-                >
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Alexander Pierce"
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    fontSize: 15,
-                    border: "1px solid #d1d5db",
-                    borderRadius: 10,
-                    outline: "none",
-                    color: "#1a1a2e",
-                    background: "#ffffff",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </section>
-
-              {/* Facility + Role */}
-              <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                <section>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "#6b7280",
-                      letterSpacing: "0.07em",
-                      textTransform: "uppercase",
-                      marginBottom: 8,
-                    }}
-                  >
-                    Assigned Facility
-                  </label>
-                  <select
-                    value={facility}
-                    onChange={(e) => setFacility(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "12px 16px",
-                      fontSize: 15,
-                      border: "1px solid #d1d5db",
-                      borderRadius: 10,
-                      outline: "none",
-                      color: facility ? "#1a1a2e" : "#9ca3af",
-                      background: "#ffffff",
-                      boxSizing: "border-box",
-                      appearance: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <option value="" disabled>
-                      Select a facility...
-                    </option>
-                    {FACILITIES.map((f) => (
-                      <option key={f} value={f}>
-                        {f}
-                      </option>
-                    ))}
-                  </select>
-                </section>
-
-                <section>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "#6b7280",
-                      letterSpacing: "0.07em",
-                      textTransform: "uppercase",
-                      marginBottom: 8,
-                    }}
-                  >
-                    Role
-                  </label>
-                  <section
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "12px 16px",
-                      fontSize: 15,
-                      border: "1px solid #c7c3fb",
-                      borderRadius: 10,
-                      background: "#f5f3ff",
-                      color: "#4f46e5",
-                      fontWeight: 500,
-                    }}
-                  >
-                    <span>Trade Facilitator</span>
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ fontSize: 18, color: "#4f46e5" }}
-                    >
-                      settings
-                    </span>
-                  </section>
-                </section>
-              </section>
-
-              {/* Actions */}
-              <section
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 16,
-                  marginTop: 12,
-                }}
-              >
-                <button
-                  onClick={() => {
-                    setFullName("");
-                    setFacility("");
-                  }}
-                  style={{
-                    padding: "12px 26px",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    border: "1px solid #d1d5db",
-                    borderRadius: 10,
-                    background: "transparent",
-                    color: "#374151",
-                    cursor: "pointer",
-                  }}
-                >
-                  Discard
-                </button>
-                <button
-                  style={{
-                    padding: "12px 26px",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    border: "none",
-                    borderRadius: 10,
-                    background: "#4f46e5",
-                    color: "#ffffff",
-                    cursor: "pointer",
-                  }}
-                >
-                  Save Staff
-                </button>
-              </section>
-            </section>
-
-            <section id="slot-capacity-section" style={{ marginTop: 40, paddingTop: 40, borderTop: "1px solid #e8e8f0" }}>
+            <section id="slot-capacity-section">
               <section style={{ marginBottom: 28 }}>
                 <h2
                   style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", margin: "0 0 8px" }}
@@ -1014,19 +1041,54 @@ export default function AdminDashboard({ handleLogout }) {
               <section style={{ display: "flex", justifyContent: "flex-end", marginTop: 24 }}>
                 <button
                   onClick={handleSaveSlotCapacity}
+                  disabled={slotSaving}
                   style={{
                     padding: "12px 26px",
                     fontSize: 14,
                     fontWeight: 600,
                     border: "none",
                     borderRadius: 10,
-                    background: "#4f46e5",
+                    background: slotSaving ? "#9ca3af" : "#4f46e5",
                     color: "#ffffff",
-                    cursor: "pointer",
+                    cursor: slotSaving ? "not-allowed" : "pointer",
                   }}
                 >
-                  Save Slot Capacity
+                  {slotSaving ? "Saving…" : "Save Slot Capacity"}
                 </button>
+              </section>
+
+              <section style={{ marginTop: 28, paddingTop: 24, borderTop: "1px dashed #e8e8f0" }}>
+                <p style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                  Bulk Apply
+                </p>
+                <p style={{ margin: "0 0 16px", fontSize: 14, color: "#6b7280" }}>
+                  Apply the capacity value above to multiple slots at once.
+                </p>
+                <section style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <button
+                    onClick={() => handleBulkUpdateCapacity("date")}
+                    disabled={bulkSaving}
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: 14,
+                      fontWeight: 500,
+                      border: "1px solid #4f46e5",
+                      borderRadius: 10,
+                      background: "#f5f3ff",
+                      color: "#4f46e5",
+                      cursor: bulkSaving ? "not-allowed" : "pointer",
+                      opacity: bulkSaving ? 0.6 : 1,
+                    }}
+                  >
+                    All slots on {slotDate || "selected date"}
+                  </button>
+                </section>
+                {bulkError && (
+                  <p style={{ marginTop: 12, color: "#b91c1c", fontSize: 14 }}>{bulkError}</p>
+                )}
+                {bulkMessage && (
+                  <p style={{ marginTop: 12, color: "#166534", fontSize: 14 }}>{bulkMessage}</p>
+                )}
               </section>
             </section>
 
@@ -1042,82 +1104,40 @@ export default function AdminDashboard({ handleLogout }) {
                 </p>
               </section>
 
-              <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20 }}>
-                {operatingHours.map((hour, index) => (
-                  <section key={hour.day} style={{ border: "1px solid #e8e8f0", borderRadius: 10, padding: 20 }}>
-                    <h3 style={{ fontSize: 16, fontWeight: 600, color: "#1a1a2e", margin: "0 0 16px" }}>
-                      {hour.day}
-                    </h3>
-                    <section style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                      <section>
-                        <label
-                          style={{
-                            display: "block",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "#6b7280",
-                            letterSpacing: "0.07em",
-                            textTransform: "uppercase",
-                            marginBottom: 4,
-                          }}
-                        >
-                          Start Time
-                        </label>
-                        <input
-                          type="time"
-                          value={hour.start}
-                          onChange={(e) => {
-                            const newHours = [...operatingHours];
-                            newHours[index].start = e.target.value;
-                            setOperatingHours(newHours);
-                          }}
-                          style={{
-                            padding: "8px 12px",
-                            fontSize: 14,
-                            border: "1px solid #d1d5db",
-                            borderRadius: 8,
-                            outline: "none",
-                            color: "#1a1a2e",
-                            background: "#ffffff",
-                          }}
-                        />
-                      </section>
-                      <section>
-                        <label
-                          style={{
-                            display: "block",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "#6b7280",
-                            letterSpacing: "0.07em",
-                            textTransform: "uppercase",
-                            marginBottom: 4,
-                          }}
-                        >
-                          End Time
-                        </label>
-                        <input
-                          type="time"
-                          value={hour.end}
-                          onChange={(e) => {
-                            const newHours = [...operatingHours];
-                            newHours[index].end = e.target.value;
-                            setOperatingHours(newHours);
-                          }}
-                          style={{
-                            padding: "8px 12px",
-                            fontSize: 14,
-                            border: "1px solid #d1d5db",
-                            borderRadius: 8,
-                            outline: "none",
-                            color: "#1a1a2e",
-                            background: "#ffffff",
-                          }}
-                        />
-                      </section>
-                    </section>
-                  </section>
-                ))}
+              <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+                <section>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 8 }}>
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={hoursDate}
+                    onChange={(e) => setHoursDate(e.target.value)}
+                    style={{ width: "100%", padding: "12px 16px", fontSize: 15, border: "1px solid #d1d5db", borderRadius: 10, outline: "none", color: "#1a1a2e", background: "#ffffff", boxSizing: "border-box" }}
+                  />
+                </section>
+                <section>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 8 }}>
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    value={hoursStart}
+                    onChange={(e) => setHoursStart(e.target.value)}
+                    style={{ width: "100%", padding: "12px 16px", fontSize: 15, border: "1px solid #d1d5db", borderRadius: 10, outline: "none", color: "#1a1a2e", background: "#ffffff", boxSizing: "border-box" }}
+                  />
+                </section>
+                <section>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 8 }}>
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    value={hoursEnd}
+                    onChange={(e) => setHoursEnd(e.target.value)}
+                    style={{ width: "100%", padding: "12px 16px", fontSize: 15, border: "1px solid #d1d5db", borderRadius: 10, outline: "none", color: "#1a1a2e", background: "#ffffff", boxSizing: "border-box" }}
+                  />
+                </section>
               </section>
 
               {hoursError && (
@@ -1135,20 +1155,78 @@ export default function AdminDashboard({ handleLogout }) {
               <section style={{ display: "flex", justifyContent: "flex-end", marginTop: 24 }}>
                 <button
                   onClick={handleSaveOperatingHours}
+                  disabled={hoursSaving}
                   style={{
                     padding: "12px 26px",
                     fontSize: 14,
                     fontWeight: 600,
                     border: "none",
                     borderRadius: 10,
-                    background: "#4f46e5",
+                    background: hoursSaving ? "#9ca3af" : "#4f46e5",
                     color: "#ffffff",
-                    cursor: "pointer",
+                    cursor: hoursSaving ? "not-allowed" : "pointer",
                   }}
                 >
-                  Save Operating Hours
+                  {hoursSaving ? "Saving…" : "Save Operating Hours"}
                 </button>
               </section>
+            </section>
+
+            <section style={{ marginTop: 40, paddingTop: 40, borderTop: "1px solid #e8e8f0" }}>
+              <section style={{ marginBottom: 28 }}>
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", margin: "0 0 8px" }}>
+                  Content Moderation — Reviews
+                </h2>
+                <p style={{ fontSize: 14, color: "#6b7280", margin: 0, lineHeight: 1.5 }}>
+                  Remove inappropriate or abusive reviews. Removed reviews are hidden from all users.
+                </p>
+              </section>
+
+              {moderationReviewsLoading ? (
+                <p style={{ color: "#6b7280", fontSize: 14 }}>Loading reviews...</p>
+              ) : moderationReviewsError ? (
+                <p style={{ color: "#b91c1c", fontSize: 14 }}>{moderationReviewsError}</p>
+              ) : moderationReviews.length === 0 ? (
+                <p style={{ color: "#6b7280", fontSize: 14 }}>No active reviews to moderate.</p>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr>
+                        {["Reviewer", "Reviewee", "Listing", "Rating", "Comment", "Date", "Actions"].map(h => (
+                          <th key={h} style={{ textAlign: "left", padding: "10px 8px", color: "#6b7280", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {moderationReviews.map(review => (
+                        <tr key={review.id}>
+                          <td style={{ padding: "10px 8px", borderTop: "1px solid #e5e7eb" }}>{review.reviewer?.username || "—"}</td>
+                          <td style={{ padding: "10px 8px", borderTop: "1px solid #e5e7eb" }}>{review.reviewee?.username || "—"}</td>
+                          <td style={{ padding: "10px 8px", borderTop: "1px solid #e5e7eb" }}>{review.listing?.title || "—"}</td>
+                          <td style={{ padding: "10px 8px", borderTop: "1px solid #e5e7eb", whiteSpace: "nowrap" }}>
+                            {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                          </td>
+                          <td style={{ padding: "10px 8px", borderTop: "1px solid #e5e7eb", maxWidth: 240 }}>
+                            {review.comment?.length > 80 ? review.comment.slice(0, 80) + "..." : review.comment || "—"}
+                          </td>
+                          <td style={{ padding: "10px 8px", borderTop: "1px solid #e5e7eb", whiteSpace: "nowrap" }}>
+                            {new Date(review.created_at).toLocaleDateString("en-ZA")}
+                          </td>
+                          <td style={{ padding: "10px 8px", borderTop: "1px solid #e5e7eb" }}>
+                            <button
+                              onClick={() => handleRemoveReview(review.id)}
+                              style={{ background: "#fee2e2", color: "#b91c1c", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
 
             <section style={{ marginTop: 40, paddingTop: 40, borderTop: "1px solid #e8e8f0" }}>

@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../utils/supabase';
-import { DEFAULT_TIME_SLOTS, FACILITY_LOCATION } from '../utils/bookingConstants';
+import { FACILITY_LOCATION } from '../utils/bookingConstants';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // useBookings — fetch and manage a student's bookings
@@ -208,16 +208,13 @@ export function useAvailableSlots(date) {
       setError(null);
 
       try {
-        // Try to get admin-configured slots for this date
+        // Only show slots the admin has explicitly configured for this date
         const { data: facilitySlots } = await supabase
           .from('facility_slots')
           .select('time_slot, capacity')
           .eq('date', date);
 
-        // Fall back to default slots if none configured
-        const baseSlots = facilitySlots && facilitySlots.length > 0
-          ? facilitySlots
-          : DEFAULT_TIME_SLOTS.map(ts => ({ time_slot: ts, capacity: 5 }));
+        const baseSlots = (facilitySlots || []);
 
         // Count existing bookings per slot for this date
         const { data: existingBookings } = await supabase
