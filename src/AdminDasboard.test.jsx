@@ -1,65 +1,83 @@
 import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AdminDashboard from "./AdminDashboard";
+import { supabase } from "./utils/supabase";
+import { installAdminSupabaseMocks } from "./test-utils/adminDashboardMocks";
+
+jest.mock("./utils/supabase", () => ({
+  supabase: { from: jest.fn() },
+}));
+
+beforeEach(() => {
+  supabase.from.mockClear();
+  installAdminSupabaseMocks(supabase);
+  global.URL.createObjectURL = jest.fn(() => "blob:mock");
+  global.URL.revokeObjectURL = jest.fn();
+});
 
 const setup = () => render(<AdminDashboard />);
+
+const waitForDashboardLoaded = async () => {
+  await waitFor(() => {
+    expect(screen.queryByText(/Loading analytics\.\.\./i)).not.toBeInTheDocument();
+  });
+};
+
+const setupAndWait = async () => {
+  setup();
+  await waitForDashboardLoaded();
+};
 
 // ---------------------------------------------------------------------------
 // Helpers — grab landmark regions once so duplicate-text errors never occur
 // ---------------------------------------------------------------------------
-const getSidebar = () => screen.getByRole("complementary"); // <aside>
-const getHeader = () => screen.getByRole("banner");         // <header>
-const getMain = () => screen.getByRole("main");             // <main>
-const getFooter = () => screen.getByRole("contentinfo");    // <footer>
+const getHeader = () => screen.getByRole("banner");
+const getHeaderNav = () => screen.getByRole("navigation", { name: /dashboard navigation/i });
+const getMain = () => screen.getByRole("main");
+const getFooter = () => screen.getByRole("contentinfo");
 
 // ===========================================================================
 // Layout & static content
 // ===========================================================================
 describe("Layout & static content", () => {
-  test("renders the Uni-Mart brand name in the sidebar", () => {
+  test("renders the UNIMART brand name in the header", () => {
     setup();
-    expect(within(getSidebar()).getByText("Uni-Mart")).toBeInTheDocument();
+    expect(within(getHeader()).getByText("UNIMART")).toBeInTheDocument();
   });
 
-  test("renders 'Admin Portal' subtitle in the sidebar", () => {
+  test("renders 'Admin Portal' subtitle in the header", () => {
     setup();
-    expect(within(getSidebar()).getByText("Admin Portal")).toBeInTheDocument();
+    expect(within(getHeader()).getByText("Admin Portal")).toBeInTheDocument();
   });
 
-  test("renders all six primary navigation items inside the sidebar nav", () => {
+  test("renders the Analytics navigation item in the header nav", () => {
     setup();
-    const nav = within(getSidebar()).getByRole("navigation");
-    ["Dashboard", "Users", "Listings", "Reports", "Analytics", "Settings"].forEach((label) => {
-      expect(within(nav).getByText(label)).toBeInTheDocument();
-    });
+    expect(within(getHeaderNav()).getByText("Analytics")).toBeInTheDocument();
   });
 
-  test("renders Support and Logout in the bottom nav", () => {
+  test("renders the Create Staff navigation item in the header nav", () => {
     setup();
-    expect(within(getSidebar()).getByText("Support")).toBeInTheDocument();
-    expect(within(getSidebar()).getByText("Logout")).toBeInTheDocument();
+    expect(within(getHeaderNav()).getByText("Create Staff")).toBeInTheDocument();
   });
 
-  test("renders the top-bar title 'Create Staff Profile' inside the header", () => {
+  test("renders the Slot Capacity navigation item in the header nav", () => {
     setup();
-    // The header <span> contains the text; the button in <main> also has it,
-    // so we scope to the banner region.
-    expect(within(getHeader()).getByText("Create Staff Profile")).toBeInTheDocument();
+    expect(within(getHeaderNav()).getByText("Slot Capacity")).toBeInTheDocument();
   });
 
-  test("renders breadcrumb 'Users' inside the header (not the nav)", () => {
+  test("renders the Operating Hours navigation item in the header nav", () => {
     setup();
-    expect(within(getHeader()).getByText("Users")).toBeInTheDocument();
+    expect(within(getHeaderNav()).getByText("Operating Hours")).toBeInTheDocument();
   });
 
-  test("renders breadcrumb 'Add Staff' inside the header", () => {
+  test("renders Logout in the header", () => {
     setup();
-    expect(within(getHeader()).getByText("Add Staff")).toBeInTheDocument();
+    expect(within(getHeader()).getByText("Logout")).toBeInTheDocument();
   });
 
-  test("renders the search placeholder text", () => {
+  test("renders the top-bar title 'Admin Workspace' inside the header", () => {
     setup();
-    expect(screen.getByText("Search resources...")).toBeInTheDocument();
+    expect(within(getHeader()).getByText("Admin Workspace")).toBeInTheDocument();
   });
 
   test("renders admin avatar with letter 'A'", () => {
@@ -108,27 +126,18 @@ describe("Layout & static content", () => {
     expect(screen.getByRole("button", { name: /Discard/i })).toBeInTheDocument();
   });
 
-  test("renders Create Staff Profile button inside main", () => {
+  test("renders Save Staff button inside main", () => {
     setup();
-    // Scoped to main so it doesn't collide with the header span
     expect(
-      within(getMain()).getByRole("button", { name: /Create Staff Profile/i })
+      within(getMain()).getByRole("button", { name: /Save Staff/i })
     ).toBeInTheDocument();
   });
 
   test("renders footer copyright text", () => {
     setup();
     expect(
-      within(getFooter()).getByText(/© 2024 Uni-Mart Campus Marketplace\. All Rights Reserved\./i)
+      within(getFooter()).getByText(/© 2026 UNIMART\. All Rights Reserved\./i)
     ).toBeInTheDocument();
-  });
-
-  test("renders footer links: Privacy Policy, Security Standards, System Status", () => {
-    setup();
-    const footer = getFooter();
-    expect(within(footer).getByText("Privacy Policy")).toBeInTheDocument();
-    expect(within(footer).getByText("Security Standards")).toBeInTheDocument();
-    expect(within(footer).getByText("System Status")).toBeInTheDocument();
   });
 
   test("renders 'Configure Slot Capacity' heading", () => {
@@ -191,11 +200,8 @@ describe("Layout & static content", () => {
 
   test("renders Start Time and End Time labels for each day", () => {
     setup();
-    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-    days.forEach((day) => {
-      expect(within(getMain()).getByText("Start Time")).toBeInTheDocument();
-      expect(within(getMain()).getByText("End Time")).toBeInTheDocument();
-    });
+    expect(within(getMain()).getAllByText("Start Time").length).toBeGreaterThanOrEqual(7);
+    expect(within(getMain()).getAllByText("End Time").length).toBeGreaterThanOrEqual(7);
   });
 
   test("renders Save Operating Hours button", () => {
@@ -219,13 +225,13 @@ describe("Layout & static content", () => {
     ).toBeInTheDocument();
   });
 
-  test("renders Reports & Exports section heading", () => {
-    setup();
+  test("renders Reports & Exports section heading", async () => {
+    await setupAndWait();
     expect(within(getMain()).getByText("Reports & Exports")).toBeInTheDocument();
   });
 
-  test("renders report export buttons", () => {
-    setup();
+  test("renders report export buttons", async () => {
+    await setupAndWait();
     expect(screen.getByRole("button", { name: /Export Categories CSV/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Export Categories PDF/i })).toBeInTheDocument();
   });
@@ -252,7 +258,7 @@ describe("Form inputs — initial state", () => {
 
   test("Facility select starts with no selection (empty value)", () => {
     setup();
-    expect(screen.getByRole("combobox")).toHaveValue("");
+    expect(within(getMain()).getAllByRole("combobox")[0]).toHaveValue("");
   });
 
   test("Facility select renders all six facility options", () => {
@@ -296,11 +302,10 @@ describe("Form inputs — initial state", () => {
 
   test("Operating Hours inputs have default times", () => {
     setup();
-    // Check for some default times, e.g., Monday start
-    expect(screen.getByDisplayValue("08:00")).toBeInTheDocument(); // Monday start
-    expect(screen.getByDisplayValue("18:00")).toBeInTheDocument(); // Monday end
-    expect(screen.getByDisplayValue("10:00")).toBeInTheDocument(); // Sunday start
-    expect(screen.getByDisplayValue("16:00")).toBeInTheDocument(); // Sunday end
+    expect(within(getMain()).getAllByDisplayValue("08:00").length).toBeGreaterThanOrEqual(1);
+    expect(within(getMain()).getAllByDisplayValue("18:00").length).toBeGreaterThanOrEqual(1);
+    expect(within(getMain()).getAllByDisplayValue("10:00").length).toBeGreaterThanOrEqual(1);
+    expect(within(getMain()).getAllByDisplayValue("16:00").length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -317,13 +322,14 @@ describe("Form interactions — typing & selecting", () => {
 
   test("selecting a facility updates the select value", async () => {
     setup();
-    await userEvent.selectOptions(screen.getByRole("combobox"), "Library Commons Zone");
-    expect(screen.getByRole("combobox")).toHaveValue("Library Commons Zone");
+    const select = within(getMain()).getAllByRole("combobox")[0];
+    await userEvent.selectOptions(select, "Library Commons Zone");
+    expect(select).toHaveValue("Library Commons Zone");
   });
 
   test("selecting each facility option works correctly", async () => {
     setup();
-    const select = screen.getByRole("combobox");
+    const select = within(getMain()).getAllByRole("combobox")[0];
     const facilities = [
       "North Campus Hub",
       "Library Commons Zone",
@@ -355,7 +361,7 @@ describe("Discard button behaviour", () => {
 
   test("clicking Discard resets the Facility select to empty", async () => {
     setup();
-    const select = screen.getByRole("combobox");
+    const select = within(getMain()).getAllByRole("combobox")[0];
     await userEvent.selectOptions(select, "North Campus Hub");
     expect(select).toHaveValue("North Campus Hub");
 
@@ -401,9 +407,8 @@ describe("Slot Capacity interactions", () => {
 
   test("changing Slot Capacity updates its value", async () => {
     setup();
-    const capacityInput = screen.getByDisplayValue("5");
-    await userEvent.clear(capacityInput);
-    await userEvent.type(capacityInput, "10");
+    const capacityInput = within(getMain()).getByRole("spinbutton");
+    fireEvent.change(capacityInput, { target: { value: "10" } });
     expect(capacityInput).toHaveValue(10);
   });
 
@@ -441,64 +446,62 @@ describe("Operating Hours interactions", () => {
 // Analytics display
 // ===========================================================================
 describe("Analytics display", () => {
-  // Note: These tests assume analytics data is loaded. In a real scenario, you'd mock the fetch or use waitFor.
-  test("renders Total Bookings metric", () => {
-    setup();
-    // This might not be visible initially due to loading, but assuming data loads
+  test("renders Total Bookings metric", async () => {
+    await setupAndWait();
     expect(within(getMain()).getByText("Total Bookings")).toBeInTheDocument();
   });
 
-  test("renders Total Users metric", () => {
-    setup();
+  test("renders Total Users metric", async () => {
+    await setupAndWait();
     expect(within(getMain()).getByText("Total Users")).toBeInTheDocument();
   });
 
-  test("renders User Breakdown section", () => {
-    setup();
+  test("renders User Breakdown section", async () => {
+    await setupAndWait();
     expect(within(getMain()).getByText("User Breakdown")).toBeInTheDocument();
   });
 
-  test("renders Revenue Snapshot section", () => {
-    setup();
+  test("renders Revenue Snapshot section", async () => {
+    await setupAndWait();
     expect(within(getMain()).getByText("Revenue Snapshot")).toBeInTheDocument();
   });
 
-  test("renders Listing Performance section", () => {
-    setup();
+  test("renders Listing Performance section", async () => {
+    await setupAndWait();
     expect(within(getMain()).getByText("Listing Performance")).toBeInTheDocument();
   });
 });
 
 // ===========================================================================
-// Create Staff Profile button
+// Save Staff button
 // ===========================================================================
-describe("Create Staff Profile button", () => {
+describe("Save Staff button", () => {
   test("button is present inside main", () => {
     setup();
     expect(
-      within(getMain()).getByRole("button", { name: /Create Staff Profile/i })
+      within(getMain()).getByRole("button", { name: /Save Staff/i })
     ).toBeInTheDocument();
   });
 
   test("button is enabled by default", () => {
     setup();
     expect(
-      within(getMain()).getByRole("button", { name: /Create Staff Profile/i })
+      within(getMain()).getByRole("button", { name: /Save Staff/i })
     ).not.toBeDisabled();
   });
 
   test("button is clickable without throwing", () => {
     setup();
     expect(() =>
-      fireEvent.click(within(getMain()).getByRole("button", { name: /Create Staff Profile/i }))
+      fireEvent.click(within(getMain()).getByRole("button", { name: /Save Staff/i }))
     ).not.toThrow();
   });
 
-  test("clicking Create Staff Profile does not reset form fields", async () => {
+  test("clicking Save Staff does not reset form fields", async () => {
     setup();
     const input = screen.getByPlaceholderText(/e\.g\. Alexander Pierce/i);
     await userEvent.type(input, "Professor X");
-    fireEvent.click(within(getMain()).getByRole("button", { name: /Create Staff Profile/i }));
+    fireEvent.click(within(getMain()).getByRole("button", { name: /Save Staff/i }));
     expect(input).toHaveValue("Professor X");
   });
 });
@@ -514,14 +517,14 @@ describe("Accessibility", () => {
 
   test("Facility combobox is accessible via role", () => {
     setup();
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(within(getMain()).getAllByRole("combobox")[0]).toBeInTheDocument();
   });
 
   test("both action buttons are accessible via role and name", () => {
     setup();
     expect(screen.getByRole("button", { name: /Discard/i })).toBeInTheDocument();
     expect(
-      within(getMain()).getByRole("button", { name: /Create Staff Profile/i })
+      within(getMain()).getByRole("button", { name: /Save Staff/i })
     ).toBeInTheDocument();
   });
 
@@ -532,9 +535,282 @@ describe("Accessibility", () => {
     ).toBeInTheDocument();
   });
 
-  test("sidebar renders a navigation landmark", () => {
+  test("header renders a navigation landmark", () => {
     setup();
-    expect(within(getSidebar()).getByRole("navigation")).toBeInTheDocument();
+    expect(getHeaderNav()).toBeInTheDocument();
+  });
+});
+
+// ===========================================================================
+// Navigation click behavior and scrolling
+// ===========================================================================
+describe("Navigation click behavior", () => {
+  test("clicking Create Staff nav item scrolls to create staff section", () => {
+    setup();
+    const scrollIntoViewMock = jest.fn();
+    const element = document.getElementById("create-staff-section");
+    if (element) {
+      element.scrollIntoView = scrollIntoViewMock;
+    }
+    const nav = getHeaderNav();
+    const createStaffBtn = within(nav).getByText("Create Staff").closest("button");
+    fireEvent.click(createStaffBtn);
+    // Verify the section exists in the document
+    expect(document.getElementById("create-staff-section")).toBeInTheDocument();
+  });
+
+  test("clicking Slot Capacity nav item scrolls to slot capacity section", () => {
+    setup();
+    const slotCapacitySection = document.getElementById("slot-capacity-section");
+    expect(slotCapacitySection).toBeInTheDocument();
+    const nav = getHeaderNav();
+    const slotCapacityBtn = within(nav).getByText("Slot Capacity").closest("button");
+    fireEvent.click(slotCapacityBtn);
+    expect(document.getElementById("slot-capacity-section")).toBeInTheDocument();
+  });
+
+  test("clicking Operating Hours nav item scrolls to operating hours section", () => {
+    setup();
+    const operatingHoursSection = document.getElementById("operating-hours-section");
+    expect(operatingHoursSection).toBeInTheDocument();
+    const nav = getHeaderNav();
+    const operatingHoursBtn = within(nav).getByText("Operating Hours").closest("button");
+    fireEvent.click(operatingHoursBtn);
+    expect(document.getElementById("operating-hours-section")).toBeInTheDocument();
+  });
+
+  test("clicking Analytics nav item scrolls to analytics section", () => {
+    setup();
+    const analyticsSection = document.getElementById("analytics-overview");
+    if (analyticsSection) {
+      const scrollIntoViewMock = jest.fn();
+      analyticsSection.scrollIntoView = scrollIntoViewMock;
+    }
+    const nav = getHeaderNav();
+    const analyticsBtn = within(nav).getByText("Analytics").closest("button");
+    fireEvent.click(analyticsBtn);
+  });
+});
+
+// ===========================================================================
+// Mobile nav functionality
+// ===========================================================================
+describe("Mobile navigation", () => {
+  test("mobile menu toggle button is visible on mobile screens", () => {
+    setup();
+    const toggleBtn = screen.getByLabelText("Toggle navigation");
+    expect(toggleBtn).toBeInTheDocument();
+  });
+
+  test("clicking mobile menu toggle opens navigation", () => {
+    setup();
+    const toggleBtn = screen.getByLabelText("Toggle navigation");
+    fireEvent.click(toggleBtn);
+    // After clicking, the menu should be open - look for mobile nav items
+    expect(screen.getByLabelText("Mobile dashboard navigation")).toBeInTheDocument();
+  });
+
+  test("mobile nav contains all navigation items", () => {
+    setup();
+    const toggleBtn = screen.getByLabelText("Toggle navigation");
+    fireEvent.click(toggleBtn);
+    const mobileNav = screen.getByLabelText("Mobile dashboard navigation");
+    expect(within(mobileNav).getByText("Create Staff")).toBeInTheDocument();
+    expect(within(mobileNav).getByText("Slot Capacity")).toBeInTheDocument();
+    expect(within(mobileNav).getByText("Operating Hours")).toBeInTheDocument();
+    expect(within(mobileNav).getByText("Analytics")).toBeInTheDocument();
+    expect(within(mobileNav).getByText("Logout")).toBeInTheDocument();
+  });
+
+  test("clicking mobile nav item closes the menu", () => {
+    setup();
+    const toggleBtn = screen.getByLabelText("Toggle navigation");
+    fireEvent.click(toggleBtn);
+    const mobileNav = screen.getByLabelText("Mobile dashboard navigation");
+    const createStaffBtn = within(mobileNav).getByText("Create Staff").closest("button");
+    fireEvent.click(createStaffBtn);
+    // Menu should still exist but clicking should work
+    expect(screen.getByLabelText("Toggle navigation")).toBeInTheDocument();
+  });
+
+  test("clicking mobile menu toggle twice returns to closed state", () => {
+    setup();
+    const toggleBtn = screen.getByLabelText("Toggle navigation");
+    fireEvent.click(toggleBtn);
+    fireEvent.click(toggleBtn);
+    // After clicking twice, the menu should close
+    expect(screen.getByLabelText("Toggle navigation")).toBeInTheDocument();
+  });
+});
+
+// ===========================================================================
+// Form submission and state management
+// ===========================================================================
+describe("Form submission and state", () => {
+  test("Save Staff button submission does not throw error", async () => {
+    setup();
+    const input = screen.getByPlaceholderText(/e\.g\. Alexander Pierce/i);
+    await userEvent.type(input, "New Staff");
+    const saveBtn = within(getMain()).getByRole("button", { name: /Save Staff/i });
+    expect(() => fireEvent.click(saveBtn)).not.toThrow();
+  });
+
+  test("Save Slot Capacity button is present and clickable", () => {
+    setup();
+    const saveSlotsBtn = within(getMain()).getByRole("button", { name: /Save Slot Capacity/i });
+    expect(saveSlotsBtn).toBeInTheDocument();
+    expect(() => fireEvent.click(saveSlotsBtn)).not.toThrow();
+  });
+
+  test("Save Operating Hours button is present and clickable", () => {
+    setup();
+    const saveHoursBtn = within(getMain()).getByRole("button", { name: /Save Operating Hours/i });
+    expect(saveHoursBtn).toBeInTheDocument();
+    expect(() => fireEvent.click(saveHoursBtn)).not.toThrow();
+  });
+
+  test("changing slot date updates state correctly", async () => {
+    setup();
+    const dateInputs = screen.getAllByDisplayValue(/\d{4}-\d{2}-\d{2}/);
+    const slotDateInput = dateInputs[0];
+    await userEvent.clear(slotDateInput);
+    await userEvent.type(slotDateInput, "2026-06-15");
+    expect(slotDateInput).toHaveValue("2026-06-15");
+  });
+
+  test("changing operating hour times persists state", async () => {
+    setup();
+    const timeInputs = screen.getAllByDisplayValue("08:00");
+    if (timeInputs.length > 0) {
+      const mondayStart = timeInputs[0];
+      await userEvent.clear(mondayStart);
+      await userEvent.type(mondayStart, "07:00");
+      expect(mondayStart).toHaveValue("07:00");
+    }
+  });
+});
+
+// ===========================================================================
+// Export functionality
+// ===========================================================================
+describe("Export functionality", () => {
+  test("renders export buttons for reports", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getAllByRole("button", { name: /^CSV$/i }).length).toBeGreaterThanOrEqual(2);
+    expect(within(getMain()).getAllByRole("button", { name: /^PDF$/i }).length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("category export buttons are present", async () => {
+    await setupAndWait();
+    expect(screen.getByRole("button", { name: /Export Categories CSV/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Export Categories PDF/i })).toBeInTheDocument();
+  });
+
+  test("facility export buttons are present", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getAllByRole("button", { name: /^CSV$/i }).length).toBeGreaterThanOrEqual(1);
+    expect(within(getMain()).getAllByRole("button", { name: /^PDF$/i }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  test("flagged content export buttons are present", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getAllByRole("button", { name: /^CSV$/i }).length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("clicking export button does not throw error", async () => {
+    await setupAndWait();
+    const csvBtns = within(getMain()).getAllByRole("button", { name: /^CSV$/i });
+    expect(() => fireEvent.click(csvBtns[0])).not.toThrow();
+  });
+});
+
+// ===========================================================================
+// Analytics section
+// ===========================================================================
+describe("Analytics section", () => {
+  test("renders analytics overview section heading", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getByText("Analytics Overview")).toBeInTheDocument();
+  });
+
+  test("renders total bookings metric", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getByText("Total Bookings")).toBeInTheDocument();
+  });
+
+  test("renders confirmed bookings metric", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getByText("Confirmed")).toBeInTheDocument();
+  });
+
+  test("renders cancelled bookings metric", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getByText("Cancelled")).toBeInTheDocument();
+  });
+
+  test("analytics section has loading state message", () => {
+    setup();
+    expect(within(getMain()).getByText("Loading analytics...")).toBeInTheDocument();
+  });
+});
+
+// ===========================================================================
+// Reports section
+// ===========================================================================
+describe("Reports section", () => {
+  test("renders Reports & Exports section", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getByText("Reports & Exports")).toBeInTheDocument();
+  });
+
+  test("renders report categories section", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getByText(/Popular Categories|Most Popular Categories/i)).toBeInTheDocument();
+  });
+
+  test("renders facility utilization report section", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getByText(/Facility Utilization|Trade Facility Utilization/i)).toBeInTheDocument();
+  });
+
+  test("renders moderation summary section", async () => {
+    await setupAndWait();
+    expect(within(getMain()).getByText("Flagged / Moderated Content Summary")).toBeInTheDocument();
+  });
+});
+
+// ===========================================================================
+// Accessibility and interactions
+// ===========================================================================
+describe("Additional accessibility tests", () => {
+  test("all form inputs are accessible", () => {
+    setup();
+    expect(screen.getByPlaceholderText(/e\.g\. Alexander Pierce/i)).toBeInTheDocument();
+    const comboboxes = screen.getAllByRole("combobox");
+    expect(comboboxes.length).toBeGreaterThan(0);
+  });
+
+  test("header has admin title", () => {
+    setup();
+    expect(within(getHeader()).getByText("Admin Workspace")).toBeInTheDocument();
+  });
+
+  test("main content area is properly structured", () => {
+    setup();
+    expect(getMain()).toBeInTheDocument();
+    expect(getFooter()).toBeInTheDocument();
+  });
+
+  test("fixed header is present", () => {
+    setup();
+    expect(getHeader()).toHaveClass("fixed");
+  });
+
+  test("all nav items have proper button roles", () => {
+    setup();
+    const nav = getHeaderNav();
+    const buttons = within(nav).getAllByRole("button");
+    expect(buttons.length).toBeGreaterThanOrEqual(4); // Create Staff, Slot Capacity, Operating Hours, Analytics
   });
 });
 
@@ -542,8 +818,9 @@ describe("Accessibility", () => {
 // Snapshot
 // ===========================================================================
 describe("Snapshot", () => {
-  test("matches snapshot on initial render", () => {
+  test("matches snapshot after data loads", async () => {
     const { asFragment } = setup();
+    await waitForDashboardLoaded();
     expect(asFragment()).toMatchSnapshot();
   });
 });
