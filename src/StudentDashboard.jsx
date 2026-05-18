@@ -10,7 +10,8 @@ import { supabase } from './utils/supabase';
 import { useUnreadMessages } from './hooks/useUnreadMessages';
 import StudentBookingDashboard from './components/booking/StudentBookingDashboard';
 import { useSellerPendingOrders } from './hooks/useBookings';
-import UserProfileModal from './components/UserProfileModal'
+import UserProfileModal from './components/UserProfileModal';
+import { getInitials } from './utils/avatarUtils';
 
 const StudentDashboard = ({ user, userRole, handleLogout }) => {
   const navigate = useNavigate();
@@ -354,7 +355,7 @@ const filteredProducts = useMemo(() => {
         if (sellerIds.length > 0) {
           const { data: sellers, error: sellersError } = await supabase
             .from('users')
-            .select('id, username, email')
+            .select('id, username, email, profile_picture_url')
             .in('id', sellerIds);
 
           if (!sellersError && sellers && sellers.length > 0) {
@@ -379,7 +380,7 @@ const filteredProducts = useMemo(() => {
             timePosted: calculateTimeAgo(listing.created_at),
             category: listing.category?.toUpperCase() || 'OTHER',
             sellerName: displayName,
-            sellerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+            sellerAvatar: seller?.profile_picture_url || null,
             image: listing.image_path ? `https://keposlpyrewldohbmesq.supabase.co/storage/v1/object/public/Listings/${listing.image_path}` : 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=800&q=80',
           };
         });
@@ -439,7 +440,7 @@ const filteredProducts = useMemo(() => {
             className={`transition-colors pb-1 flex items-center gap-1 ${currentView === 'wishlist' ? 'border-b-2 border-dark text-dark font-semibold' : 'text-gray-500 hover:text-dark'}`}
           >
             <Heart size={14} />
-            Wishlist ({wishlistIds.size})
+            Wishlist{wishlistIds.size > 0 ? ` (${wishlistIds.size})` : ''}
           </button>
           <button
             onClick={() => setCurrentView('orders')}
@@ -737,14 +738,20 @@ const filteredProducts = useMemo(() => {
 
                 {/* Seller Info & Action (Border Top) */}
                 <section className="border-t border-gray-100 pt-4 flex items-center justify-between">
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setProfileModal({ open: true, userId: product.seller_id });
                     }}
                     className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
                   >
-                    <img src={product.sellerAvatar} alt={product.sellerName} className="w-8 h-8 rounded-full object-cover shadow-sm" />
+                    {product.sellerAvatar ? (
+                      <img src={product.sellerAvatar} alt={product.sellerName} className="w-8 h-8 rounded-full object-cover shadow-sm" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-sm shrink-0">
+                        <span className="text-white font-bold text-xs">{getInitials(product.sellerName)}</span>
+                      </div>
+                    )}
                     <span className="text-sm font-medium text-gray-700">{product.sellerName}</span>
                   </button>
                   <button className="text-gray-400 hover:text-red-500 transition-colors p-1 relative z-10" onClick={(e) => {

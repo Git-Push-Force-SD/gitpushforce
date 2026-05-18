@@ -40,7 +40,7 @@ const mockProfile = {
   id: RECEIVER_ID,
   username: 'jane_doe',
   email: 'jane@uni.ac.za',
-  avatar_url: null,
+  profile_picture_url: null,
 };
 const mockMessages = [
   { id: 'msg-1', sender_id: USER_ID,     body: 'Hello there!',    sent_at: new Date().toISOString(), conversation_id: CONV_ID },
@@ -432,58 +432,43 @@ describe('MessagesPage', () => {
       expect(screen.queryByText('Buy')).not.toBeInTheDocument();
     });
 
-    it('opens the dropdown menu when the MoreVertical button is clicked', async () => {
+    it('Buy is never in the document (unimplemented action removed)', async () => {
       renderPage();
       await waitFor(() => screen.getByText('Jane Doe'));
-      const headerBtns = Array.from(document.querySelectorAll('header button'));
-      fireEvent.click(headerBtns.at(-1));
-      expect(screen.getByText('Buy')).toBeInTheDocument();
+      expect(screen.queryByText('Buy')).not.toBeInTheDocument();
     });
 
-    it('shows Buy, Trade, Report options for buyer', async () => {
+    it('Buy, Trade and Report options are not in the document', async () => {
       renderPage();
       await waitFor(() => screen.getByText('Test Laptop'));
-      const headerBtns = Array.from(document.querySelectorAll('header button'));
-      fireEvent.click(headerBtns.at(-1));
-      expect(screen.getByText('Buy')).toBeInTheDocument();
-      expect(screen.getByText('Trade')).toBeInTheDocument();
-      expect(screen.getByText('Report')).toBeInTheDocument();
+      expect(screen.queryByText('Buy')).not.toBeInTheDocument();
+      expect(screen.queryByText('Trade')).not.toBeInTheDocument();
+      expect(screen.queryByText('Report')).not.toBeInTheDocument();
     });
 
-    it('shows only Report option for seller', async () => {
+    it('Report option is not in the document for seller', async () => {
       useAuth.mockReturnValue({ user: { id: 'other-seller' } });
       renderPage();
       await waitFor(() => screen.getByText('Test Laptop'));
-      const headerBtns = Array.from(document.querySelectorAll('header button'));
-      fireEvent.click(headerBtns.at(-1));
       expect(screen.queryByText('Buy')).not.toBeInTheDocument();
-      expect(screen.getByText('Report')).toBeInTheDocument();
+      expect(screen.queryByText('Report')).not.toBeInTheDocument();
     });
 
-    it('closes the menu when Buy is clicked', async () => {
+    it('Buy is never in the document', async () => {
       renderPage();
       await waitFor(() => screen.getByText('Test Laptop'));
-      const headerBtns = Array.from(document.querySelectorAll('header button'));
-      fireEvent.click(headerBtns.at(-1));
-      fireEvent.click(screen.getByText('Buy'));
       expect(screen.queryByText('Buy')).not.toBeInTheDocument();
     });
 
-    it('closes the menu when Trade is clicked', async () => {
+    it('Trade is never in the document', async () => {
       renderPage();
       await waitFor(() => screen.getByText('Test Laptop'));
-      const headerBtns = Array.from(document.querySelectorAll('header button'));
-      fireEvent.click(headerBtns.at(-1));
-      fireEvent.click(screen.getByText('Trade'));
       expect(screen.queryByText('Trade')).not.toBeInTheDocument();
     });
 
-    it('closes the menu when Report is clicked', async () => {
+    it('Report is never in the document', async () => {
       renderPage();
       await waitFor(() => screen.getByText('Test Laptop'));
-      const headerBtns = Array.from(document.querySelectorAll('header button'));
-      fireEvent.click(headerBtns.at(-1));
-      fireEvent.click(screen.getByText('Report'));
       expect(screen.queryByText('Report')).not.toBeInTheDocument();
     });
   });
@@ -526,12 +511,12 @@ describe('MessagesPage', () => {
       await waitFor(() => expect(screen.getByText('Profile')).toBeInTheDocument());
     });
 
-    it('shows receiver avatar image when avatar_url is set', async () => {
+    it('shows receiver avatar image when profile_picture_url is set', async () => {
       setupSupabaseMocks({
-        profileData: { data: { ...mockProfile, avatar_url: 'https://example.com/avatar.jpg' }, error: null },
+        profileData: { data: { ...mockProfile, profile_picture_url: 'https://example.com/avatar.jpg' }, error: null },
       });
       renderPage();
-      await openProfileModal();
+      await waitFor(() => screen.getByText('Jane Doe'));
       await waitFor(() => {
         const imgs = screen.getAllByRole('img');
         expect(imgs.some(i => i.src.includes('avatar.jpg'))).toBe(true);

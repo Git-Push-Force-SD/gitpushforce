@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useCallback, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useMessages } from "./hooks/useMessages";
 import { useAuth } from "./AuthContext";
-import { ChevronLeft, MoreVertical, User, Star, X } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import { getInitials } from "./utils/avatarUtils";
 import { supabase } from "./utils/supabase";
 import UserProfileModal from "../src/components/UserProfileModal";
 
@@ -13,7 +14,6 @@ export default function MessagesPage() {
   const { user } = useAuth();
   const [inputValue, setInputValue] = useState("");
   const [sending, setSending] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [isBuyer, setIsBuyer] = useState(false);
   const [profileModal, setProfileModal] = useState({ open: false, userId: null });
   const [receiverProfile, setReceiverProfile] = useState(null);
@@ -84,7 +84,7 @@ export default function MessagesPage() {
       try {
         const { data: profile } = await supabase
           .from('users')
-          .select('id, username, email, avatar_url')
+          .select('id, username, email, profile_picture_url')
           .eq('id', receiverId)
           .single();
         
@@ -194,17 +194,6 @@ export default function MessagesPage() {
     }
   };
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (menuOpen && !e.target.closest('button') && !e.target.closest('div[class*="relative"]')) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [menuOpen]);
-
   if (!conversationId || !receiverId) {
     return (
       <section className="bg-offwhite h-screen flex items-center justify-center">
@@ -239,15 +228,15 @@ export default function MessagesPage() {
                 onClick={() => setProfileModal({ open: true, userId: receiverId })}
                 className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-light transition-colors"
               >
-                {receiverProfile?.avatar_url ? (
+                {receiverProfile?.profile_picture_url ? (
                   <img
-                    src={receiverProfile.avatar_url}
+                    src={receiverProfile.profile_picture_url}
                     alt={receiverProfile.username}
                     className="w-10 h-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-light flex items-center justify-center">
-                    <User size={20} className="text-text-muted" />
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                    <span className="text-white font-bold text-xs">{getInitials(receiverProfile?.username || receiverName)}</span>
                   </div>
                 )}
               </button>
@@ -255,62 +244,6 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          {/* Menu Button */}
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="text-dark hover:text-primary transition-colors p-2 hover:bg-light rounded-lg"
-            >
-              <MoreVertical size={24} />
-            </button>
-
-            {/* Dropdown Menu */}
-            {menuOpen && (
-              <div className="absolute right-0 mt-2 w-40 bg-offwhite border border-light rounded-lg shadow-xl z-10 overflow-hidden text-sm">
-                {isBuyer ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        console.log('Buy action');
-                        setMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-dark hover:bg-light hover:text-primary transition-colors border-b border-light"
-                    >
-                      Buy
-                    </button>
-                    <button
-                      onClick={() => {
-                        console.log('Trade action');
-                        setMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-dark hover:bg-light hover:text-primary transition-colors border-b border-light"
-                    >
-                      Trade
-                    </button>
-                    <button
-                      onClick={() => {
-                        console.log('Report action');
-                        setMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-dark hover:bg-light hover:text-primary transition-colors"
-                    >
-                      Report
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => {
-                      console.log('Report action');
-                      setMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-dark hover:bg-light hover:text-primary transition-colors"
-                  >
-                    Report
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
         </header>
 
         {/* Negotiated Item Banner */}

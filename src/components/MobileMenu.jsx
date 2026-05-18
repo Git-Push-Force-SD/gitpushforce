@@ -116,9 +116,11 @@ const MobileMenu = ({
               <Heart size={20} />
               <div className="flex items-center justify-between flex-1">
                 <span className="font-medium">Wishlist</span>
-                <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full font-bold">
-                  {wishlistCount}
-                </span>
+                {wishlistCount > 0 && (
+                  <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full font-bold">
+                    {wishlistCount}
+                  </span>
+                )}
               </div>
             </button>
 
