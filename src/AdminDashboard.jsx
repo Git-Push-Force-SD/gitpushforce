@@ -878,23 +878,10 @@ export default function AdminDashboard({ handleLogout }) {
 
       <section className="pt-16 min-h-screen flex flex-col">
         <main
-          className="flex-1"
-          style={{
-            padding: 32,
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
-          }}
+          className="flex-1 flex items-start justify-center p-4 sm:p-6 lg:p-8"
         >
           <section
-            style={{
-              background: "#ffffff",
-              borderRadius: 16,
-              border: "1px solid #e8e8f0",
-              padding: "40px 48px",
-              width: "100%",
-              maxWidth: 760,
-            }}
+            className="w-full max-w-3xl rounded-2xl border border-slate-100 bg-white p-6 sm:p-8 lg:p-10"
           >
             <section id="slot-capacity-section">
               <section style={{ marginBottom: 28 }}>
@@ -908,7 +895,7 @@ export default function AdminDashboard({ handleLogout }) {
                 </p>
               </section>
 
-              <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              <section className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <section>
                   <label
                     style={{
@@ -1038,10 +1025,11 @@ export default function AdminDashboard({ handleLogout }) {
                 </section>
               )}
 
-              <section style={{ display: "flex", justifyContent: "flex-end", marginTop: 24 }}>
+              <section className="flex justify-end mt-6">
                 <button
                   onClick={handleSaveSlotCapacity}
                   disabled={slotSaving}
+                  className="w-full sm:w-auto"
                   style={{
                     padding: "12px 26px",
                     fontSize: 14,
@@ -1104,7 +1092,7 @@ export default function AdminDashboard({ handleLogout }) {
                 </p>
               </section>
 
-              <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+              <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <section>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#6b7280", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 8 }}>
                     Date
@@ -1152,10 +1140,11 @@ export default function AdminDashboard({ handleLogout }) {
                 </section>
               )}
 
-              <section style={{ display: "flex", justifyContent: "flex-end", marginTop: 24 }}>
+              <section className="flex justify-end mt-6">
                 <button
                   onClick={handleSaveOperatingHours}
                   disabled={hoursSaving}
+                  className="w-full sm:w-auto"
                   style={{
                     padding: "12px 26px",
                     fontSize: 14,
@@ -1252,13 +1241,7 @@ export default function AdminDashboard({ handleLogout }) {
                 </section>
               ) : (
                 <>
-                  <section
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                      gap: 20,
-                    }}
-                  >
+                  <section className="grid grid-cols-2 lg:grid-cols-4 gap-5">
                     <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                       <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                         Total Bookings
@@ -1319,8 +1302,8 @@ export default function AdminDashboard({ handleLogout }) {
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#1a1a2e" }}>
                       Revenue Snapshot
                     </h3>
-                    <div style={{ marginTop: 16, display: "flex", gap: 20, flexWrap: "wrap" }}>
-                      <div style={{ minWidth: 180, padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                         <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                           Total Revenue
                         </p>
@@ -1328,7 +1311,7 @@ export default function AdminDashboard({ handleLogout }) {
                           ${analytics.revenue.total.toFixed(2)}
                         </p>
                       </div>
-                      <div style={{ minWidth: 180, padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
+                      <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                         <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                           Avg. Transaction
                         </p>
@@ -1343,7 +1326,7 @@ export default function AdminDashboard({ handleLogout }) {
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#1a1a2e" }}>
                       Listing Performance
                     </h3>
-                    <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 20 }}>
+                    <div className="mt-4 grid grid-cols-2 gap-5">
                       <div style={{ padding: 20, border: "1px solid #e8e8f0", borderRadius: 10 }}>
                         <p style={{ margin: 0, fontSize: 12, color: "#6b7280", textTransform: "uppercase" }}>
                           Total Listings
@@ -1371,7 +1354,7 @@ export default function AdminDashboard({ handleLogout }) {
                   </section>
 
                   <section style={{ marginTop: 36, padding: 28, border: "1px solid #e8e8f0", borderRadius: 16, background: "#fafafb" }}>
-                    <section style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                    <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div>
                         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#1a1a2e" }}>
                           Reports & Exports
@@ -1380,7 +1363,7 @@ export default function AdminDashboard({ handleLogout }) {
                           Download the latest category, facility, and moderation reports as CSV or PDF.
                         </p>
                       </div>
-                      <section style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <section className="flex flex-wrap gap-3">
                         <button
                           onClick={exportCategoriesAsCSV}
                           style={{ padding: "10px 18px", borderRadius: 10, border: "1px solid #e5e7eb", background: "#ffffff", cursor: "pointer" }}
