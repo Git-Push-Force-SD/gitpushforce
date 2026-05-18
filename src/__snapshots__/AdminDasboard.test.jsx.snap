@@ -54,17 +54,6 @@ exports[`Snapshot matches snapshot after data loads 1`] = `
             <span
               class="material-symbols-outlined text-lg"
             >
-              person_add
-            </span>
-            Create Staff
-          </button>
-          <button
-            class="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors text-slate-600 hover:bg-slate-100"
-            type="button"
-          >
-            <span
-              class="material-symbols-outlined text-lg"
-            >
               calendar_month
             </span>
             Slot Capacity
@@ -134,128 +123,10 @@ exports[`Snapshot matches snapshot after data loads 1`] = `
         style="padding: 32px; display: flex; align-items: flex-start; justify-content: center;"
       >
         <section
-          id="create-staff-section"
           style="background: rgb(255, 255, 255); border-radius: 16px; border: 1px solid #e8e8f0; padding: 40px 48px; width: 100%; max-width: 760px;"
         >
           <section
-            style="margin-bottom: 36px;"
-          >
-            <h1
-              style="font-size: 24px; font-weight: 700; color: rgb(26, 26, 46); margin: 0px 0px 8px;"
-            >
-              Trade Facilitator Staff
-            </h1>
-            <p
-              style="font-size: 14px; color: rgb(107, 114, 128); margin: 0px; line-height: 1.5;"
-            >
-              Onboard a new facilitator to manage campus marketplace transactions and safety protocols.
-            </p>
-          </section>
-          <section
-            style="display: flex; flex-direction: column; gap: 28px;"
-          >
-            <section>
-              <label
-                style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
-              >
-                Full Name
-              </label>
-              <input
-                placeholder="e.g. Alexander Pierce"
-                style="width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid #d1d5db; border-radius: 10px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255); box-sizing: border-box;"
-                type="text"
-                value=""
-              />
-            </section>
-            <section
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"
-            >
-              <section>
-                <label
-                  style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
-                >
-                  Assigned Facility
-                </label>
-                <select
-                  style="width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid #d1d5db; border-radius: 10px; outline: none; color: rgb(156, 163, 175); background: rgb(255, 255, 255); box-sizing: border-box; appearance: none; cursor: pointer;"
-                >
-                  <option
-                    disabled=""
-                    value=""
-                  >
-                    Select a facility...
-                  </option>
-                  <option
-                    value="North Campus Hub"
-                  >
-                    North Campus Hub
-                  </option>
-                  <option
-                    value="Library Commons Zone"
-                  >
-                    Library Commons Zone
-                  </option>
-                  <option
-                    value="South Plaza Exchange"
-                  >
-                    South Plaza Exchange
-                  </option>
-                  <option
-                    value="Graduate Student Center"
-                  >
-                    Graduate Student Center
-                  </option>
-                  <option
-                    value="West Wing Marketplace"
-                  >
-                    West Wing Marketplace
-                  </option>
-                  <option
-                    value="Engineering Quarter"
-                  >
-                    Engineering Quarter
-                  </option>
-                </select>
-              </section>
-              <section>
-                <label
-                  style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
-                >
-                  Role
-                </label>
-                <section
-                  style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; font-size: 15px; border: 1px solid #c7c3fb; border-radius: 10px; background: rgb(245, 243, 255); color: rgb(79, 70, 229); font-weight: 500;"
-                >
-                  <span>
-                    Trade Facilitator
-                  </span>
-                  <span
-                    class="material-symbols-outlined"
-                    style="font-size: 18px; color: rgb(79, 70, 229);"
-                  >
-                    settings
-                  </span>
-                </section>
-              </section>
-            </section>
-            <section
-              style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 12px;"
-            >
-              <button
-                style="padding: 12px 26px; font-size: 14px; font-weight: 500; border: 1px solid #d1d5db; border-radius: 10px; background: transparent; color: rgb(55, 65, 81); cursor: pointer;"
-              >
-                Discard
-              </button>
-              <button
-                style="padding: 12px 26px; font-size: 14px; font-weight: 600; border-radius: 10px; background: rgb(79, 70, 229); color: rgb(255, 255, 255); cursor: pointer;"
-              >
-                Save Staff
-              </button>
-            </section>
-          </section>
-          <section
             id="slot-capacity-section"
-            style="margin-top: 40px; padding-top: 40px; border-top: 1px solid #e8e8f0;"
           >
             <section
               style="margin-bottom: 28px;"
@@ -296,59 +167,44 @@ exports[`Snapshot matches snapshot after data loads 1`] = `
                   style="width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid #d1d5db; border-radius: 10px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255); box-sizing: border-box; appearance: none; cursor: pointer;"
                 >
                   <option
-                    value="08:00–08:30"
+                    value="09:00 - 10:00"
                   >
-                    08:00–08:30
+                    09:00 - 10:00
                   </option>
                   <option
-                    value="08:30–09:00"
+                    value="10:00 - 11:00"
                   >
-                    08:30–09:00
+                    10:00 - 11:00
                   </option>
                   <option
-                    value="09:00–09:30"
+                    value="11:00 - 12:00"
                   >
-                    09:00–09:30
+                    11:00 - 12:00
                   </option>
                   <option
-                    value="09:30–10:00"
+                    value="12:00 - 13:00"
                   >
-                    09:30–10:00
+                    12:00 - 13:00
                   </option>
                   <option
-                    value="10:00–10:30"
+                    value="13:00 - 14:00"
                   >
-                    10:00–10:30
+                    13:00 - 14:00
                   </option>
                   <option
-                    value="10:30–11:00"
+                    value="14:00 - 15:00"
                   >
-                    10:30–11:00
+                    14:00 - 15:00
                   </option>
                   <option
-                    value="11:00–11:30"
+                    value="15:00 - 16:00"
                   >
-                    11:00–11:30
+                    15:00 - 16:00
                   </option>
                   <option
-                    value="14:00–14:30"
+                    value="16:00 - 17:00"
                   >
-                    14:00–14:30
-                  </option>
-                  <option
-                    value="14:30–15:00"
-                  >
-                    14:30–15:00
-                  </option>
-                  <option
-                    value="15:00–15:30"
-                  >
-                    15:00–15:30
-                  </option>
-                  <option
-                    value="15:30–16:00"
-                  >
-                    15:30–16:00
+                    16:00 - 17:00
                   </option>
                 </select>
               </section>
@@ -391,6 +247,29 @@ exports[`Snapshot matches snapshot after data loads 1`] = `
                 Save Slot Capacity
               </button>
             </section>
+            <section
+              style="margin-top: 28px; padding-top: 24px; border-top: 1px dashed #e8e8f0;"
+            >
+              <p
+                style="margin: 0px 0px 14px; font-size: 13px; font-weight: 600; color: rgb(107, 114, 128); text-transform: uppercase; letter-spacing: 0.07em;"
+              >
+                Bulk Apply
+              </p>
+              <p
+                style="margin: 0px 0px 16px; font-size: 14px; color: rgb(107, 114, 128);"
+              >
+                Apply the capacity value above to multiple slots at once.
+              </p>
+              <section
+                style="display: flex; gap: 12px; flex-wrap: wrap;"
+              >
+                <button
+                  style="padding: 10px 20px; font-size: 14px; font-weight: 500; border: 1px solid #4f46e5; border-radius: 10px; background: rgb(245, 243, 255); color: rgb(79, 70, 229); cursor: pointer; opacity: 1;"
+                >
+                  All slots on 2026-05-18
+                </button>
+              </section>
+            </section>
           </section>
           <section
             id="operating-hours-section"
@@ -411,266 +290,43 @@ exports[`Snapshot matches snapshot after data loads 1`] = `
               </p>
             </section>
             <section
-              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;"
+              style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;"
             >
-              <section
-                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
-              >
-                <h3
-                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
+              <section>
+                <label
+                  style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
                 >
-                  Monday
-                </h3>
-                <section
-                  style="display: flex; gap: 12px; align-items: center;"
-                >
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      Start Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="08:00"
-                    />
-                  </section>
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      End Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="18:00"
-                    />
-                  </section>
-                </section>
+                  Date
+                </label>
+                <input
+                  style="width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid #d1d5db; border-radius: 10px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255); box-sizing: border-box;"
+                  type="date"
+                  value="2026-05-18"
+                />
               </section>
-              <section
-                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
-              >
-                <h3
-                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
+              <section>
+                <label
+                  style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
                 >
-                  Tuesday
-                </h3>
-                <section
-                  style="display: flex; gap: 12px; align-items: center;"
-                >
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      Start Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="08:00"
-                    />
-                  </section>
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      End Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="18:00"
-                    />
-                  </section>
-                </section>
+                  Start Time
+                </label>
+                <input
+                  style="width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid #d1d5db; border-radius: 10px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255); box-sizing: border-box;"
+                  type="time"
+                  value="09:00"
+                />
               </section>
-              <section
-                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
-              >
-                <h3
-                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
+              <section>
+                <label
+                  style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;"
                 >
-                  Wednesday
-                </h3>
-                <section
-                  style="display: flex; gap: 12px; align-items: center;"
-                >
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      Start Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="08:00"
-                    />
-                  </section>
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      End Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="18:00"
-                    />
-                  </section>
-                </section>
-              </section>
-              <section
-                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
-              >
-                <h3
-                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
-                >
-                  Thursday
-                </h3>
-                <section
-                  style="display: flex; gap: 12px; align-items: center;"
-                >
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      Start Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="08:00"
-                    />
-                  </section>
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      End Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="18:00"
-                    />
-                  </section>
-                </section>
-              </section>
-              <section
-                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
-              >
-                <h3
-                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
-                >
-                  Friday
-                </h3>
-                <section
-                  style="display: flex; gap: 12px; align-items: center;"
-                >
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      Start Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="08:00"
-                    />
-                  </section>
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      End Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="18:00"
-                    />
-                  </section>
-                </section>
-              </section>
-              <section
-                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
-              >
-                <h3
-                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
-                >
-                  Saturday
-                </h3>
-                <section
-                  style="display: flex; gap: 12px; align-items: center;"
-                >
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      Start Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="09:00"
-                    />
-                  </section>
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      End Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="17:00"
-                    />
-                  </section>
-                </section>
-              </section>
-              <section
-                style="border: 1px solid #e8e8f0; border-radius: 10px; padding: 20px;"
-              >
-                <h3
-                  style="font-size: 16px; font-weight: 600; color: rgb(26, 26, 46); margin: 0px 0px 16px;"
-                >
-                  Sunday
-                </h3>
-                <section
-                  style="display: flex; gap: 12px; align-items: center;"
-                >
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      Start Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="10:00"
-                    />
-                  </section>
-                  <section>
-                    <label
-                      style="display: block; font-size: 12px; font-weight: 600; color: rgb(107, 114, 128); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;"
-                    >
-                      End Time
-                    </label>
-                    <input
-                      style="padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255);"
-                      type="time"
-                      value="16:00"
-                    />
-                  </section>
-                </section>
+                  End Time
+                </label>
+                <input
+                  style="width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid #d1d5db; border-radius: 10px; outline: none; color: rgb(26, 26, 46); background: rgb(255, 255, 255); box-sizing: border-box;"
+                  type="time"
+                  value="17:00"
+                />
               </section>
             </section>
             <section
@@ -682,6 +338,155 @@ exports[`Snapshot matches snapshot after data loads 1`] = `
                 Save Operating Hours
               </button>
             </section>
+          </section>
+          <section
+            style="margin-top: 40px; padding-top: 40px; border-top: 1px solid #e8e8f0;"
+          >
+            <section
+              style="margin-bottom: 28px;"
+            >
+              <h2
+                style="font-size: 20px; font-weight: 700; color: rgb(26, 26, 46); margin: 0px 0px 8px;"
+              >
+                Content Moderation — Reviews
+              </h2>
+              <p
+                style="font-size: 14px; color: rgb(107, 114, 128); margin: 0px; line-height: 1.5;"
+              >
+                Remove inappropriate or abusive reviews. Removed reviews are hidden from all users.
+              </p>
+            </section>
+            <div
+              style="overflow-x: auto;"
+            >
+              <table
+                style="width: 100%; border-collapse: collapse; font-size: 13px;"
+              >
+                <thead>
+                  <tr>
+                    <th
+                      style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600; border-bottom: 1px solid #e5e7eb;"
+                    >
+                      Reviewer
+                    </th>
+                    <th
+                      style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600; border-bottom: 1px solid #e5e7eb;"
+                    >
+                      Reviewee
+                    </th>
+                    <th
+                      style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600; border-bottom: 1px solid #e5e7eb;"
+                    >
+                      Listing
+                    </th>
+                    <th
+                      style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600; border-bottom: 1px solid #e5e7eb;"
+                    >
+                      Rating
+                    </th>
+                    <th
+                      style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600; border-bottom: 1px solid #e5e7eb;"
+                    >
+                      Comment
+                    </th>
+                    <th
+                      style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600; border-bottom: 1px solid #e5e7eb;"
+                    >
+                      Date
+                    </th>
+                    <th
+                      style="text-align: left; padding: 10px 8px; color: rgb(107, 114, 128); font-weight: 600; border-bottom: 1px solid #e5e7eb;"
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                    >
+                      alice
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                    >
+                      bob
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                    >
+                      Old Textbook
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb; white-space: nowrap;"
+                    >
+                      ★★★★☆
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb; max-width: 240px;"
+                    >
+                      inappropriate language here
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb; white-space: nowrap;"
+                    >
+                      2026/05/18
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                    >
+                      <button
+                        style="background: rgb(254, 226, 226); color: rgb(185, 28, 28); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; font-weight: 600;"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                    >
+                      charlie
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                    >
+                      diana
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                    >
+                      Laptop
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb; white-space: nowrap;"
+                    >
+                      ★★★★★
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb; max-width: 240px;"
+                    >
+                      Great trade
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb; white-space: nowrap;"
+                    >
+                      2026/05/18
+                    </td>
+                    <td
+                      style="padding: 10px 8px; border-top: 1px solid #e5e7eb;"
+                    >
+                      <button
+                        style="background: rgb(254, 226, 226); color: rgb(185, 28, 28); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; font-weight: 600;"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </section>
           <section
             style="margin-top: 40px; padding-top: 40px; border-top: 1px solid #e8e8f0;"
@@ -1053,7 +858,7 @@ exports[`Snapshot matches snapshot after data loads 1`] = `
                         style="padding: 14px; border-radius: 12px; background: rgb(248, 250, 252); display: flex; justify-content: space-between; align-items: center;"
                       >
                         <span>
-                          2026-05-18 · 08:00–08:30
+                          2026-05-18 · 09:00 - 10:00
                         </span>
                         <span
                           style="font-weight: 600;"
@@ -1065,7 +870,7 @@ exports[`Snapshot matches snapshot after data loads 1`] = `
                         style="padding: 14px; border-radius: 12px; background: rgb(248, 250, 252); display: flex; justify-content: space-between; align-items: center;"
                       >
                         <span>
-                          2026-05-18 · 10:00–10:30
+                          2026-05-18 · 10:00 - 11:00
                         </span>
                         <span
                           style="font-weight: 600;"

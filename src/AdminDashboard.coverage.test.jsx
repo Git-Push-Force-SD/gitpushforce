@@ -50,7 +50,6 @@ const setupWithData = async (overrides = {}) => {
 };
 
 const getMain = () => screen.getByRole("main");
-const getFacilitySelect = () => within(getMain()).getAllByRole("combobox")[0];
 const getSlotCapacityInput = () => within(getMain()).getByRole("spinbutton");
 
 beforeEach(() => {
@@ -134,8 +133,8 @@ describe("AdminDashboard coverage – analytics & reports", () => {
 
   test("computes zero utilization when slot capacity is zero", async () => {
     await setupWithData({
-      facility_slots: [{ date: today, time_slot: "08:00–08:30", capacity: 0 }],
-      bookings: [{ date: today, time_slot: "08:00–08:30", status: "confirmed" }],
+      facility_slots: [{ date: today, time_slot: "09:00 - 10:00", capacity: 0 }],
+      bookings: [{ date: today, time_slot: "09:00 - 10:00", status: "confirmed" }],
     });
     expect(within(getMain()).getByText("Trade Facility Utilization")).toBeInTheDocument();
   });
@@ -165,7 +164,7 @@ describe("AdminDashboard coverage – exports", () => {
   test("export facility utilization CSV and PDF", async () => {
     const manySlots = Array.from({ length: 12 }, (_, i) => ({
       date: `2026-05-${String(i + 1).padStart(2, "0")}`,
-      time_slot: "08:00–08:30",
+      time_slot: "09:00 - 10:00",
       capacity: 10,
       booked: i,
       utilization: i * 8,
@@ -207,7 +206,7 @@ describe("AdminDashboard coverage – exports", () => {
 describe("AdminDashboard coverage – slot capacity", () => {
   test("loads slot capacity from facility_slots records", async () => {
     await setupWithData({
-      facility_slots: [{ date: today, time_slot: "08:00–08:30", capacity: 12 }],
+      facility_slots: [{ date: today, time_slot: "09:00 - 10:00", capacity: 12 }],
       bookings: [{ id: "1" }, { id: "2" }, { id: "3" }],
     });
 
@@ -219,7 +218,7 @@ describe("AdminDashboard coverage – slot capacity", () => {
 
   test("shows validation error when capacity is below bookings", async () => {
     await setupWithData({
-      facility_slots: [{ date: today, time_slot: "08:00–08:30", capacity: 10 }],
+      facility_slots: [{ date: today, time_slot: "09:00 - 10:00", capacity: 10 }],
       bookings: [{ id: "1" }, { id: "2" }, { id: "3" }],
     });
 
@@ -259,12 +258,18 @@ describe("AdminDashboard coverage – slot capacity", () => {
   test("shows error when slot capacity save fails", async () => {
     installSupabaseMocks({
       bookings: [],
-      facility_slots: [{ date: today, time_slot: "08:00–08:30", capacity: 5 }],
+      facility_slots: [{ date: today, time_slot: "09:00 - 10:00", capacity: 5 }],
     });
     supabase.from.mockImplementation((table) => {
       const chain = createChain({ data: defaultTableData[table] ?? [], error: null });
       if (table === "facility_slots") {
-        chain.upsert = jest.fn(() => Promise.resolve({ data: null, error: { message: "upsert failed" } }));
+        chain.insert = jest.fn(() =>
+          Promise.resolve({ data: null, error: { message: "insert failed" } })
+        );
+        chain.update = jest.fn(() => chain);
+        chain.maybeSingle = jest.fn(() =>
+          Promise.resolve({ data: null, error: null })
+        );
       }
       if (table === "bookings") {
         return createChain({ data: [], error: null });
@@ -288,17 +293,19 @@ describe("AdminDashboard coverage – operating hours", () => {
     fireEvent.click(within(getMain()).getByRole("button", { name: /Save Operating Hours/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Operating hours saved successfully/i)).toBeInTheDocument();
+      expect(screen.getByText(/Operating hours saved\./i)).toBeInTheDocument();
     });
-    expect(supabase.from).toHaveBeenCalledWith("facility_operating_hours");
+    expect(supabase.from).toHaveBeenCalledWith("facility_slots");
   });
 
   test("shows error when operating hours save fails", async () => {
     installSupabaseMocks();
     supabase.from.mockImplementation((table) => {
       const chain = createChain({ data: defaultTableData[table] ?? [], error: null });
-      if (table === "facility_operating_hours") {
-        chain.upsert = jest.fn(() => Promise.resolve({ data: null, error: { message: "save failed" } }));
+      if (table === "facility_slots") {
+        chain.insert = jest.fn(() =>
+          Promise.resolve({ data: null, error: { message: "save failed" } })
+        );
       }
       return chain;
     });
@@ -312,34 +319,83 @@ describe("AdminDashboard coverage – operating hours", () => {
     });
   });
 
-  test("validates missing operating hour times", async () => {
+  test("validates missing operating hours date", async () => {
     await setupWithData();
-    const mondayStart = within(getMain()).getAllByDisplayValue("08:00")[0];
-    await userEvent.clear(mondayStart);
+    // Clear the hours date input
+    const dateInputs = within(getMain()).getAllByDisplayValue(/\d{4}-\d{2}-\d{2}/);
+    // Second date input is the hours date
+    const hoursDateInput = dateInputs[1];
+    fireEvent.change(hoursDateInput, { target: { value: "" } });
     fireEvent.click(within(getMain()).getByRole("button", { name: /Save Operating Hours/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Please set start and end times for all days/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Please select a date, start time, and end time/i)
+      ).toBeInTheDocument();
     });
+  });
+
+  test("updates operating hours start and end inputs", async () => {
+    await setupWithData();
+    const hoursStartInput = within(getMain()).getByDisplayValue("09:00");
+    const hoursEndInput = within(getMain()).getByDisplayValue("17:00");
+    fireEvent.change(hoursStartInput, { target: { value: "07:30" } });
+    fireEvent.change(hoursEndInput, { target: { value: "19:00" } });
+    expect(hoursStartInput).toHaveValue("07:30");
+    expect(hoursEndInput).toHaveValue("19:00");
+  });
+});
+
+describe("AdminDashboard coverage – content moderation reviews", () => {
+  test("renders moderation reviews table with reviewer data", async () => {
+    await setupWithData();
+    await waitFor(() => {
+      expect(within(getMain()).queryByText("Loading reviews...")).not.toBeInTheDocument();
+    });
+    expect(within(getMain()).getByText("alice")).toBeInTheDocument();
+    expect(within(getMain()).getByText("charlie")).toBeInTheDocument();
+  });
+
+  test("renders no active reviews message when reviews list is empty", async () => {
+    await setupWithData({ reviews: [] });
+    await waitFor(() => {
+      expect(within(getMain()).getByText(/No active reviews to moderate\./i)).toBeInTheDocument();
+    });
+  });
+
+  test("shows error when moderation reviews fetch fails", async () => {
+    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    installSupabaseMocks();
+    supabase.from.mockImplementation((table) => {
+      if (table === "reviews") {
+        const chain = createChain({ data: null, error: { message: "reviews failed" } });
+        return chain;
+      }
+      return createChain({ data: defaultTableData[table] ?? [], error: null });
+    });
+    render(<AdminDashboard />);
+    await waitFor(() => {
+      expect(within(screen.getByRole("main")).getByText(/Failed to load reviews/i)).toBeInTheDocument();
+    });
+    consoleSpy.mockRestore();
+  });
+
+  test("remove review button calls supabase update", async () => {
+    window.confirm = jest.fn(() => true);
+    await setupWithData();
+    await waitFor(() => {
+      expect(within(getMain()).queryByText("Loading reviews...")).not.toBeInTheDocument();
+    });
+    const removeButtons = within(getMain()).getAllByRole("button", { name: /Remove/i });
+    fireEvent.click(removeButtons[0]);
+    await waitFor(() => {
+      expect(supabase.from).toHaveBeenCalledWith("reviews");
+    });
+    window.confirm = undefined;
   });
 });
 
 describe("AdminDashboard coverage – forms & navigation", () => {
-  test("facility select updates value", async () => {
-    await setupWithData();
-    await userEvent.selectOptions(getFacilitySelect(), "Library Commons Zone");
-    expect(getFacilitySelect()).toHaveValue("Library Commons Zone");
-  });
-
-  test("discard resets staff form fields", async () => {
-    await setupWithData();
-    await userEvent.type(screen.getByPlaceholderText(/Alexander Pierce/i), "Jane Doe");
-    await userEvent.selectOptions(getFacilitySelect(), "North Campus Hub");
-    fireEvent.click(screen.getByRole("button", { name: /Discard/i }));
-    expect(screen.getByPlaceholderText(/Alexander Pierce/i)).toHaveValue("");
-    expect(getFacilitySelect()).toHaveValue("");
-  });
-
   test("handleLogout is called from mobile navigation", async () => {
     const handleLogout = jest.fn();
     installSupabaseMocks();
@@ -380,19 +436,9 @@ describe("AdminDashboard coverage – forms & navigation", () => {
     fireEvent.change(dateInput, { target: { value: "2026-12-01" } });
     expect(dateInput).toHaveValue("2026-12-01");
 
-    const timeSelect = within(getMain()).getAllByRole("combobox")[1];
-    fireEvent.change(timeSelect, { target: { value: "10:00–10:30" } });
-    expect(timeSelect).toHaveValue("10:00–10:30");
-  });
-
-  test("updates operating hours start and end inputs", async () => {
-    await setupWithData();
-    const mondayStart = within(getMain()).getAllByDisplayValue("08:00")[0];
-    const mondayEnd = within(getMain()).getAllByDisplayValue("18:00")[0];
-    fireEvent.change(mondayStart, { target: { value: "07:30" } });
-    fireEvent.change(mondayEnd, { target: { value: "19:00" } });
-    expect(mondayStart).toHaveValue("07:30");
-    expect(mondayEnd).toHaveValue("19:00");
+    const timeSelect = within(getMain()).getAllByRole("combobox")[0];
+    fireEvent.change(timeSelect, { target: { value: "10:00 - 11:00" } });
+    expect(timeSelect).toHaveValue("10:00 - 11:00");
   });
 });
 
@@ -423,10 +469,10 @@ describe("AdminDashboard coverage – PDF pagination & fetch errors", () => {
   test("facility utilization PDF export paginates with many slots", async () => {
     const manySlots = Array.from({ length: 45 }, (_, i) => ({
       date: `2026-06-${String((i % 28) + 1).padStart(2, "0")}`,
-      time_slot: "08:00–08:30",
+      time_slot: "09:00 - 10:00",
       capacity: 10,
     }));
-    const manyBookings = manySlots.map((slot, i) => ({
+    const manyBookings = manySlots.map((slot) => ({
       date: slot.date,
       time_slot: slot.time_slot,
       status: "confirmed",
@@ -487,16 +533,9 @@ describe("AdminDashboard coverage – PDF pagination & fetch errors", () => {
     expect(within(getMain()).getByRole("spinbutton")).toHaveValue(5);
   });
 
-  test("scrolls to create staff section from navigation", async () => {
-    await setupWithData();
-    const nav = screen.getByRole("navigation", { name: /dashboard navigation/i });
-    fireEvent.click(within(nav).getByText("Create Staff").closest("button"));
-    expect(document.getElementById("create-staff-section")).toBeInTheDocument();
-  });
-
   test("shows inline warning when slot capacity drops below booked count", async () => {
     await setupWithData({
-      facility_slots: [{ date: today, time_slot: "08:00–08:30", capacity: 10 }],
+      facility_slots: [{ date: today, time_slot: "09:00 - 10:00", capacity: 10 }],
       bookings: [{ id: "1" }, { id: "2" }, { id: "3" }],
     });
     await waitFor(() => expect(getSlotCapacityInput()).toHaveValue(10));
@@ -581,8 +620,8 @@ describe("AdminDashboard coverage – PDF pagination & fetch errors", () => {
   test("covers pending bookings and unknown user roles in analytics", async () => {
     await setupWithData({
       bookings: [
-        { date: today, time_slot: "08:00–08:30", status: "pending", created_at: `${today}T08:00:00Z` },
-        { date: today, time_slot: "08:00–08:30", status: "cancelled", created_at: `${today}T08:00:00Z` },
+        { date: today, time_slot: "09:00 - 10:00", status: "pending", created_at: `${today}T08:00:00Z` },
+        { date: today, time_slot: "09:00 - 10:00", status: "cancelled", created_at: `${today}T08:00:00Z` },
       ],
       users: [{ role: null, created_at: "2020-01-01T00:00:00Z" }],
       listings: [

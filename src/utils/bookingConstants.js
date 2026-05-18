@@ -4,17 +4,14 @@
 export const FACILITY_LOCATION = 'Trade Facility — Room 2B';
 
 export const DEFAULT_TIME_SLOTS = [
-  '08:00–08:30',
-  '08:30–09:00',
-  '09:00–09:30',
-  '09:30–10:00',
-  '10:00–10:30',
-  '10:30–11:00',
-  '11:00–11:30',
-  '14:00–14:30',
-  '14:30–15:00',
-  '15:00–15:30',
-  '15:30–16:00',
+  '09:00 - 10:00',
+  '10:00 - 11:00',
+  '11:00 - 12:00',
+  '12:00 - 13:00',
+  '13:00 - 14:00',
+  '14:00 - 15:00',
+  '15:00 - 16:00',
+  '16:00 - 17:00',
 ];
 
 export const BOOKING_STATUS = {
@@ -54,5 +51,5 @@ export const TIMELINE_STEPS = [
 ];
 
 // Booking hours enforced on the frontend (matches server-side validation)
-export const BOOKING_HOUR_START = 7;  // 07:00
-export const BOOKING_HOUR_END   = 21; // 21:00
+export const BOOKING_HOUR_START = 9;  // 09:00
+export const BOOKING_HOUR_END   = 17; // 17:00
