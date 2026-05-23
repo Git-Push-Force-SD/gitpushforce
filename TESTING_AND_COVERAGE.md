@@ -88,8 +88,6 @@ The coverage report includes:
 
 Navigate to `coverage/lcov-report/index.html` for detailed visualization.
 
-**Note**: For public repositories, Codecov works automatically with GitHub Actions.
-
 ### How It Works
 
 The GitHub Action automatically:
@@ -100,23 +98,7 @@ The GitHub Action automatically:
 4. **Updates pull requests** with coverage info
 5. **Tracks coverage over time** in Codecov dashboard
 
-### Codecov Features
-
-After setup, you can:
-
-- **View coverage trends**: See how coverage changes over time
-- **PR coverage reports**: Codecov comments on PRs with coverage changes
-- **Branch comparisons**: Compare coverage between branches
-- **Merge coverage reports**: Automatic reports for merged PRs
-- **Badges**: Display coverage badge in README
-
 ## Writing Tests
-
-### Test File Naming
-
-Place test files in:
-- Same directory as source file with `.test.jsx` or `.spec.jsx` extension
-- Example: `src/App.jsx` → `src/App.test.jsx`
 
 ### Test Structure
 
