@@ -47,27 +47,12 @@ A modern, responsive web app for a Campus Marketplace. Built with React, Tailwin
 npm install
 ```
 
-2. Copy `.env.example` to `.env` and fill in the credentials. Keep your existing
-values if `.env` already exists. The frontend uses `VITE_SUPABASE_URL` and
-`VITE_SUPABASE_PUBLISHABLE_KEY`. The payment backend also requires
-`SUPABASE_SERVICE_KEY` (the Supabase service role key) and `STRIPE_SECRET_KEY`
-(use a Stripe test secret for local development). Keep both backend secrets
-server-side; never prefix them with `VITE_`.
-
-3. Start the frontend development server:
+2. Start the development server:
 ```bash
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser. For payments, run the backend in
-a second terminal:
-
-```bash
-npm start
-```
-
-The backend listens at `http://localhost:3000`. To serve the production frontend
-from the backend, run `npm run build` before `npm start`.
+The application will open automatically at `http://localhost:3000`
 
 ### Building for Production
 

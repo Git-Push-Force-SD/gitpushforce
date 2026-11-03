@@ -7,17 +7,9 @@ import { fileURLToPath } from 'url'
 import Stripe from 'stripe'
 import cors from 'cors'
 import { createClient } from '@supabase/supabase-js'
-const requiredEnv = ['VITE_SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'STRIPE_SECRET_KEY']
-const missingEnv = requiredEnv.filter((name) => !process.env[name]?.trim())
-
-if (missingEnv.length) {
-  console.error(`Missing required environment variables: ${missingEnv.join(', ')}. Set them in .env before running npm start. See .env.example.`)
-  process.exit(1)
-}
-
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
+  process.env.SUPABASE_SERVICE_KEY  
 )
 
 const __filename = fileURLToPath(import.meta.url)
