@@ -63,6 +63,7 @@ jest.mock('./AdminDashboard', () => function MockAdminDashboard({ handleLogout }
 });
 
 const mockSupabase = supabaseModule.supabase;
+let authStateCallback;
 
 const mockUsersTable = ({ roleData = { role: 'student' }, selectError = null } = {}) => {
   mockSupabase.from.mockImplementation(() => ({
@@ -78,54 +79,86 @@ const mockUsersTable = ({ roleData = { role: 'student' }, selectError = null } =
   }));
 };
 
-describe('App routing + auth integration', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    localStorage.clear(); // prevent stale cached roles bleeding between tests
-    global.__TEST_ROUTE__ = '/';
-    mockSupabase.auth.onAuthStateChange.mockReturnValue({
-      data: { subscription: { unsubscribe: jest.fn() } },
-    });
+beforeAll(() => {
+  // RevealOnScroll uses IntersectionObserver, which jsdom does not implement.
+  window.IntersectionObserver = class IntersectionObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+});
+
+beforeEach(() => {
+  jest.resetAllMocks();
+  localStorage.clear();
+  global.__TEST_ROUTE__ = '/';
+  authStateCallback = undefined;
+
+  mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+  mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
+    authStateCallback = callback;
+    return { data: { subscription: { unsubscribe: jest.fn() } } };
   });
+  mockSupabase.auth.signOut.mockImplementation(async () => {
+    authStateCallback?.('SIGNED_OUT', null);
+    return { error: null };
+  });
+});
 
-  test('renders landing page for unauthenticated user', async () => {
-    mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
-
+describe('App landing page', () => {
+  test('renders landing page for an unauthenticated user', async () => {
     render(<App />);
 
-    await waitFor(() => {
-      expect(screen.getAllByText('UNIMART').length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Sign In/i).length).toBeGreaterThan(0);
-    });
+    expect((await screen.findAllByText('UNIMART')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Sign In/i).length).toBeGreaterThan(0);
+    expect(screen.getByText('Browse The Feed')).toBeInTheDocument();
   });
 
-  test('navigates to login route from landing sign in button', async () => {
-    mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+  test('does not render the removed How It Works and Safety sections or links', async () => {
+    render(<App />);
+    await screen.findByText('Browse The Feed');
 
+    expect(screen.queryByRole('heading', { name: /A faster way to trade on campus/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Security built into every trade/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /List Your Item/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Chat Securely/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Meet on Campus/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /How It Works/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^Safety$/i })).not.toBeInTheDocument();
+  });
+
+  test('retains marketplace features and browse actions', async () => {
+    render(<App />);
+    await screen.findByText('Browse The Feed');
+
+    expect(screen.getByText('List in Minutes')).toBeInTheDocument();
+    expect(screen.getByText('Message Safely')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Secure Exchange' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /View All Marketplace/i })).toBeInTheDocument();
+  });
+
+  test('navigates to login from the landing sign-in button', async () => {
     render(<App />);
 
     const signInButton = (await screen.findAllByRole('button', { name: /Sign In/i }))[0];
     fireEvent.click(signInButton);
 
-    await waitFor(() => {
-      expect(screen.getByText('Mock Login Page')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Mock Login Page')).toBeInTheDocument();
   });
 
   test('navigates back to landing from login route', async () => {
     global.__TEST_ROUTE__ = '/login';
-    mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
-
     render(<App />);
 
-    const backButton = await screen.findByRole('button', { name: 'Back' });
-    fireEvent.click(backButton);
+    fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
 
     await waitFor(() => {
       expect(screen.getAllByText('UNIMART').length).toBeGreaterThan(0);
     });
   });
+});
 
+describe('App authentication and routing', () => {
   test('redirects authenticated student to student dashboard', async () => {
     mockSupabase.auth.getSession.mockResolvedValue({
       data: { session: { user: { id: 'u1', email: '1@students.wits.ac.za' } } },
@@ -134,9 +167,7 @@ describe('App routing + auth integration', () => {
 
     render(<App />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Mock Student Dashboard')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Mock Student Dashboard')).toBeInTheDocument();
   });
 
   test('redirects authenticated staff to staff dashboard', async () => {
@@ -147,9 +178,7 @@ describe('App routing + auth integration', () => {
 
     render(<App />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Mock Staff Dashboard')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Mock Staff Dashboard')).toBeInTheDocument();
   });
 
   test('redirects authenticated admin from login route to admin dashboard', async () => {
@@ -161,66 +190,54 @@ describe('App routing + auth integration', () => {
 
     render(<App />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Mock Admin Dashboard')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Mock Admin Dashboard')).toBeInTheDocument();
   });
 
   test('protects dashboard route and redirects unauthenticated user to login', async () => {
     global.__TEST_ROUTE__ = '/studentdashboard';
-    mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
 
     render(<App />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Mock Login Page')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Mock Login Page')).toBeInTheDocument();
   });
 
-  test('logout from student dashboard calls supabase signOut', async () => {
+  test('logout from student dashboard calls supabase signOut and shows login', async () => {
     global.__TEST_ROUTE__ = '/studentdashboard';
     mockSupabase.auth.getSession.mockResolvedValue({
       data: { session: { user: { id: 'u4', email: '4@students.wits.ac.za' } } },
     });
-    mockSupabase.auth.signOut.mockResolvedValue({ error: null });
     mockUsersTable({ roleData: { role: 'student' } });
 
     render(<App />);
-
-    const logoutButton = await screen.findByRole('button', { name: 'Logout Student' });
-    fireEvent.click(logoutButton);
+    fireEvent.click(await screen.findByRole('button', { name: 'Logout Student' }));
 
     await waitFor(() => {
       expect(mockSupabase.auth.signOut).toHaveBeenCalled();
       expect(screen.getByText('Mock Login Page')).toBeInTheDocument();
     });
   });
-});
 
-test('redirects /staffdashboard to /staff/queue', async () => {
-  global.__TEST_ROUTE__ = '/staffdashboard';
-  mockSupabase.auth.getSession.mockResolvedValue({
-    data: { session: { user: { id: 'u5', email: '5@students.wits.ac.za' } } },
+  test('redirects /staffdashboard to /staff/queue', async () => {
+    global.__TEST_ROUTE__ = '/staffdashboard';
+    mockSupabase.auth.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'u5', email: '5@students.wits.ac.za' } } },
+    });
+    mockUsersTable({ roleData: { role: 'staff' } });
+
+    render(<App />);
+
+    expect(await screen.findByText('Mock Staff Dashboard')).toBeInTheDocument();
   });
-  mockUsersTable({ roleData: { role: 'staff' } });
 
-  render(<App />);
+  test('staff can refresh directly on /staff/collections', async () => {
+    global.__TEST_ROUTE__ = '/staff/collections';
+    mockSupabase.auth.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'u6', email: '6@students.wits.ac.za' } } },
+    });
+    mockUsersTable({ roleData: { role: 'staff' } });
 
-  await waitFor(() => {
-    expect(screen.getByText('Mock Staff Dashboard')).toBeInTheDocument();
-  });
-});
+    render(<App />);
 
-test('staff can refresh directly on /staff/collections', async () => {
-  global.__TEST_ROUTE__ = '/staff/collections';
-  mockSupabase.auth.getSession.mockResolvedValue({
-    data: { session: { user: { id: 'u6', email: '6@students.wits.ac.za' } } },
-  });
-  mockUsersTable({ roleData: { role: 'staff' } });
-
-  render(<App />);
-
-  await waitFor(() => {
-    expect(screen.getByText('Mock Staff Dashboard')).toBeInTheDocument();
+    expect(await screen.findByText('Mock Staff Dashboard')).toBeInTheDocument();
   });
 });
